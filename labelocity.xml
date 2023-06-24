@@ -12,6 +12,7 @@
             <directoryMode>0775</directoryMode>
             <fileMode>0644</fileMode>
             <includes>
+                <include>initenv</include>
                 <include>version</include>
                 <include>README*</include>
             </includes>
@@ -25,8 +26,8 @@
             <directoryMode>0775</directoryMode>
             <fileMode>0755</fileMode>
             <includes>
-                <include>**/*.sh</include>
                 <include>**/*.csh</include>
+                <include>**/*.sh</include>
                 <include>**/*.tcsh</include>
             </includes>
             <excludes>
@@ -39,8 +40,8 @@
             <directoryMode>0775</directoryMode>
             <fileMode>0755</fileMode>
             <includes>
-                <include>**/*.py</include>
                 <include>**/*.csh</include>
+                <include>**/*.py</include>
                 <include>**/*.tcsh</include>
                 <include>LabelBrowse</include>
                 <include>LabelImage</include>
@@ -73,9 +74,9 @@
             <directoryMode>0775</directoryMode>
             <fileMode>0644</fileMode>
             <includes>
+                <include>**/*.json</include>
                 <include>**/*.vm</include>
                 <include>**/*.vmac</include>
-                <include>**/*.json</include>
             </includes>
             <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>

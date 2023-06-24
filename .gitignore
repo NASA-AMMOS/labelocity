@@ -48,3 +48,8 @@ logs
 **/version
 **/src/main/resources/version
 
+# custom repo settings #
+bin
+jars
+templates
+
