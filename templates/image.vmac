@@ -1,0 +1,1583 @@
+## This template is made up of usable macros for PDS4 Velocity Templates,
+## focusing on the IMAGE details.
+##
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##      #parse ( "image.vmac" )
+##
+## this test code. 
+
+###set ( $DEBUG = 1 )
+
+
+## Mapping of Subframe shortname to more human readable string:
+## NONE - None
+## SW_ONLY - Software processsing only.
+## HW_COND - Use hardware only if compatible.
+## HW_SW - Use hardware then software.
+## SUN_NO_IMG - If the sun is found, send a subframed image of the sun. If sun is not found, send back no image.
+## SUN_FULL - If the sun is found, send a subframed image of the sun. If the sun is not found, send back the entire image.
+#set ($IMG_SUBFRAME_TYPE_DICT = { 
+  "NONE"       : "None",                   
+  "SW_ONLY"    : "Software Only",          
+  "HW_COND"    : "Hardware Compatible",    
+  "HW_SW"      : "Hardware Else Software", 
+  "SUN_NO_IMG" : "Subframe Around Sun",    
+  "SUN_FULL"   : "Sun Subframe Or Full"    
+})
+
+
+##################################
+## identification_asList macro
+##
+## VICAR labels and PDS3 labels built from a
+## vicar file have the same set of early keywords
+## VICAR keywords add IDENTIFICATION. in front of the keyword
+## PDS keywords do not
+## This macro is intended to allow the same velocity template to use
+## a vicar or PDS3 version of the same file
+## PROPERTY or GROUP things look the same
+##
+## could check the $generate.reader_format == "vicar" or "pds"
+###
+## $generate_file_name is the input filename
+##
+#macro(identification_asList $var)
+## try prepending "IDENTIFICATION."
+#set ($val = "")
+#set ($id = "IDENTIFICATION.")
+#set ($v = $id.concat($var))
+## <!-- $v -->
+#set ($val = $label.getList($v))
+#set ($val_size = $val.size() )##
+#if ($val_size > 0)
+$val##
+#else
+## use the input value as-is
+#set ($val = $label.getList($var))
+#set ($val_size = $val.size() )##
+#if ($val_size > 0)
+$val##
+#else
+error##
+#end
+#end
+#end
+##################################
+
+
+
+
+#################################
+## PDS3 to PDS4 Data Type Mapping
+##
+## This macro will return a PDS4 data type based on a PDS3 data type
+## More specifically, this macro provides a mapping from the PDS3 Keywords
+## DATA_TYPE, SAMPLE_TYPE, among others, to PDS4 data_type attribute in
+## accordance with the number of BITS for the data_type (i.e. SAMPLE_BITS).
+## The values in PDS4 are based on PDS SCH 1.4.0.0
+
+## The following mappings are TBD
+##  "ComplexLSB16",
+##  "ComplexLSB8",
+##  "ComplexMSB16",
+##  "ComplexMSB8",
+##  "IEEE754LSBDouble",
+##  "IEEE754LSBSingle",
+##  "IEEE754MSBDouble",
+##  "IEEE754MSBSingle",
+##  "SignedBitString",
+##  "SignedByte",
+##  "UnsignedBitString",
+##  "UnsignedByte",
+#set ($PDS3_PDS4_DTYPE_MAP = {
+    "LSB_SIGNED_INTEGER"   : "SignedLSB",
+    "MSB_SIGNED_INTEGER"   : "SignedMSB",
+    "LSB_UNSIGNED_INTEGER" : "UnsignedLSB",
+    "MSB_UNSIGNED_INTEGER" : "UnsignedMSB",
+    "UNSIGNED_INTEGER"     : "UnsignedMSB"
+})
+#macro(getPds4DataType $pds3_dtype $bits)
+$PDS3_PDS4_DTYPE_MAP.get($pds3_dtype)$bits##
+#end
+#################################
+
+
+
+#################################
+## PDS3 Bit Mask Trimmer
+##
+## In PDS3, the value for BIT_MASK and SAMPLE_BIT_MASK look like the following:
+##      SAMPLE_BIT_MASK              = 2#0000111111111111#
+##
+## In PDS4, these values should be just the binary portion "0000111111111111"
+##
+## This macro extracts the binary portion of the bit mask string. Dependent on the
+## the number of bits for the array/sample/object.
+##
+#macro(trimBitMask $bit_mask)
+#if ( $bit_mask )
+#set ( $img_tbm_is_float = "#isFloatDataType()" )
+#if ( $img_tbm_is_float == $CONST_FALSE )
+$bit_mask.replace('2', '').replace('#', '')##
+#end
+#end 
+##
+#end
+#################################
+
+
+
+
+
+#################################
+## Convert PDS3 Bit Mask to PDS4 Sample Bits
+##
+## In PDS3, the value for BIT_MASK and SAMPLE_BIT_MASK look like the following:
+##      SAMPLE_BIT_MASK              = 2#0000111111111111#
+##
+## In PDS4, these values should be just the binary portion "0000111111111111"
+##
+## This macro extracts the binary portion of the bit mask string. Dependent on the
+## the number of bits for the array/sample/object.
+##
+#macro(bitMaskToSampleBits $bit_mask)
+#set ( $dataType = $label.PDS4_IMAGE.pds4_data_type.toString() )
+#if ($bit_mask)
+##
+#if ( !($dataType.startsWith("IEEE") || $dataType.startsWith("Complex")) )
+#set ( $bit_mask = $bit_mask.replace('2', '').replace('#', '').trim() )
+#set ( $bit_mask_chars = $bit_mask.toCharArray() )
+#set ( $bit_count = 0 )
+#set ( $length = $bit_mask.length() - 1 )
+#foreach ( $i in [ 0..$length ] )
+#if( $bit_mask_chars[$i] == '1')
+#set ( $bit_count = $bit_count + 1 )
+#end
+#end
+#end
+$!bit_count##
+##
+#end
+#end
+#################################
+
+
+##TODO:Id move the if for axes lower down, the only difference is that 3 axes has the potential of the color section. The color section should use a new macro, isColorImage, appearing in the Specific macro. 
+
+
+##################################
+## defaultDisplaySettings
+##
+## This function will set the default
+## display settings information based
+## on the most common cases.
+##
+##
+#macro(defaultDisplaySettings $bands $id )
+    #set($axes = $label.PDS4_IMAGE.axes[0])    
+    #if ( $axes == 2 )
+        <Local_Internal_Reference>
+          <local_identifier_reference>$id</local_identifier_reference>
+          <local_reference_type>display_settings_to_array</local_reference_type>
+        </Local_Internal_Reference>
+        <disp:Display_Direction>
+          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+          <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+        </disp:Display_Direction>
+    #elseif ( $axes == 3 )
+        <Local_Internal_Reference>
+          <local_identifier_reference>$id</local_identifier_reference>
+          <local_reference_type>display_settings_to_array</local_reference_type>
+        </Local_Internal_Reference>
+        <disp:Display_Direction>
+          <disp:horizontal_display_axis>Sample</disp:horizontal_display_axis>
+          <disp:horizontal_display_direction>Left to Right</disp:horizontal_display_direction>
+          <disp:vertical_display_axis>Line</disp:vertical_display_axis>
+          <disp:vertical_display_direction>Top to Bottom</disp:vertical_display_direction>
+        </disp:Display_Direction>
+        #set( $derived_img_type = $label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE.toString() )
+        #set ( $img_type = $!IDENT.IMAGE_TYPE.toString() )
+        #if ( ($derived_img_type && $derived_img_type.equals("IMAGE")) || (!$derived_img_type && ( $img_type.equals("REGULAR") || $img_type.equals("THUMBNAIL") ) ) )
+        <disp:Color_Display_Settings>
+          <disp:color_display_axis>Band</disp:color_display_axis>
+          <disp:red_channel_band>1</disp:red_channel_band>
+          <disp:green_channel_band>2</disp:green_channel_band>
+          <disp:blue_channel_band>3</disp:blue_channel_band>
+        </disp:Color_Display_Settings>
+        #end
+    #end
+#end
+##################################
+
+
+
+
+
+## TODO: However... this should be made smarter, to check if the extension should be included or not, and to strip the appropriate number of characters for the version (see new macros below). 
+
+##################################
+## Removes the version number from product ID
+## and re-appends the extension.
+## For use with non-image products where we want
+## to remove the version ID but keep extension.
+##
+##
+#macro(generatePID $pid)
+#set ( $substrings = $pid.split("\.") )
+#set ( $pidVid     = $substrings[0] )
+#set ( $ext        = $substrings[1] )
+#set ( $pidEnd     = $pidVid.length() - 1 )
+#set ( $finalPid   = $pidVid.substring(0,$pidEnd) + '.' + $ext)
+$finalPid.toLowerCase()##
+#end
+##################################
+
+
+##################################
+## generateLID from the product ID
+##
+## Most of LID is the same but will differ based on:
+## * collection
+## * pid
+##
+##
+##
+
+#macro(generateLID $lid_prefix $collection $pid)
+#set ($img_glid_suffix1 = "")
+#set ($img_glid_suffix2 = "")
+#set ($img_glid_suffix1 = $collection.toLowerCase())
+#set ($img_glid_suffix2 = $pid.toString().toLowerCase())
+${lid_prefix}:${img_glid_suffix1}:${img_glid_suffix2}##
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+
+## TODO: This is fine for insight but needs to be augmented to also handle the old-style bayer labels (like on MSL).
+
+##################################
+## Set Color Filter Array parameters
+##
+## We check for a deprecated label entry to indicate that
+## CFA information is in the older form or newer form.
+##
+#macro( getCFAstate )
+## Determine from where to get the bayer alg
+#set ( $_bayerAlg = "" )
+#if ( $label.INSTRUMENT_STATE_PARMS.BAYER_MODE )##older form
+#set ( $_bayerAlg = $label.INSTRUMENT_STATE_PARMS.BAYER_MODE.toString() )
+#elseif ( $label.INSTRUMENT_STATE_PARMS.BAYER_METHOD )
+#set ( $_bayerAlg = $label.INSTRUMENT_STATE_PARMS.BAYER_METHOD.toString() )
+#end
+#if ( $_bayerAlg.isEmpty() )
+No CFA##
+#elseif ( $_bayerAlg.equals("RAW_BAYER") )
+Encoded##
+#elseif ( $_bayerAlg.equals("NONE") )
+No CFA##
+#else
+Decoded##
+#end##if_equals
+#end## end_macro
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+## TODO: However, it can pull the labels directly rather than taking them as arguments.
+
+##################################
+## Get companding parameters
+## $node Source node
+## $name Source node name
+## $derivedImgTyp Derived image type
+## $includeObsReqParms Flag to control including OBSERVATION_REQUEST_PARMS label entries
+##                     Valid values are $CONST_TRUE, $CONST_FALSE
+##
+
+#macro(getCompandingParameters $node $name $derivedImgTyp $includeObsReqParms )
+
+    #set ($sampleBitMethod = "" ) 
+    #if ( $node.SAMPLE_BIT_METHOD )
+      #set ($sampleBitMethod = $!node.SAMPLE_BIT_METHOD.toString().toUpperCase() ) 
+    #end
+
+    #set ($sampleBitModeId = "" ) 
+    #set ($sampleBitModeId = $!node.SAMPLE_BIT_MODE_ID.toString() )
+    
+    #if ( $!sampleBitModeId == "" )
+      #set ($sampleBitModeId = "None")
+    #end
+    
+    #if ( $!sampleBitMethod.equals("") )
+      #set ($compandingState = "Companded")
+      #set ($compandingVenue = "")
+    #elseif ( $sampleBitMethod.equals("SOFTWARE") )
+      #set ($compandingState = "Companded")
+      #set ($compandingVenue = "Software")
+    #elseif ( $sampleBitMethod.equals("SOFTWARE_INVERTED") )
+      #set ($compandingState = "Expanded")
+      #set ($compandingVenue = "Software")
+    #elseif ( $sampleBitMethod.equals("HARDWARE") )
+      #set ($compandingState = "Companded")
+      #set ($compandingVenue = "Hardware")
+    #elseif ( $sampleBitMethod.equals("HARDWARE_INVERTED") )
+      #set ($compandingState = "Expanded")
+      #set ($compandingVenue = "Hardware")
+    #end
+    
+    #if ( $sampleBitMethod.equals("") || ! $sampleBitMethod.equals("NONE") )
+        <img:Companding>
+          #debug("Derived from ${name}.SAMPLE_BIT_METHOD")
+          <img:processing_venue>$!compandingVenue</img:processing_venue>
+          #debug("${name}.SAMPLE_BIT_MODE_ID")
+          <img:processing_algorithm>$!sampleBitModeId</img:processing_algorithm>
+          #debug("${name}.SAMPLE_BIT_METHOD")
+          <img:companding_state>$compandingState</img:companding_state>
+
+
+          ## Sometimes the result should include values extracted from the OBSERVATION_REQUEST_PARMS
+          ## The caller of this macro will inform us if it wants this by passing in $CONST_TRUE
+          ## for the 'includeObsReqParms' argument.
+          ## these items were moved to mipl_cameras.vm inside <img:Detector> 
+          #if ( $!includeObsReqParms == $CONST_TRUE )
+            ## Directly from OBSERVATION_REQUEST_PARMS
+            ###debug("OBSERVATION_REQUEST_PARMS.EARLY_PIXEL_SCALE_FLAG")
+            ###<img:early_scaling>$!label.OBSERVATION_REQUEST_PARMS.EARLY_PIXEL_SCALE_FLAG</img:early_scaling>
+            ###debug("OBSERVATION_REQUEST_PARMS.EARLY_IMAGE_RETURN_FLAG")
+            ###<img:early_image_return>$!label.OBSERVATION_REQUEST_PARMS.EARLY_IMAGE_RETURN_FLAG</img:early_image_return>
+          #end
+
+          #if( $IS_MOSAIC eq $CONST_FALSE )
+
+            #if ( $derivedImgTyp.equals("IMAGE") )
+            
+              #set ( $n_ilut_filename = "" )
+              #if ( $node.INVERSE_LUT_FILE_NAME )
+                #set ( $n_ilut_filename = $node.INVERSE_LUT_FILE_NAME.toString() )
+              #end
+              
+              #if ( $n_ilut_filename != "" )
+                #debug ("$name.INVERSE_LUT_FILE_NAME")
+                #set ($basename = "#getBasename($n_ilut_filename)")
+                <img:Companding_File>
+                  <Internal_Reference>
+                    <lid_reference>#generateLID( $LID_PREFIX "calibration" $basename.toLowerCase() )</lid_reference>
+                    <reference_type>data_to_data_correction_file</reference_type>
+                  </Internal_Reference>
+                </img:Companding_File>
+              #end
+            #end
+          #end
+        </img:Companding>
+    #end
+#end
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## getArrayDefinition
+##
+## Insight produces Array_2D and Array_3D
+## This function will figure out which on it is
+## and return the correct XML block.
+##
+##
+
+#macro(getArrayDefinition $pid $label $derivedImageType)
+#set($axes = $label.PDS4_IMAGE.axes[0])
+#if ( $axes == 2 || $axes == 3 )
+
+    ##set default index values assuming axes == 2
+    #set ($img_gad_band_idx = "")
+    #set ($img_gad_line_idx = "1")
+    #set ($img_gad_samp_idx = "2")
+
+    ##Update index values if axes == 3
+    #if ( $axes == 3 )
+      #set ($img_gad_band_idx = "1")
+      #set ($img_gad_line_idx = "2")
+      #set ($img_gad_samp_idx = "3")
+    #end
+    
+    <Array_${axes}D_Image>
+      <local_identifier>$pid</local_identifier>
+      <offset unit="byte">$!label.PDS4_IMAGE.offset</offset>
+      <axes>$label.PDS4_IMAGE.axes</axes>
+      <axis_index_order>Last Index Fastest</axis_index_order>
+      <Element_Array>
+        <data_type>$label.PDS4_IMAGE.pds4_data_type</data_type>
+        #if ($label.DERIVED_IMAGE_PARMS.RADIOMETRIC_CORRECTION_TYPE && $derivedImageType.equals("IMAGE"))
+            #debug("DERIVED_IMAGE_PARMS.RADIANCE_OFFSET__UNIT")
+            #if( $label.DERIVED_IMAGE_PARMS.RADIANCE_OFFSET__UNIT )
+            <unit>#transformUnits($label.DERIVED_IMAGE_PARMS.RADIANCE_OFFSET__UNIT.toString())</unit>
+            #end
+            #debug("DERIVED_IMAGE_PARMS.RADIANCE_SCALING_FACTOR")
+            <scaling_factor>$!label.DERIVED_IMAGE_PARMS.RADIANCE_SCALING_FACTOR</scaling_factor>
+            #debug("DERIVED_IMAGE_PARMS.RADIANCE_OFFSET")
+            <value_offset>$!label.DERIVED_IMAGE_PARMS.RADIANCE_OFFSET</value_offset>
+        #else
+            <unit>DN</unit>
+        #end
+      </Element_Array>
+      
+
+      ## Only include the band entry if associated index is non-empty
+      #if ( "$img_gad_band_idx" != "" )
+      <Axis_Array>
+        <axis_name>Band</axis_name>
+        <elements>$label.PDS4_IMAGE.nb</elements>
+        <sequence_number>$img_gad_band_idx</sequence_number>
+      </Axis_Array>    
+      #end       
+      
+      <Axis_Array>
+        <axis_name>Line</axis_name>
+        <elements>$label.PDS4_IMAGE.nl</elements>
+        <sequence_number>$img_gad_line_idx</sequence_number>
+      </Axis_Array>
+      
+      <Axis_Array>
+        <axis_name>Sample</axis_name>
+        <elements>$label.PDS4_IMAGE.ns</elements>
+        <sequence_number>$img_gad_samp_idx</sequence_number>
+      </Axis_Array>
+      
+      <Special_Constants>      
+        <missing_constant>#asScalar( $IMAGE "MISSING_CONSTANT" )</missing_constant>        
+        <invalid_constant>#asScalar( $IMAGE "INVALID_CONSTANT" )</invalid_constant>        
+      </Special_Constants>
+      
+    </Array_${axes}D_Image>    
+#end
+#end
+##################################
+
+
+
+
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+#macro(generateAutoExposureParameters $node $nodeName $ns)
+
+#if ( ! $ns || "$ns" == "")
+    #set ($ns = 'img')
+#end
+
+#if ( $node.EXPOSURE_TYPE )
+#set( $exposureType = $!node.EXPOSURE_TYPE.toString() )
+#if ($exposureType.equals("AUTO") || $exposureType.equals("NULL")  )
+          <$ns:Autoexposure>
+          
+            <$ns:active_flag></$ns:active_flag>
+          
+            ## We only add this constant value if there is anything else to accompany it
+            ## NOTE: Any new labels added to this macro should be reflect in the OR'd list
+            #if ($node.AUTO_EXPOSURE_DATA_CUT || $node.AUTO_EXPOSURE_PERCENT || $node.MAX_AUTO_EXPOS_AUTO_EXPOSURE_PIXEL_FRACTIONITERATION_COUNT || $node.MAX_AUTO_EXPOS_ITERATION_COUNT)
+              #set ( $im_gaep_proc_alg_name = "" )
+              #set ( $im_gaep_proc_alg_name = "#msn_getAutoExposureAlgorithm( $PID )") 
+              <$ns:processing_algorithm>$!im_gaep_proc_alg_name</$ns:processing_algorithm>
+            #end
+                       
+            #if ($node.AUTO_EXPOSURE_DATA_CUT)
+              #set ( $autoexp_data_cut = "" )
+              #set ( $autoexp_data_cut = $!node.AUTO_EXPOSURE_DATA_CUT.toString().toUpperCase() )
+              #if ( $!autoexp_data_cut != $CONST_NULL )
+                #debug ("${nodeName}.AUTO_EXPOSURE_DATA_CUT")
+                <$ns:auto_exposure_data_cut>$!autoexp_data_cut</$ns:auto_exposure_data_cut>
+              #end
+            #end
+
+            ##<$ns:auto_exposure_percent>$!node.AUTO_EXPOSURE_PERCENT</$ns:auto_exposure_percent>
+            #getNodeValueNotNil( $node   'AUTO_EXPOSURE_PERCENT'   "${ns}:auto_exposure_percent"   '' )
+
+            ##<$ns:auto_exposure_pixel_fraction>$!node.AUTO_EXPOSURE_PIXEL_FRACTION</$ns:auto_exposure_pixel_fraction>            
+            #getNodeValueNotNil( $node   'AUTO_EXPOSURE_PIXEL_FRACTION'   "$ns:auto_exposure_pixel_fraction"   '' )
+
+            <$ns:auto_exposure_lower_threshold>$!node.AUTO_EXPOSURE_LOWER_THRESHOLD</$ns:auto_exposure_lower_threshold>
+
+            <$ns:auto_exposure_lower_limit>$!node.AUTO_EXPOSURE_LOWER_LIMIT</$ns:auto_exposure_lower_limit>
+
+            <$ns:auto_exposure_roi_lines>$!node.AUTO_EXPOSURE_ROI_LINES</$ns:auto_exposure_roi_lines>
+
+            <$ns:auto_exposure_roi_samples>$!node.AUTO_EXPOSURE_ROI_SAMPLES</$ns:auto_exposure_roi_samples>
+
+            <$ns:auto_exposure_roi_first_line>$!node.AUTO_EXPOSURE_ROI_FIRST_LINE</$ns:auto_exposure_roi_first_line>
+
+            <$ns:auto_exposure_roi_first_sample>$!node.AUTO_EXPOSURE_ROI_FIRST_SAMPLE</$ns:auto_exposure_roi_first_sample>
+
+            <$ns:auto_exposure_upper_threshold>$!node.AUTO_EXPOSURE_UPPER_THRESHOLD</$ns:auto_exposure_upper_threshold>
+
+            <$ns:auto_exposure_upper_limit>$!node.AUTO_EXPOSURE_UPPER_LIMIT</$ns:auto_exposure_upper_limit>
+ 
+            ##<$ns:max_auto_exposure_iteration_count>$!node.MAX_AUTO_EXPOS_ITERATION_COUNT</$ns:max_auto_exposure_iteration_count>        
+            #getNodeValueNotNil( $node   'MAX_AUTO_EXPOS_ITERATION_COUNT'   "$ns:max_auto_exposure_iteration_count"   '' )
+
+            ## Direct reference to OBSERVATION_REQUEST_PARMS
+            #if ($!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_TABLE_ID)
+            #debug ("OBSERVATION_REQUEST_PARMS.EXPOSURE_TABLE_ID")
+            <$ns:exposure_table>$!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_TABLE_ID</$ns:exposure_table>
+            #end
+
+            #if ($!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_TBL_UPDATE_FLAG)
+            #debug ("OBSERVATION_REQUEST_PARMS.EXPOSURE_TBL_UPDATE_FLAG")
+            <$ns:exposure_table_update_flag>$!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_TBL_UPDATE_FLAG.toString().toLowerCase()</$ns:exposure_table_update_flag>
+            #end
+            ##
+
+            <$ns:valid_maximum_pixel>$!node.VALID_MAXIMUM_PIXEL</$ns:valid_maximum_pixel>
+            
+            <$ns:valid_minimum_pixel>$!node.VALID_MINIMUM_PIXEL</$ns:valid_minimum_pixel>
+
+          </$ns:Autoexposure>          
+#end  ##if_AUTO_or_NULL
+#end ##if EXPOSURE_TYPE exists
+#end           
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+#macro(generateExposureParameters $node $nodeName $ns )        
+          
+          #if ( ! $ns || "$ns" == "")
+              #set ($ns = 'img')
+          #end
+  
+          <$ns:Exposure>                   
+            
+            #if ($node.EXPOSURE_COUNT)
+            #debug ("${nodeName}.EXPOSURE_COUNT")
+            <$ns:exposure_count>$!node.EXPOSURE_COUNT</$ns:exposure_count> 
+            #end 
+            
+            #set ($img_genExPrm_ExDur = "#checkNA( $node.EXPOSURE_DURATION '' )")
+            #if ( "$img_genExPrm_ExDur" != "" ) 
+            #debug ("${nodeName}.EXPOSURE_DURATION")
+            <$ns:exposure_duration #getUnitAttrOrDefault( $!node    'EXPOSURE_DURATION'   ''   's')>$img_genExPrm_ExDur</$ns:exposure_duration>
+            #end 
+            
+            #if ($node.EXPOSURE_DURATION_COUNT)
+            #debug ("${nodeName}.EXPOSURE_DURATION_COUNT")
+            <$ns:exposure_duration_count>$!node.EXPOSURE_DURATION_COUNT</$ns:exposure_duration_count>
+            #end 
+
+           #if ($node.EXPOSURE_TYPE && $!node.EXPOSURE_TYPE.toString().toUpperCase() != $CONST_NULL )
+              #set ($gep_exp_type = $!node.EXPOSURE_TYPE.toString().replace('_',' '))
+              #set ($gep_exp_type = $text.capitalize($gep_exp_type))
+              #debug ("${nodeName}.EXPOSURE_TYPE")
+              <$ns:exposure_type>$!gep_exp_type</$ns:exposure_type>
+            #end 
+
+            ## Direct reference to OBSERVATION_REQUEST_PARMS
+            #if ($!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_SCALE_FACTOR)
+            #debug ("OBSERVATION_REQUEST_PARMS.EXPOSURE_SCALE_FACTOR")
+            <$ns:exposure_scale_factor>$!label.OBSERVATION_REQUEST_PARMS.EXPOSURE_SCALE_FACTOR</$ns:exposure_scale_factor>
+            #end 
+
+            #if ($!node.EXPOSURE_COADD)
+            #debug ("${nodeName}.EXPOSURE_COADD")
+            <$ns:exposure_coadd_count>$!node.EXPOSURE_COADD</$ns:exposure_coadd_count>
+            #end 
+        
+            #if ($!node.EXPOSURE_READOUT_COUNT)
+            #debug ("${nodeName}.EXPOSURE_READOUT_COUNT")
+            <$ns:exposure_readout_count>$!node.EXPOSURE_READOUT_COUNT</$ns:exposure_readout_count>
+            #end 
+  
+
+  
+            #generateAutoExposureParameters($node $nodeName $ns)
+            
+          </$ns:Exposure>
+#end 
+##################################
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+##################################
+
+#macro (generateShutterSubtraction $node $nodeName)    
+
+            #set ( $shutter_mode = "" )
+            #if ( $node.SHUTTER_CORRECTION_MODE ) 
+              #set ( $shutter_mode = $node.SHUTTER_CORRECTION_MODE.toString().toLowerCase() )
+            #elseif ( $node.SHUTTER_CORRECTION_MODE_ID ) 
+              #set ( $shutter_mode = $node.SHUTTER_CORRECTION_MODE_ID.toString().toLowerCase() )
+            #end
+
+            #if ( $!shutter_mode != "" && $!shutter_mode != "none" )
+             <img:Shutter_Subtraction>
+              #debug ("${nodeName}.SHUTTER_CORRECTION_MODE")
+              #if ( $shutter_mode.equals("conditional") )
+                <img:active_flag>true</img:active_flag>
+                <img:processing_venue>Onboard</img:processing_venue>
+                <img:shutter_subtraction_mode>$!text.capitalize($shutter_mode)</img:shutter_subtraction_mode>
+              #elseif ( $shutter_mode.equals("false") )
+                <img:active_flag>$shutter_mode</img:active_flag>
+                <img:data_correction_type>Shutter Subtraction</img:data_correction_type>
+                <img:shutter_subtraction_mode>$!text.capitalize($shutter_mode)</img:shutter_subtraction_mode>
+              #else 
+                ## this was $shutter_mode but since the remaining value is Always
+                ## it is now set to true
+                <img:active_flag>true</img:active_flag>
+                <img:processing_venue>Onboard</img:processing_venue>
+                <img:shutter_subtraction_mode>$!text.capitalize($shutter_mode)</img:shutter_subtraction_mode>               
+              #end
+
+              ## If SHUTTER_CORRECT_THRESH_COUNT is part of node, use it.  Else get from ORP
+              #if ( $node.SHUTTER_CORRECT_THRESH_COUNT ) 
+                #debug ("${nodeName}.SHUTTER_CORRECT_THRESH_COUNT")
+                <img:exposure_duration_threshold_count>$!node.SHUTTER_CORRECT_THRESH_COUNT</img:exposure_duration_threshold_count>                
+              #elseif ( $node.SHUTTER_CORRECTION_MODE_ID ) 
+                #debug ("OBSERVATION_REQUEST_PARMS.SHUTTER_CORRECT_THRESH_COUNT")
+                <img:exposure_duration_threshold_count>$!label.OBSERVATION_REQUEST_PARMS.SHUTTER_CORRECT_THRESH_COUNT</img:exposure_duration_threshold_count>
+              #end
+
+             </img:Shutter_Subtraction>
+
+            #elseif ( $!node.SHUTTER_EFFECT_CORRECTION_FLAG )
+
+              ## RGD: Also, SHUTTER_EFFECT_CORRECTION_FLAG in Instrument_State_Parameters is not coming out. 
+              ## If it's true it should trigger a Shutter_Subtraction class in Imaging with a shutter_subtraction_mode of True.
+              #if ( $node.SHUTTER_EFFECT_CORRECTION_FLAG.toString().equalsIgnoreCase("true") )
+
+                 <img:Shutter_Subtraction>
+                   <img:shutter_subtraction_mode>True</img:shutter_subtraction_mode>
+                 </img:Shutter_Subtraction>
+
+              #end
+            #end
+
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+#macro (generatePointCorr $node $name )
+
+        <img:Pointing_Correction>
+
+          <img:Pointing_Correction_File>
+          </img:Pointing_Correction_File>
+
+          <img:Pointing_Correction_Image>
+
+              <Internal_Reference>
+              </Internal_Reference>
+
+              #debug("$name.POINTING_MODEL_NAME")
+              <img:pointing_model_name>$!node.POINTING_MODEL_NAME</img:pointing_model_name>
+              #debug("$name.SOLUTION_ID")
+              <img:pointing_model_solution_id>$!node.SOLUTION_ID</img:pointing_model_solution_id>
+
+              #if ( $!node.POINTING_MODEL_PARAMS )
+              #set($length = $node.POINTING_MODEL_PARAMS.size())
+              #foreach ( $i in [1..$length] )
+              <img:Pointing_Model_Parameter>
+                <img:name>$!node.POINTING_MODEL_PARAMS_NAME.get($foreach.index)</img:name>
+                <img:value>$!node.POINTING_MODEL_PARAMS.get($foreach.index)</img:value>
+              </img:Pointing_Model_Parameter>
+              #end
+              #end
+          </img:Pointing_Correction_Image>
+
+        </img:Pointing_Correction>
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro (generateRadCorr $node $name $derivedImageType )
+            
+            #debug("$name.RADIOMETRIC_CORRECTION_TYPE")
+            #set( $radiometric_correction_type = $node.RADIOMETRIC_CORRECTION_TYPE.toString() )
+            #if ( $derivedImageType.equals("IMAGE") )
+              #if ( $radiometric_correction_type )
+              <img:Radiometric_Correction>
+                <img:active_flag>true</img:active_flag>
+                <img:processing_venue>Ground</img:processing_venue>
+                #debug ("$name.RADIOMETRIC_CORRECTION_TYPE")
+                <img:processing_algorithm>$node.RADIOMETRIC_CORRECTION_TYPE</img:processing_algorithm>
+                
+                <img:radiometric_type>$!node.RADIOMETRIC_TYPE</img:radiometric_type>                
+                ##<img:radiometric_zenith_scaling_factor #getUnitAttr( $node    'RADIANCE_SCALING_FACTOR'   '')>$!node.RAD_ZENITH_SCALING_FACTOR</img:radiometric_zenith_scaling_factor>                
+                <img:radiometric_zenith_scaling_factor>$!node.RAD_ZENITH_SCALING_FACTOR</img:radiometric_zenith_scaling_factor>  
+                <img:responsivity_r>$!node.RESPONSIVITY_R</img:responsivity_r>
+                <img:responsivity_g>$!node.RESPONSIVITY_G</img:responsivity_g>
+                <img:responsivity_b>$!node.RESPONSIVITY_B</img:responsivity_b>                
+                <img:responsivity_pan>$!node.RESPONSIVITY_PAN</img:responsivity_pan>
+                
+                <img:atmospheric_opacity>$!node.ATMOSPHERIC_OPACITY</img:atmospheric_opacity>
+                <img:atmospheric_opacity_reference>$!node.ATMOSPHERIC_OPACITY_REFERENCE</img:atmospheric_opacity_reference>
+                
+                <img:comment>$!node.RADIANCE_OFFSET__UNIT</img:comment>                
+                 
+              </img:Radiometric_Correction>
+              #else
+              <img:Radiometric_Correction>
+                <img:active_flag>false</img:active_flag>
+              </img:Radiometric_Correction>
+              #end  ##END_if_radiometricCorrectionType
+            #end    ##END_if_derivedType==IMAGE
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateBrightCorrMosaic $node $name $derivedImageType $isMosaic )
+
+          #if ( $isMosaic eq $CONST_TRUE )
+
+            #set( $brightness_correction_type = "" )
+            #if ( $node.BRIGHTNESS_CORRECTION_TYPE )
+              #set( $brightness_correction_type = $!node.BRIGHTNESS_CORRECTION_TYPE.toString() )
+            #elseif ( $node.IMAGE_RADIANCE_FACTOR )
+              #set( $brightness_correction_type = "MULTIPLICATIVE" )
+            #end
+
+            #if ( $!brightness_correction_type != "" )
+
+              <img:Brightness_Correction>
+
+                #debug("$name.BRIGHTNESS_CORRECTION_TYPE")
+                <img:processing_algorithm>${brightness_correction_type}</img:processing_algorithm>
+
+                <img:Brightness_Correction_File>
+                  <img:description>${brightness_correction_type}</img:description>
+                  <pds:name>$!node.BRIGHTNESS_CORRECTION_FILE</pds:name>
+                </img:Brightness_Correction_File>
+                
+
+                ## For type LINEAR and MIXED, use this default...
+                #set( $gBCM_elementName = "Brightness_Correction_Linear" )
+                #if ( $brightness_correction_type.equals("HSI_LIN" ) )
+                    #set( $gBCM_elementName = "Brightness_Correction_HSI_Linear" )
+                #end
+
+                #set ($factor_end_idx = -1 )
+                #set ($offset_end_idx = -1 )
+                #if ( $node.IMAGE_RADIANCE_FACTOR )
+                  #set ($factor_end_idx = $node.IMAGE_RADIANCE_FACTOR.size() - 1)
+                #end
+                #if ( $node.IMAGE_RADIANCE_OFFSET )
+                  #set ($offset_end_idx = $node.IMAGE_RADIANCE_OFFSET.size() - 1)
+                #end
+
+                #set ($max_end_idx    = $math.max($factor_end_idx, $offset_end_idx))
+                #foreach ( $i in [ 0..$max_end_idx ] )
+                  ##Do we assume arrays are always same length?  If not, then assume default and check each time if value defined.
+                  #set ($cur_fac_val = "" )
+                  #set ($cur_off_val = "" )
+                  #if ( $foreach.index le $factor_end_idx )
+                     #set ($cur_fac_val = $node.IMAGE_RADIANCE_FACTOR.get($foreach.index))
+                  #end
+                  #if ( $foreach.index le $offset_end_idx )
+                     #set ($cur_off_val = $node.IMAGE_RADIANCE_OFFSET.get($foreach.index))
+                  #end
+
+                  ## Check for case where one has value and other doesn't. Defaults: offset=0.0 factor=1.0
+                  #if ( $cur_fac_val != "" && $cur_off_val.isEmpty())
+                     #set ($cur_off_val = "0.0")
+                  #elseif ( $cur_fac_val.isEmpty() && $cur_off_val != "")
+                     #set ($cur_fac_val = "1.0")
+                  #end
+
+                  <img:Brightness_Correction_Image>
+                    <Internal_Reference>
+                    </Internal_Reference>
+                    <img:${gBCM_elementName}>
+                      <img:brightness_scale>$cur_fac_val</img:brightness_scale>
+                      <img:brightness_offset>$cur_off_val</img:brightness_offset>
+                    </img:${gBCM_elementName}>
+                  </img:Brightness_Correction_Image>
+                  
+                #end ##forEachIdx
+              
+              </img:Brightness_Correction>
+            #end ##END_if_brightness_correction_type
+
+          #end  ##END_if_mosaic
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateFlatFieldCorrection $node $name)
+
+	## TBD: should a placeholder without the filename be included
+	## even if there is no filename, just because rad is on?  Because
+	## we know that FF is on if rad is on....
+
+    ## Should only apply to INSTRUMENT_STATE_PARMS
+    #if ( $!node.FLAT_FIELD_CORRECTION_FLAG  && $!node.FLAT_FIELD_CORRECTION_PARM )
+      #set ( $img_gffc_ffff = $node.FLAT_FIELD_CORRECTION_FLAG.toString() )
+      
+      #if ( $img_gffc_ffff.equalsIgnoreCase("True") ) 
+        #set ( $img_gffc_fffp_len = $node.FLAT_FIELD_CORRECTION_PARM.size() )
+        #if ( $img_gffc_fffp_len == 5 )  
+          <img:Flat_Field_Correction>
+            <img:active_flag>true</img:active_flag>
+            <img:processing_venue>Onboard</img:processing_venue>
+            <img:Radial_Flat_Field_Function>
+              <img:x_center>$node.FLAT_FIELD_CORRECTION_PARM.get(0)</img:x_center>
+              <img:y_center>$node.FLAT_FIELD_CORRECTION_PARM.get(1)</img:y_center>
+              <img:r1>$node.FLAT_FIELD_CORRECTION_PARM.get(2)</img:r1>
+              <img:r2>$node.FLAT_FIELD_CORRECTION_PARM.get(3)</img:r2>
+              <img:r3>$node.FLAT_FIELD_CORRECTION_PARM.get(4)</img:r3>
+            </img:Radial_Flat_Field_Function>
+          </img:Flat_Field_Correction>
+        #end
+      #end
+    #end
+
+
+    ## Handle single and list values for filename and file description  
+    #set ( $img_gffc_fffn_list = "#joinStrList( $node.FLAT_FIELD_FILE_NAME ';' )" )    
+    #set ( $img_gffc_fffd_list = "#joinStrList( $node.FLAT_FIELD_FILE_DESC ';' )" )
+    
+    #set ( $img_gffc_fffn_list = $img_gffc_fffn_list.split(';') )
+    #set ( $img_gffc_fffd_list = $img_gffc_fffd_list.split(';') )
+    
+    #set($img_gffc_fffn_size = $img_gffc_fffn_list.size())
+    #set($img_gffc_fffd_size = $img_gffc_fffd_list.size())
+    
+    ## If no entries, we still need to try and include active_flag.
+    ## Yay - we need the special case where result of "".split() returns an Array containing emptry string...
+    ###if ( $img_gffc_fffn_size == 0 || ($img_gffc_fffn_size == 1 && $img_gffc_fffn_list.get(0).isEmpty()) )
+
+    #set ( $img_gffc_fffn_list_is_empty = "#isSplitListFromJoinStrListEmpty($img_gffc_fffn_list)" )  
+    #if ( $img_gffc_fffn_list_is_empty == $CONST_TRUE )
+    
+         <img:Flat_Field_Correction>                
+            <img:active_flag>$!node.FLAT_FIELD_CORRECTION_FLAG.toString().toLowerCase()</img:active_flag>         
+         </img:Flat_Field_Correction>
+    
+    #else
+    
+        ## calculate the end indices
+        #set($img_gffc_fffn_count = $img_gffc_fffn_list.size() - 1)
+        #set($img_gffc_fffd_count = $img_gffc_fffd_list.size() - 1)
+        
+        
+        #foreach ( $i in [ 0..$img_gffc_fffn_count ] )
+           #set ( $img_gffc_fffn_cur = $img_gffc_fffn_list.get($foreach.index) )
+           #set ( $img_gffc_fffd_cur = $img_gffc_fffd_list.get(0) )
+           #if ( $foreach.index <= $img_gffc_fffd_count )
+              #set ( $img_gffc_fffd_cur = $img_gffc_fffd_list.get($foreach.index) )
+           #end          
+      
+              <img:Flat_Field_Correction>                
+                <img:Flat_Field_File>
+                  #debug ( "$name.FLAT_FIELD_FILE_DESC")
+                  <img:description>$img_gffc_fffd_cur</img:description>
+                  #debug ( "$name.FLAT_FIELD_FILE_NAME")
+                  <Internal_Reference>
+                    #set ($ff_basename = "#getBasename($img_gffc_fffn_cur)")
+                    <lid_reference>#generateLID( $LID_PREFIX "calibration" $ff_basename.toLowerCase() )</lid_reference>
+                    <reference_type>data_to_data_correction_file</reference_type>
+                  </Internal_Reference>
+                </img:Flat_Field_File>
+
+                <img:active_flag>$!node.FLAT_FIELD_CORRECTION_FLAG.toString().toLowerCase()</img:active_flag>
+                
+              </img:Flat_Field_Correction>
+        #end ##ForEach
+    #end ##If/Else    
+#end
+                
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+##
+## Generate the Focus section of the PDS4 label
+## node_list: A single source node or list of potential source nodes.  If
+##            a list, then nodes will be checked-in order if they contain
+##            the label value.
+## ns       : namespace, if empty string it will default to 'img'
+##
+
+#macro (generateFocusParameters $node_list $ns )
+
+              #if ( ! $ns || "$ns" == "")
+                  #set ($ns = 'img')
+              #end
+
+              <$ns:Focus>
+
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_MODE'         "$ns:focus_mode"                $CONST_FALSE   $CONST_TRUE )
+                  
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_POSITION'     "$ns:focus_position"            $CONST_FALSE   $CONST_TRUE )
+
+                  ## 'focus position count' can be one of two names:
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_POSITION_CNT' "$ns:focus_position_count"      $CONST_FALSE   $CONST_TRUE )
+                  #pollNodes( $node_list 'FOCUS_POSITION_COUNT'          "$ns:focus_position_count"      $CONST_FALSE   $CONST_TRUE )
+
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_STEP_SIZE'    "$ns:autofocus_step_size"       $CONST_FALSE   $CONST_TRUE )
+
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_STEPS'        "$ns:autofocus_step_count"      $CONST_FALSE   $CONST_TRUE )
+
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_DISTANCE'     "$ns:focus_distance"            'mm'           $CONST_TRUE )
+
+                  #pollNodes( $node_list 'MINIMUM_FOCUS_DISTANCE'        "$ns:minimum_focus_distance"    'm'            $CONST_FALSE )
+
+                  #pollNodes( $node_list 'BEST_FOCUS_DISTANCE'           "$ns:best_focus_distance"       'm'            $CONST_FALSE )
+
+                  #pollNodes( $node_list 'MAXIMUM_FOCUS_DISTANCE'        "$ns:maximum_focus_distance"    'm'            $CONST_FALSE )
+
+                  #pollNodes( $node_list 'INSTRUMENT_FOCUS_INIT_FLAG'    "$ns:focus_initialization_flag" $CONST_FALSE   $CONST_TRUE )
+
+              </$ns:Focus>
+
+#end
+
+
+## ------------------------------------------------------------------------
+
+## generateOpticalFilterParameters takes a node list (or single node), 
+## since it appears some values  for a single group can come from different 
+## source nodes...but...
+## WTF....so we already knew center_filter_wavelength can appear in one of many 
+## nodes - while NOW it may be a single value OR an array value....with special
+## handling for either!  So we have to determine and unravel those 
+## and THEN pass them to another macro.  Ugly?  Yep.
+
+#macro (generateOpticalFilterParameters $node_list )
+
+  #set ($cfw_value = "")
+  #set ($cfw_unit  = "")
+  #set ($cfw_index = "")
+  #set ($cfw_parent  = "")  ##empty string will mean null in our case, otherwise its a node
+
+  ## Look for the parent node for CENTER_FILTER_WAVELENGTH
+  ## Convert to list (since nodelist might be single entry or list already)
+  #if ( $node_list )
+    #if ( ! $list_class.isAssignableFrom( $node_list.class ) )
+      #set($pn_tmp_list = [])
+      #set($pn_tmp_list_shh = $pn_tmp_list.add( $node_list ) )
+      #set($node_list = $pn_tmp_list )
+    #end
+    #foreach ( $node in $node_list )
+      #if ( $node.CENTER_FILTER_WAVELENGTH )
+        #set ($cfw_parent = $node )
+      #end
+    #end
+  #end
+
+  #if ( $cfw_parent.toString() == "" ) ##Did not find a CENTER_FILTER_WAVELENGTH
+
+      #generateOpticalFilterParametersWithCfw( $node_list  ''  ''  '' )
+
+  #else
+
+    #set ( $img_gofp_cfw_list = "#joinStrList( $cfw_parent.CENTER_FILTER_WAVELENGTH ';' )" )    
+    #set ( $img_gofp_cfw_list = $img_gofp_cfw_list.split(';') )
+    #set ( $img_gofp_cfw_list_is_empty = "#isSplitListFromJoinStrListEmpty($img_gofp_cfw_list)" )  
+      
+    #if ( $img_gofp_cfw_list_is_empty == $CONST_TRUE )
+
+      #generateOpticalFilterParametersWithCfw( $node_list  ''  ''  '' )
+        
+    #else
+
+      #set($img_gofp_cfw_count = $img_gofp_cfw_list.size() - 1)      
+      #foreach ( $i in [ 0..$img_gofp_cfw_count ] )  
+
+        ## Get the value
+        #set ( $cfw_cur_val =  $img_gofp_cfw_list.get($foreach.index) )
+
+        ## Get the unit attribute
+        #set ( $cfw_cur_attr = "#getUnitAttrOrDefault( $cfw_parent   'CENTER_FILTER_WAVELENGTH'   $foreach.index  '')")
+
+        ##Get the index value (empty-str unless there was more than a single value in list)
+        #set ( $cfw_cur_idx = "" )
+        #if ( $img_gofp_cfw_count > 0 )
+          #set ( $cfw_cur_idx = $math.add( $foreach.index, 1) )
+        #end
+
+        #generateOpticalFilterParametersWithCfw( $node_list  $cfw_cur_val  $cfw_cur_attr  $cfw_cur_idx )
+ 
+      #end
+    #end
+  #end
+#end
+
+## generateOpticalFilterParameters takes a node list (or single node), since it 
+## appears some values for a single group can come from different source nodes
+## Also accepts direct arguments for center_filter_wavelength value, unit-attr, and index
+
+#macro (generateOpticalFilterParametersWithCfw $node_list $cfw_value $cfw_unit_attr $cfw_index )
+
+              <img:Optical_Filter>
+
+                  #pollNodes( $node_list 'FILTER_NAME'                "img:filter_name"                $CONST_FALSE    $CONST_TRUE )
+
+                  ##Place holder for filter id...
+                  <img:filter_id></img:filter_id> 
+
+                  #pollNodes( $node_list 'FILTER_NUMBER'              "img:filter_number"              $CONST_FALSE    $CONST_TRUE )
+
+                  #pollNodes( $node_list 'FILTER_POSITION_COUNT'      "img:filter_position_count"      $CONST_FALSE    $CONST_TRUE )
+
+                  ### Pass in TRUE because it might have a unit to include
+                  ### #pollNodes( $node_list 'CENTER_FILTER_WAVELENGTH'   "img:center_filter_wavelength"   $CONST_TRUE )
+                  
+                  ## Special handling for CFW...
+                  #if ( $!cfw_value != '' )
+                    <img:center_filter_wavelength $!cfw_unit_attr>$cfw_value</img:center_filter_wavelength>
+                    <img:array_band_number>$!cfw_index</img:array_band_number>
+                  #end
+
+              </img:Optical_Filter>
+#end
+
+## ------------------------------------------------------------------------
+
+
+
+## ------------------------------------------------------------------------
+
+
+## New macro for Optical_Properties node
+## Added as part of Issue 75
+
+
+#macro (generateOpticalProperties $node_list )
+
+              <img:Optical_Properties>
+
+                  ##Added per Issue 175 (at most this or previous will be satisfied...LIES!!)
+                  ## #pollNodes( $node_list 'FOCAL_LENGTH'             'img:focal_length'   'mm' )
+                  ## #pollNodes( $node_list 'COMMANDED_FOCAL_LENGTH'   'img:focal_length'   'mm' )
+
+                  #set ( $gop_op_foc_len_elmt = "" )
+                  ## Pass in "mm" as default units, tho it will check what is provided first
+                  #set ( $gop_op_foc_len_elmt = "#pollNodes( $node_list 'FOCAL_LENGTH'            'img:focal_length'   'mm'   $CONST_TRUE )" )
+                  #if ( $!gop_op_foc_len_elmt == "" )
+                  #set ( $gop_op_foc_len_elmt = "#pollNodes( $node_list 'COMMANDED_FOCAL_LENGTH'  'img:focal_length'   'mm'   $CONST_TRUE )" )
+                  #end
+                  $!gop_op_foc_len_elmt
+
+
+
+                  ## img:zoom_position, comes from:
+                  ## 1) INSTRUMENT_ZOOM_POSITION_CNT in img req (for Commanded)
+                  ### 2) ZOOM_POSITION_COUNT in ISP for non-commanded
+                  
+                  ## #pollNodes( $node_list  'ZOOM_POSITION_COUNT'           'img:zoom_position'  $CONST_FALSE )
+                  ## #pollNodes( $node_list  'INSTRUMENT_ZOOM_POSITION_CNT'  'img:zoom_position'  $CONST_FALSE )
+
+                  #set ( $gop_op_zoom_pos_elmt = "" )
+                  ## Pass in "mm" as default units, tho it will check what is provided first
+                  #set ( $gop_op_zoom_pos_elmt = "#pollNodes( $node_list  'ZOOM_POSITION_COUNT'           'img:zoom_position'  $CONST_FALSE    $CONST_TRUE )" )
+                  #if ( $!gop_op_zoom_pos_elmt == "" )
+                  #set ( $gop_op_zoom_pos_elmt = "#pollNodes( $node_list  'INSTRUMENT_ZOOM_POSITION_CNT'  'img:zoom_position'  $CONST_FALSE    $CONST_TRUE )" )
+                  #end
+                  $!gop_op_zoom_pos_elmt
+
+              </img:Optical_Properties>
+#end
+
+
+## ------------------------------------------------------------------------
+
+## Now called from inside the img:Subframe, so we removed the enclosing element
+#macro (generateSubframeLineSampParameters $node $name $backupSampleValue )
+
+              #debug ( "$name.FIRST_LINE")
+              <img:first_line>$!node.FIRST_LINE</img:first_line>
+              #debug ( "$name.FIRST_LINE_SAMPLE")
+              <img:first_sample>$!node.FIRST_LINE_SAMPLE</img:first_sample>
+              #debug ( "$name.LINES")
+              <img:lines>$!node.LINES</img:lines>
+              
+              #if ( $node.LINE_SAMPLES )
+                #debug ( "$name.LINE_SAMPLES")
+                <img:samples>$!node.LINE_SAMPLES</img:samples>
+              #elseif ( $node.LINES && $backupSampleValue && "$backupSampleValue" != "" )
+                #debug("$backup-source.LINE_SAMPLES")
+                <img:samples>$backupSampleValue</img:samples>
+              #end              
+#end
+
+## ------------------------------------------------------------------------
+
+## Called from inside the img:Subframe, so we removed the enclosing element
+#macro (generateSubframeType $node $name  )
+    #if ( $!node.SUBFRAME_TYPE )
+            #set ($gsft_type = $!node.SUBFRAME_TYPE.toString() )
+            #if ( $IMG_SUBFRAME_TYPE_DICT.containsKey($gsft_type) )              
+              #set ($gsft_name = $IMG_SUBFRAME_TYPE_DICT.get($gsft_type) )              
+              #debug( "${name}.SUBFRAME_TYPE" )
+              <img:subframe_type>$gsft_name</img:subframe_type>
+            #end     
+    #end         
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateVideoParameters $node $name $inc_intrn_ref )
+
+              <img:Video>
+
+                  <img:video_flag>$!node.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:video_flag>
+
+                  #getNodeValueNotNil( $node 'COMMANDED_VIDEO_FRAMES'  'img:frame_count'       '' )
+
+                  #getNodeValueNotNil( $node 'INTERFRAME_DELAY'        'img:interframe_delay'  'ms' )
+
+                  #getNodeValueNotNil( $node 'FRAME_RATE'              'img:frame_rate'        'frames/s' )
+                  
+                  #getNodeValueNotNil( $node 'FRAME_INDEX'             'img:frame_index'       '' )
+                  
+                  #getNodeValueNotNil( $node 'GOP_FRAME_INDEX'         'img:gop_frame_index'   '' )
+
+                  #getNodeValueNotNil( $node 'GOP_TOTAL_FRAMES'        'img:gop_frame_count'   '' )
+
+                  #getNodeValueNotNil( $node 'GOP_START_INDEX'         'img:gop_start_index'   '' )
+                  
+                #if ( $CONST_TRUE.equals($inc_intrn_ref) )
+                  #if ( $IDENT.MOVIE_PRODUCT_ID )
+                    #set ($movie_prod_id = $IDENT.MOVIE_PRODUCT_ID.toString().toLowerCase() )
+                    #if  ( $movie_prod_id != '' )
+                      #set ( $movie_prod_id  = "#getPidFullnameNoVersion($movie_prod_id)" )
+                      #set ( $movie_lid_coll = "#msn_getProductLidCollection($movie_prod_id)" )
+                      <Internal_Reference>
+                        <lid_reference>#generateLID( $LID_PREFIX $movie_lid_coll $movie_prod_id )</lid_reference>
+                        <reference_type>video_frame_to_video</reference_type>
+                      </Internal_Reference>
+                    #end
+                  #end
+                #end
+
+              </img:Video>
+              
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro (generateSpatialFilterParameters $node $name)
+
+    ##Determine if we include Processing algorithm...
+    ##Currently, we set if only if the avg/min/max windows are ALL
+    ##defined AND if the derived image type is XYZ_FILTER_MAP
+    
+    #set ( $img_gsfp_proc_alg = "" )
+    #if ( $node.AVERAGE_FILTER_WINDOW && $node.MAX_FILTER_WINDOW && $node.MIN_FILTER_WINDOW )
+      
+      #set ( $img_gsfp_proc_alg = "Range_Filter_Deen_2020" )
+
+      ### Commented out per Issue 191
+      ## #set ( $img_gsfp_dit = "" )
+      ## #if ( $node.DERIVED_IMAGE_TYPE )
+       ## #set ( $img_gsfp_dit = $node.DERIVED_IMAGE_TYPE.toString() )
+       ## #set ( $img_gsfp_dit = $img_gsfp_dit.toLowerCase() )
+       ## #if ( "$img_gsfp_dit" == "xyz_filter_map" )
+       ## #set ( $img_gsfp_proc_alg = "Range_Filter_Deen_2020" )
+       ## #end
+      ## #end
+    #end        
+            <img:Spatial_Filter>
+            
+                #if ( $!img_gsfp_proc_alg != "" )
+                <img:processing_algorithm>$img_gsfp_proc_alg</img:processing_algorithm>
+                #end 
+                
+                #debug ( "$name.AVERAGE_FILTER_WINDOW")
+                <img:filter_window_line>$!node.AVERAGE_FILTER_WINDOW</img:filter_window_line>
+                <img:filter_window_sample>$!node.AVERAGE_FILTER_WINDOW</img:filter_window_sample>
+                
+                #debug ( "$name.MAX_FILTER_WINDOW")
+                <img:max_filter_window_line>$!node.MAX_FILTER_WINDOW</img:max_filter_window_line>
+                <img:max_filter_window_sample>$!node.MAX_FILTER_WINDOW</img:max_filter_window_sample>
+                
+                #debug ( "$name.MIN_FILTER_WINDOW")
+                <img:min_filter_window_line>$!node.MIN_FILTER_WINDOW</img:min_filter_window_line>
+                <img:min_filter_window_sample>$!node.MIN_FILTER_WINDOW</img:min_filter_window_sample>
+            </img:Spatial_Filter>
+
+#end
+
+
+
+## ------------------------------------------------------------------------
+
+#macro (generateImageMaskParameters $node $name)
+
+
+            <img:Image_Mask>
+               
+               #if ( $node.HORIZON_MASK_ELEVATION )
+                 #set ($img_gimp_hme_unit = "#getXformedUnitFrom( $node 'HORIZON_MASK_ELEVATION' '')")
+                 #if  ( ! $img_gimp_hme_unit || $img_gimp_hme_unit.length() == 0 || "$img_gimp_hme_unit" == 'none')
+                   #set ( $img_gimp_hme_unit = "deg" )
+                 #end
+                 <img:horizon_mask_elevation unit="${img_gimp_hme_unit}">$node.HORIZON_MASK_ELEVATION</img:horizon_mask_elevation>
+               #end
+
+               ##Only include the processing algorithm if one of our expected nodes is defined
+               #if ( $node.HORIZON_MASK_ELEVATION  || $node.MASK_DESC_FILE_NAME )
+                 <img:processing_algorithm>$MSN_SPACECRAFT_SHORT rover mask</img:processing_algorithm>
+               #end
+             
+               ##Unroll the list entries
+               #if ( $node.MASK_DESC_FILE_NAME )
+                  #set($length = $node.MASK_DESC_FILE_NAME.size())
+                  #if ( $length > 0)
+                   #foreach ( $i in [1..$length] )
+                   <img:Image_Mask_File>
+                     #debug("$name.MASK_DESC_FILE_NAME")
+                     <img:name>$node.MASK_DESC_FILE_NAME.get($foreach.index)</img:name>
+                     <img:mask_type>description</img:mask_type>
+                   </img:Image_Mask_File>
+                   #end
+                  #end ##if_length_gt_0
+                #end ##node exists
+                
+            </img:Image_Mask>
+
+#end
+
+## ------------------------------------------------------------------------
+
+## A product can have various values for the IMAGE_TYPE label. 
+## Nominally, 'REGULAR', which is a standard image. However, there 
+## are other types too, and a subset of them map to a PDS4
+## elements with single child 'product_flag' pointing to true
+## when appropriate under the Imaging node.  
+## This macro attempts to capture that logic,
+## and will be called once per supported image type.
+## Supported test values:  THUMBNAIL, HISTOGRAM, ROW_SUM, COL_SUM, REF_PIXELS
+
+#macro (conditionalImageTypeProductFlag $lbl_image_type $test_image_type )
+
+  #if ( $lbl_image_type == $test_image_type )
+    #set ($citpf_name = "" )
+    #if ( $test_image_type == "THUMBNAIL" )
+      #set ($citpf_name = "Thumbnail" )
+    #elseif ( $test_image_type == "HISTOGRAM" )
+      #set ($citpf_name = "Histogram" )
+    #elseif ( $test_image_type == "ROW_SUM" )
+      #set ($citpf_name = "Row_Sum" )
+    #elseif ( $test_image_type == "COL_SUM" )
+      #set ($citpf_name = "Col_Sum" )
+    #elseif ( $test_image_type == "REF_PIXELS" )
+      #set ($citpf_name = "Reference_Pixel" )
+    #end
+
+    #if ( $!citpf_name )
+      <img:$citpf_name>
+        <img:product_flag>true</img:product_flag>
+      </img:$citpf_name>      
+    #end
+
+  #end ##End label value equals test value
+#end
+
+## ------------------------------------------------------------------------
+
+## From GIT Issue https://github.jpl.nasa.gov/MIPL/mm_velocity_templates/issues/49
+## There is a situation where looking at the frame and filter Determine
+## the ColorFilterArray processing algorithm when information is extracted
+## using the INSTRUMENT_STATE_PARMS.BAYER_MODE (instead of INSTRUMENT_STATE_PARMS.CFA_TYPE)
+## This macro attempts to hide logic that could very-well have been inline.
+## It uses the $bayer_mode and maybe the $frame and $filter arguments to make its decision 
+## Note: It seems ONLY MSL uses BAYER_MODE...but no need to make it part of the MM API.
+
+## Map from Frame+Filter to algorithm 
+#set ($BAYERMODE_FRAME_FILTER_TO_CFA_ALGORITHM_DICT = { 
+  "LEFT0"  : "MALVAR",
+  "LEFT1"  : "GREEN_BILINEAR",
+  "LEFT2"  : "BLUE_BILINEAR",
+  "LEFT3"  : "RED_BILINEAR",
+  "LEFT4"  : "RED_BIINEAR",
+  "LEFT5"  : "IDENTITY",
+  "LEFT6"  : "IDENTITY",
+  "LEFT7"  : "IDENTITY",
+  "RIGHT0" : "MALVAR",
+  "RIGHT1" : "GREEN_BILINEAR",
+  "RIGHT2" : "BLUE_BILINEAR",
+  "RIGHT3" : "RED_BILINEAR",
+  "RIGHT4" : "IDENTITY",
+  "RIGHT5" : "IDENTITY",
+  "RIGHT6" : "IDENTITY",
+  "RIGHT7" : "BLUE_BILINEAR"
+  })
+
+#macro (getCfaAlgorithmViaIspBayerMode $bayer_mode $frame $filter)
+#set ( $bayer_mode = $bayer_mode.toString().toUpperCase() )
+#if ( $bayer_mode == 'RAW_BAYER')
+RAW_BAYER##
+#elseif ( $bayer_mode == 'MIPL_MALVAR_INTERPOLATED' )
+MALVAR##
+#elseif ( $bayer_mode.contains("ONBOARD"))
+#set ( $gcafibm_key = $!frame.toString().toUpperCase() + $!filter.toString().toUpperCase())
+#if ( $BAYERMODE_FRAME_FILTER_TO_CFA_ALGORITHM_DICT.containsKey($gcafibm_key))
+#set ( $gcafibm_value = $BAYERMODE_FRAME_FILTER_TO_CFA_ALGORITHM_DICT.get($gcafibm_key) )##
+$gcafibm_value##
+#elseif ( $bayer_mode == 'ONBOARD_COLOR' )
+MALVAR##
+#elseif ( $bayer_mode == 'ONBOARD_LUMINANCE' )
+PANCHROMATIC##
+#end
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateHighDynamicRange $node $name ) 
+
+  <img:High_Dynamic_Range>
+    <img:active_flag></img:active_flag>
+    <img:processing_venue></img:processing_venue>
+    <img:processing_algorithm></img:processing_algorithm> ## RGD: need at least one name to use here
+    <img:hdr_acquisition_mode>$text.capitalize($!node.HDR_ACQUISITION_MODE)</img:hdr_acquisition_mode>
+    <img:hdr_frame_count>$!node.HDR_FRAME_COUNT</img:hdr_frame_count>
+    <img:hdr_clipping_threshold>$!node.HDR_CLIP_THRESHOLD</img:hdr_clipping_threshold> ## need a better definition here
+
+    #if ( $node.HDR_EXPOSURE_TIME_DELTA )
+      #set ( $img_ghdr_hetd_list = "#joinStrList( $node.HDR_EXPOSURE_TIME_DELTA ';' )" )        
+      #set ( $img_ghdr_hetd_list = $img_ghdr_hetd_list.split(';') )    
+      #set ( $img_ghdr_hetd_list_is_empty = "#isSplitListFromJoinStrListEmpty($img_ghdr_hetd_list)" )
+      #if ( $img_ghdr_hetd_list_is_empty != $CONST_TRUE )
+
+        ## calculate the end indices
+        #set($img_ghdr_hetd_count = $img_ghdr_hetd_list.size() - 1)
+        #foreach ( $i in [ 0..$img_ghdr_hetd_count ] )
+          #set ( $img_ghdr_hetd_cur = $img_ghdr_hetd_list.get($foreach.index) )
+          <img:High_Dynamic_Range_Exposure>
+            <img:exposure_time_delta #getUnitAttr( $!node   'HDR_EXPOSURE_TIME_DELTA'   $foreach.index)>$img_ghdr_hetd_cur</img:exposure_time_delta>
+          </img:High_Dynamic_Range_Exposure>      
+
+        #end
+      #end
+    #end
+
+    </img:High_Dynamic_Range>
+#end
+
+## ------------------------------------------------------------------------
+
+## Macro that populates an img:Illumination section,
+## Can be called with different nodes, so the wrapper element is 
+## created by the caller.
+#macro (generateIlluminationMaskParameters $node )
+
+          <img:name>$!node.ILLUMINATION_DEVICE_NAME</img:name>
+          <img:illumination_mode>$!node.ILLUMINATION_MODE</img:illumination_mode>
+
+           #if ( $node.ILLUMINATION_LED_NAME )            
+              #set($gimpIdnLength = $node.ILLUMINATION_LED_NAME.size())
+              #foreach ( $i in [1..$gimpIdnLength] )                
+                #set ( $gimp_il_name    = $!node.ILLUMINATION_LED_NAME.get($foreach.index).toString() )
+                #set ( $gimp_il_state   = $!node.ILLUMINATION_LED_STATE.get($foreach.index).toString() )
+                #set ( $gimp_il_wavelen = $!node.ILLUM_LED_WAVELENGTH.get($foreach.index).toString() )
+                
+                #set ( $gimp_il_state   = $text.capitalize( $gimp_il_state  ) )
+
+                <img:LED_Illumination_Source>
+                  <img:name>$!gimp_il_name</img:name>
+                  <img:illumination_state>$!gimp_il_state</img:illumination_state>
+                  <img:illumination_wavelength #getUnitAttr( $node   'ILLUM_LED_WAVELENGTH'   $foreach.index)>$!gimp_il_wavelen</img:illumination_wavelength>
+                </img:LED_Illumination_Source>
+
+              #end            
+          #end
+
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateDownsamplingParameters $node )
+
+      <img:Downsampling>
+        
+        <img:processing_venue>$!node.PIXEL_DOWNSPAMPLE_OPTION</img:processing_venue>
+        <img:processing_algorithm>$!node.DOWNSAMPLE_METHOD</img:processing_algorithm>
+        
+        <img:Pixel_Averaging_Dimensions>
+          #if ( $node.PIXEL_AVERAGING_HEIGHT )
+            <img:height_pixels unit="pixel">$!node.PIXEL_AVERAGING_HEIGHT</img:height_pixels>
+          #end
+          #if ( $node.PIXEL_AVERAGING_WIDTH )
+            <img:width_pixels unit="pixel">$!node.PIXEL_AVERAGING_WIDTH</img:width_pixels>
+          #end
+        </img:Pixel_Averaging_Dimensions>
+      </img:Downsampling>
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateTilingParameters $node )
+  
+  #if ( $!node.TILE_PRODUCT_ID != "" )
+
+    ## Handle single and list values for tile product id
+    #set ( $img_gtp_tpi_list = "#joinStrList( $node.TILE_PRODUCT_ID ';' )" )  
+    #set ( $img_gtp_tpi_list = $img_gtp_tpi_list.split(';') )
+    #set ( $img_gtp_tpi_list_is_empty = "#isSplitListFromJoinStrListEmpty($img_gtp_tpi_list)" )
+    
+    #if ( $img_gtp_tpi_list_is_empty == $CONST_FALSE )
+          
+      ## calculate the end indices
+      #set($img_gtp_tpi_count = $img_gtp_tpi_list.size())
+
+      <img:Tiling>
+
+        <description></description>                    ## not used in the 2020 use case
+        <img:num_line_tiles></img:num_line_tiles>      ## not used in the 2020 use case
+        <img:num_sample_tiles></img:num_sample_tiles>  ## not used in the 2020 use case
+        <img:tile_count>$img_gtp_tpi_count</img:tile_count>
+        <img:tile_lines></img:tile_lines>              ## not used in the 2020 use case
+        <img:tile_samples></img:tile_samples>          ## not used in the 2020 use case
+        <img:tile_type>Irregular</img:tile_type>       ## constant for 2020 use case
+        <img:tile_venue>Onboard</img:tile_venue>       ## constant for 2020 use case
+
+        #set($img_gtp_tpi_endIdx = $math.sub($img_gtp_tpi_count, 1))
+        #foreach ( $i in [ 0..$img_gtp_tpi_endIdx ] )
+                     
+          <img:Tile>
+
+            #set ( $gtp_tpi_number       = $math.add($foreach.index, 1))
+            #set ( $gtp_tpi_file         = $img_gtp_tpi_list.get($foreach.index) )
+
+            #set ( $gtp_tpi_numbands     = $!node.TILE_NUM_BANDS.get($foreach.index).toString() )
+            #set ( $gtp_tpi_upsamp_meth  = $!node.TILE_UPSAMPLE_METHOD.get($foreach.index).toString() )
+            #set ( $gtp_tpi_downsamp_x   = $!node.TILE_DOWNSAMPLE_X.get($foreach.index).toString() )
+            #set ( $gtp_tpi_downsamp_y   = $!node.TILE_DOWNSAMPLE_Y.get($foreach.index).toString() )          
+            #set ( $gtp_tpi_firstline    = $!node.TILE_FIRST_LINE.get($foreach.index).toString() )
+            #set ( $gtp_tpi_firstsample  = $!node.TILE_FIRST_LINE_SAMPLE.get($foreach.index).toString() )
+            #set ( $gtp_tpi_lines        = $!node.TILE_NUM_LINES.get($foreach.index).toString() )
+            #set ( $gtp_tpi_samples      = $!node.TILE_NUM_LINE_SAMPLES.get($foreach.index).toString() )
+
+            #set ( $gtp_tpi_lid_coll      = "#msn_getProductLidCollection($gtp_tpi_file)" )
+
+            #set ( $gtp_tpi_upsamp_meth = "$text.capitalize($gtp_tpi_upsamp_meth)" )
+
+            <img:tile_number>$gtp_tpi_number</img:tile_number>
+            <img:tile_num_bands>$gtp_tpi_numbands</img:tile_num_bands>
+            <img:tile_upsample_method>$gtp_tpi_upsamp_meth</img:tile_upsample_method>
+            <Internal_Reference>
+                <lidvid_reference>#generateLIDVID( $LID_PREFIX $gtp_tpi_lid_coll $gtp_tpi_file.toLowerCase() )</lidvid_reference>
+                <reference_type>data_to_tile_source_data</reference_type>
+            </Internal_Reference>
+            <img:Pixel_Averaging_Dimensions>
+                <img:height_pixels unit="pixel">$gtp_tpi_downsamp_x</img:height_pixels>
+                <img:width_pixels unit="pixel">$gtp_tpi_downsamp_y</img:width_pixels>
+            </img:Pixel_Averaging_Dimensions>
+            <img:Subframe>
+                <img:first_line>$gtp_tpi_firstline</img:first_line>
+                <img:first_sample>$gtp_tpi_firstsample</img:first_sample>
+                <img:lines>$gtp_tpi_lines</img:lines>
+                <img:samples>$gtp_tpi_samples</img:samples>
+            </img:Subframe>
+
+          </img:Tile>
+        #end ##foreachTPI
+
+      </img:Tiling>
+
+    #end ##IfNonEmptyList
+  #end ## IfPIDExists
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (get_Img_DeviceState_DeviceTemps)
+
+          <img:Device_Temperatures>
+
+            #if ( $!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE )
+
+              #debug("INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_NAME")
+              #debug("INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE")
+              #set($ispItnlength = $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_NAME.size())
+              #foreach ( $i in [1..$ispItnlength] )
+              <img:Device_Temperature>
+
+                #set ( $dts_dt_temp_name   = $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_NAME.get($foreach.index).toString() )
+                #set ( $dts_dt_temp_value  = $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE.get($foreach.index).toString() )
+                #set ( $dts_dt_temp_status = $!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_STATUS.get($foreach.index).toString() )
+
+                #set ( $dts_dt_temp_count = '')
+                #if ( $!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_COUNT &&
+                      $!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_COUNT.get($foreach.index) )
+                  #set ( $dts_dt_temp_count = $!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_COUNT.get($foreach.index).toString() )
+                #end
+
+                <img:device_name>$dts_dt_temp_name</img:device_name>
+
+                #if ( $dts_dt_temp_count.toUpperCase() != "UNK" )
+                  <img:raw_count>$dts_dt_temp_count</img:raw_count>
+                #end
+
+                #if ( ! $dts_dt_temp_value.equalsIgnoreCase("NULL") )
+                  <img:temperature_value #getUnitAttrOrDefault( $!label.INSTRUMENT_STATE_PARMS    'INSTRUMENT_TEMPERATURE'   $foreach.index 'degC')>$dts_dt_temp_value</img:temperature_value>
+                #else
+                  <img:temperature_value unit="degC" xsi:nil="true" nilReason="missing"/>
+                #end 
+
+                #if ( $dts_dt_temp_status.toUpperCase() != "UNK" )
+                  <img:temperature_status>$!dts_dt_temp_status</img:temperature_status>
+                #end 
+
+              </img:Device_Temperature>
+              #end
+            #end
+
+          </img:Device_Temperatures>
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (generateFrameParameters)
+
+        <img:Frame>
+
+          #if ( $IDENT.FRAME_ID && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'FRAME_ID')") ))
+            <img:frame_id>$!text.capitalize($!IDENT.FRAME_ID)</img:frame_id>
+          #end
+
+          #if ( $IDENT.FRAME_TYPE && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'FRAME_TYPE')") ))
+            <img:frame_type_name>$!text.capitalize($!IDENT.FRAME_TYPE)</img:frame_type_name>
+          #end
+
+          #if ( $!IDENT.IMAGE_TYPE.toString().equalsIgnoreCase("Regular") )
+            <img:product_flag>true</img:product_flag>
+          #end  
+
+          <img:observation_number>$!label.OBSERVATION_REQUEST_PARMS.OBSERVATION_NUMBER</img:observation_number>
+
+        </img:Frame>
+#end        
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------

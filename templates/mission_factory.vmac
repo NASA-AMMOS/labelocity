@@ -1,0 +1,169 @@
+## This template focuses on determining the mission name and prefix
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##		#parse ( "mission_factory.vmac" )
+##
+## this test code. 
+## Dependenies: image.vmac, vcore.vmac
+
+
+##################################
+## getMissionPrefix from the product type
+##
+#set ($MISSION_PREFIX_MAP = {
+"MARS EXPLORATION ROVER"  : "mer",
+"MARS SCIENCE LABORATORY" : "msl",
+"INSIGHT"                 : "insight",
+"PHOENIX"                 : "phoenix",
+"MARS 2020"               : "m2020",
+"MSAM"                    : "msam",
+"MARV"                    : "marv",
+"VOYAGER 1"               : "vgr1_rav1ciun",
+"VOYAGER 2"               : "vgr2_rav1ciun"
+})
+
+
+## ------------------------------------------------------------------------
+
+
+#macro(getMissionPrefixViaName $msnName)
+#if ( $MISSION_PREFIX_MAP.containsKey($msnName) )
+#set ($msn = $MISSION_PREFIX_MAP.get($msnName))##Return value from map
+$msn## Return value
+#else
+${CONST_UNKNOWN}## Return const general::UNK
+#end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+#macro(getMissionPrefix)
+#set ($mission_prefix = $CONST_UNKNOWN )
+#set ($mission_name   = $CONST_UNKNOWN )
+#if ( $IDENT.MISSION_NAME )
+#set ($mission_name   = $IDENT.MISSION_NAME.toString() )
+#end
+#if ( $mission_name.equals($CONST_UNKNOWN) && $IDENT.INSTRUMENT_HOST_NAME )##Use INS_HOST_NM as backup
+#set ($mission_name   = $IDENT.INSTRUMENT_HOST_NAME.toString() )
+#end
+#set ($mission_prefix = "#getMissionPrefixViaName($mission_name)" )
+#set ($mission_prefix = "#checkMissionPrefixOverride($mission_name $mission_prefix)" )
+${mission_prefix}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro(getMissionMacroFile)
+#set ($lcl_mission_prefix = "#getMissionPrefix()" )##
+${lcl_mission_prefix}_velocity_macros.vmac##
+#end
+
+
+## ------------------------------------------------------------------------
+
+##Performs specialized checking/overrides.  If no special
+##conditions are met, then the original $msnPrefix is returned.
+
+#macro(checkMissionPrefixOverride $msnName $msnPrefix)
+##Case for MSL-MSAM
+#if ($msnPrefix.equals("msl"))
+#set ($lPid = $IDENT.PRODUCT_ID.toString().toUpperCase() )
+#set ($lPidLen    = $lPid.length())
+#set ($whoIndex   = $math.toInteger($lPidLen) - 2)
+#set ($producer   = $lPid.substring($whoIndex))
+#if ($producer.startsWith("D") || $producer.startsWith("B"))
+#set ($msnPrefix = "msam")
+#else
+#set ($prod_inst = $IDENT.PRODUCER_INSTITUTION_NAME.toString().toUpperCase())
+#if ($prod_inst.startsWith("ARIZONA"))
+#set ($msnPrefix = "marv")
+#end
+#end
+#end
+## Case for meshes, which have mission in the $extras JSON file
+#if ($msnPrefix.equals($CONST_UNKNOWN))
+#set ($msnPrefixJson = $extra.INSTRUMENT_HOST_ID.toString().toLowerCase())
+#if ($msnPrefixJson.length() > 0)
+#set ($msnPrefix = "$msnPrefixJson")
+#end
+#end
+#if ($msnPrefix.equals("nsyt"))
+#set ($msnPrefix = "insight")
+#end
+##
+##Special macro to examine browse products via filename 
+#if ($msnPrefix.equals($CONST_UNKNOWN))
+#set ($msnPrefix = "#checkMissionPrefixOverrideNoLabel($msnName $msnPrefix)")
+#end
+$msnPrefix## Return value
+#end
+##################################
+
+
+##################################
+
+## TOTAL HACK FOR BROWSE IMAGES - we need to pass in the mission name
+## to the transcoder, maybe via extras, instead of doing this...
+##
+## Rules:
+## J in 3rd-to-last char is 2020 (producer with 2 digits of version)
+## D in 2nd-to-last char is MSAM (producer with 1 digit of version)
+## M in 2nd-to-last char is either MSL or InSight or MER
+##   CR in first 2 chars is MSL (RMI)
+##   C or D in first char is InSight
+##   1 or 2 in first char is MER
+##   otherwise, MSL
+## _A in 4-5 from the end is MARV
+#macro(checkMissionPrefixOverrideNoLabel $msnName $msnPrefix)
+#if ($msnPrefix.equals($CONST_UNKNOWN))
+#if ( $extra && $extra.MISSION_NAME )
+#set ($msnPrefix = $extra.MISSION_NAME.toString().toLowerCase())
+#else
+#if ( $label.PDS4_IMAGE && $label.PDS4_IMAGE.detached_filename )
+#set ($nolbl_pid = $label.PDS4_IMAGE.detached_filename.toString().toUpperCase() )
+#set ($base      = "#getBasenameNoExten($nolbl_pid)")
+#set ($baseLen   = $base.length())
+#set ($whoIndex2 = $math.toInteger($baseLen) - 2)
+#set ($producer2 = $base.substring($whoIndex2))
+#set ($whoIndex3 = $math.toInteger($baseLen) - 3)
+#set ($producer3 = $base.substring($whoIndex3))
+#set ($marvIndex = $math.toInteger($baseLen) - 5)
+#set ($marvstr   = $base.substring($marvIndex))
+#if ($producer3.startsWith("J"))
+#set ($msnPrefix = "m2020")
+#elseif ($producer2.startsWith("D"))
+#set ($msnPrefix = "msam")
+#elseif ($producer2.startsWith("M"))
+#set ($first = $base.substring(0))
+#set ($second = $base.substring(1))
+#if ($first.startsWith("C") && $second.startsWith("R"))
+#set ($msnPrefix = "msl")
+#elseif ($first.startsWith("C") || $first.startsWith("D"))
+#set ($msnPrefix = "insight")
+#elseif ($first.startsWith("1") || $first.startsWith("2"))
+#set ($msnPrefix = "mer")
+#else
+#set ($msnPrefix = "msl")
+#end##EndIf first
+#elseif ($marvstr.startsWith("_A"))
+#set ($msnPrefix = "marv")
+#end##EndIf producer
+#end##EndIf PDS4_Image
+#end##EndIf extra.MISSION_NAME/else
+#end##EndIf MsnPrfx UNK
+$msnPrefix##
+#end##EndMacro
+
+
+
+##################################
+
+
+##################################
+
+#set( $MISSION_MACRO_FILE="#getMissionMacroFile()" )##
+#parse( "${MISSION_MACRO_FILE}" )##

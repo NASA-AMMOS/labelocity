@@ -1,0 +1,617 @@
+## Mission-specific variables and macros for: MSAM Project.
+## All constants and macros with 'MSN_'/'msn_' prefix, respectively,
+## must be implemented by any other mission-implementaion.
+
+## Note that MSAM is quite similar to MSL with just a few differences.
+
+## ========================================================================
+## GLOBALS 
+## ========================================================================
+
+#set ($MSN_PRODUCT_LID_PREFIX         = "urn:nasa:pds:deen_pdart16_msl_msam")
+#set ($MSN_MODEL_VERSION              = "1.16.0.0")
+#set ($MSN_WAVELENGTH_RANGE           = "Visible")
+#set ($MSN_DOMAIN                     = "Surface")
+#set ($MSN_DISCIPLINE                 = "Imaging")
+#set ($MSN_TARGET             = "mars")
+#set ($MSN_TARGET_TYPE        = "planet")
+#set ($MSN_INVESTIGATION_MISSION  = "Mars_Science_Laboratory")
+#set ($MSN_INVESTIGATION_NAME = "MSAM")
+#set ($MSN_INVESTIGATION_TYPE = "Individual Investigation")
+#set ($MSN_INVESTIGATION_SUBTYPE = "mission")
+#set ($MSN_PLATFORM           = "msl")
+#set ($MSN_SPACECRAFT         = "Mars Science Laboratory")
+#set ($MSN_SPACECRAFT_SHORT   = "MSL")
+#set ($MSN_IDENTIFICATION_AREA_TITLE_PREFIX = "MSAM")
+
+#set ($MSN_AUTO_EXPOSURE_ALGORITHM_NAME = "Maki 2003")
+
+## TODO: should not be needed any more with the above fixes.
+#set ($DEPRECATED_PID_LENGTH = 36)
+#set ($DEPRECATED_MOSAIC_PID_LENGTH = 36)
+
+## MSL filename has a version field of size 1
+#set ($MSN_PID_VERSION_SIZE = 1)
+
+#set ($MSN_PID_VERSION_ROLLOVER_STRING = "_")
+#set ($MSN_PID_VERSION_ROLLOVER_VALUE  = 36)
+
+## All of the keys in this map are REQUIRED
+## PROLOG GLOBALS --------------------------------------
+#set ( $MSN_DEFAULT_VERSION = $PDS4_VERSION_LATEST )
+#set ($MSN_PROLOG_VERSION_DICT = $LATEST_GREATEST_PROLOG_VERSION_DICT )
+
+
+#set ( $PDS4_MSAM_SCHEMA_VERSION         = $MSN_DEFAULT_VERSION )
+
+
+## List of Process task names that we should skip
+## when outputting task history
+#set ($MSN_PROCESS_TASK_SKIP_LIST = ([ "VICARIMAGEWRITER" ]))
+
+## Mapping of flight_software_mode numeric value
+## to mission-specific name
+#set ($MSN_FLIGHT_SOFTWARE_MODE_DICT = { 
+  "0"   : "UNKNOWN",
+  "1"   : "TEST",
+  "2"   : "PRELAUNCH",
+  "3"   : "LAUNCH",
+  "4"   : "ECLIPSE",
+  "5"   : "CRUISE",
+  "6"   : "EDL_APPROACH",
+  "7"   : "EDL_MAIN",
+  "8"   : "SURFACE_NOMINAL",
+  "9"   : "SURFACE_STANDBY",
+  "10"  : "NONPRIME_TEST",
+  "11"  : "NONPRIME_PRELAUNCH",
+  "12"  : "NONPRIME_LAUNCH",
+  "13"  : "NONPRIME_ECLIPSE",
+  "14"  : "NONPRIME_CRUISE",
+  "15"  : "NONPRIME_EDL_APPROACH",
+  "16"  : "NONPRIME_EDL_MAIN",
+  "17"  : "NONPRIME_SURFACE_NOMINAL",
+  "18"  : "NONPRIME_SURFACE_STANDBY"
+})
+
+## ========================================================================
+## MACROS 
+## ========================================================================
+
+
+## ========================================================================
+## PROLOG Section
+
+##################################
+## msn_generatePrologXmlModelSection
+##
+#macro(msn_generatePrologXmlModelSection)
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generateMissionNamespaceSection
+##
+#macro(msn_generateMissionNamespaceSection)
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generatePrologSchemaLocationSection
+##
+#macro(msn_generatePrologSchemaLocationSection)
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Returns an array containing all possible RMC names.
+##
+#macro(msn_getRMCNames)
+#set ($MSN_RMC_NAMES = ['SITE','DRIVE','POSE','ARM','CHIMRA','DRILL','RSM','HGA','DRT','IC'])
+$MSN_RMC_NAMES##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##TODO: NEW isColorImage().  Returns whether an image is color (vs. bw or something noncolor like xyz etc). Replaces the direct logic in defaultDisplaySettings but is the same code.
+##################################
+## Returns a TRUE if image is color, FALSE otherwise
+##
+#macro(msn_isColorImage)
+#set($axes = $label.PDS4_IMAGE.axes[0])
+    #if ( $axes == 3 )
+        #set( $derived_img_type = $label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE.toString() )
+        #set ( $img_type = $label.IDENTIFICATION.IMAGE_TYPE.toString() )
+        #if ( ($derived_img_type && $derived_img_type.equals("IMAGE")) || (!$derived_img_type && ( $img_type.equals("REGULAR") || $img_type.equals("THUMBNAIL") ) ) )
+${CONST_TRUE}##
+        #else
+${CONST_FALSE}##
+        #end
+     #else
+${CONST_FALSE}##
+    #end
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProcessingLevel  from the product type
+##
+#set ($MSN_PROCESSING_LEVEL_SPECIFIC = {
+"RUF" : "Derived",
+"ARK" : "Derived",
+"ARM" : "Derived",
+"ARO" : "Derived",
+"MAR" : "Derived",
+"SEN" : "Derived",
+"SHD" : "Derived",
+"SHO" : "Derived",
+"SLO" : "Derived",
+"TEN" : "Derived",
+"TER" : "Derived"
+})
+#macro(msn_getProcessingLevel $ptype $isMosaic)
+#if ($isMosaic eq $CONST_TRUE)
+Derived##
+#elseif ( $MSN_PROCESSING_LEVEL_SPECIFIC.containsKey($ptype) )
+$MSN_PROCESSING_LEVEL_SPECIFIC.get($ptype)##
+#elseif ( $CORE_PROCESSING_LEVEL_MAP.containsKey($ptype) )
+$CORE_PROCESSING_LEVEL_MAP.get($ptype)##
+#else
+Derived##
+#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: Returns whether or not the PID should have the extension. For all current missions, no extension if the extension is VIC or IMG, yes otherwise.
+
+##################################
+## msn_doesPIDHaveExtension
+##
+#macro(msn_doesPIDHaveExtension $filename)
+#set ($exten = "#getFileExtension($filename)")
+#if ($exten && ( $exten.equalsIgnoreCase('VIC') || $exten.equalsIgnoreCase('IMG')) )
+${CONST_FALSE}##
+#else
+${CONST_TRUE}##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionSize
+##
+#macro(msn_getPIDVersionSize)
+${MSN_PID_VERSION_SIZE}##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: useRadianceInImageArray - specific.  Returns true if radiance offset and scaling factor should be included, false otherwise. Can use the same logic as currently in image::getArrayDefinition().
+
+##################################
+## msn_useRadianceInImageArray
+##
+#macro(msn_useRadianceInImageArray)
+${CONST_TRUE}## 1 or 2 depending on mission
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_isMosaic
+##
+## Returns TRUE if product is considered a mosaic, FALSE otherwise.
+##
+#macro(msn_isMosaic $pid )
+#if ( $IDENT.SURFACE_PROJECTION_PARMS)
+${CONST_TRUE}##
+#elseif ( $label.SURFACE_PROJECTION_PARMS)
+${CONST_TRUE}##
+#elseif ($pid.length() > 11 && ($pid.substring(11,12).equals("_") || $pid.substring(11,12).equalsIgnoreCase("X")))
+${CONST_TRUE}##
+#elseif ( $!FORCE_MOSAIC eq $CONST_TRUE )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## ------------------------------------------------------------------------
+##################################
+## msn_isThumbnail
+##
+## Returns TRUE if product is considered a thumbnail, FALSE otherwise.
+
+#macro(msn_isThumbnail $pid_or_filename )
+#set ($isMosaic = "#msn_isMosaic($pid_or_filename)")
+#if ($isMosaic eq $CONST_TRUE)
+${CONST_FALSE}##
+#else
+#if ($pid_or_filename.substring(19,20).toUpperCase().equals("T") || $pid_or_filename.substring(19,20).toUpperCase().equals("H"))
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductType
+##
+## Returns PID for this missing 
+#macro(msn_getProductType $pid)
+#set ($prodtype = "UNK") 
+#set ($isMosaic = "#msn_isMosaic($pid)")
+#if ($isMosaic eq $CONST_TRUE && $pid.length() > 14)
+#set ($prodtype = $pid.substring(12,15)) 
+#elseif ($isMosaic eq $CONST_FALSE && $pid.length() > 15)
+#set ($prodtype = $pid.substring(13,16))
+#end
+#set ($prodtype = $prodtype.toUpperCase()) 
+${prodtype}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPlanetDayNumberOrSol
+##
+## check if PLANET_DAY_NUMBER exists. If not, fall back to SOL extract from filename
+
+#macro(msn_getPlanetDayNumberOrSol $pid)
+##
+#set ($mgpdnos_val = "")
+#if ( $!IDENT.PLANET_DAY_NUMBER )
+#set ($mgpdnos_val = $!IDENT.PLANET_DAY_NUMBER)
+#else
+#set ($mgpdnos_val = "#msn_getSolFromPid($pid)")
+#end
+${mgpdnos_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSolFromPid
+##
+## Returns SOL field extracted from PID.  Unfortunately we don't have it
+## for non-mosaics.
+
+#macro(msn_getSolFromPid $pid)
+#set ($mgsfp_val = "" )
+#set ($isMosaic = "#msn_isMosaic($pid)")
+#if ($isMosaic eq $CONST_TRUE && $pid.length() > 10)
+#set ($mgsfp_val = $pid.substring(7,11) )
+#else
+#set ($mgsfp_val = ${CONST_UNKNOWN} )
+#end
+$mgsfp_val##
+#end
+
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasEjpJpegs
+##
+## Returns TRUE if mission supports EJP product 
+## types (JPEGS built from EDR), FALSE otherwise.
+
+#macro(msn_hasEjpJpegs)
+$CONST_TRUE##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_hasAssociatedFitsFile
+##
+## Returns TRUE if mission supports FITS product,
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+
+#macro(msn_hasAssociatedFitsFile $pid)
+$CONST_FALSE##
+#end
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasAssociatedMaskFile
+##
+## Returns TRUE if mission supports MASK product (for FAOS),
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+
+#macro(msn_hasAssociatedMaskFile $pid)
+$CONST_TRUE##
+#end
+
+## ------------------------------------------------------------------------
+
+## On April 23, 2019, Bob requested this be added to the mission API, saying "Unfortunately we're not going to get units of responsivity added in time for insight.  So please add a flag/macro/whatever to the mission-specific API that says whether or not to include units with responsivity values."  Not sure where we call it yet tho....
+
+##################################
+## msn_includeResponsivityUnits
+##
+#macro(msn_includeResponsivityUnits)
+${CONST_FALSE}
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionAsDecimal
+##
+#macro(msn_getPIDVersionAsDecimal $pidVerStr)
+#set ($mgpvad_val = "#getPIDVersionAsDecimalSingleChar($pidVerStr)" )
+${mgpvad_val}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextURN
+## Returns the standard URN format.
+#macro(msn_getInstrumentContextURN $instrument)
+urn:nasa:pds:context:instrument:${instrument}.${MSN_PLATFORM}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSpecialProcessingFlag
+## Returns the product special flag value.
+#macro(msn_getSpecialProcessingFlag $filename)
+#set ($mgspf_val = "" )
+#set ($isMosaic = "#msn_isMosaic($filename)")
+#if ($isMosaic eq $CONST_TRUE && $filename.length() > 6)
+#set ($mgspf_val = $filename.substring(6,7) )
+#elseif ($isMosaic eq $CONST_FALSE && $filename.length() > 3)
+#set ($mgspf_val = $filename.substring(3,4) )
+#end
+$mgspf_val##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getLegalFileExtension
+## Returns the possibly mission-modified filename extension.
+#macro(msn_getLegalFileExtension $exten )
+$exten##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidPrefix
+## Returns the product LID prefix, that can be based on the filename
+## For MSAM, we always return the constant value
+#macro(msn_getProductLidPrefix $filename )
+$MSN_PRODUCT_LID_PREFIX##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidCollection
+## Returns the product lid collection value, that can be based on the filename
+## For MSAM, we always return the same value
+#macro(msn_getProductLidCollection $filename )
+$CONST_DATA##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getAutoExposureAlgorithm
+## Returns the auto-exposure algorithm name associated with 
+## a mission. 
+## For MSAM, we always return the same value: Maki 2003
+#macro(msn_getAutoExposureAlgorithm $filename )
+$MSN_AUTO_EXPOSURE_ALGORITHM_NAME##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generateMissionAreaSection
+## Returns the mission-specific content that will be placed
+## under the <Mission_Area> section.
+## For most missions this may be empty.
+#macro(msn_generateMissionAreaSection $filename )
+#end
+
+##################################
+
+
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_includeBrowseSection
+##
+## Flag to determine if template inserts <Internal_Reference> if it is  appropriate
+## could add something from $input_filename to help decide
+##
+#macro(msn_includeBrowseSection $product_type $derived_image_type $input_filename)
+#if ( $product_type.equals($PRODUCT_TYPE_EDR) || ( $derived_image_type.equals('IMAGE') && $IS_MOSAIC == $CONST_TRUE ) )
+$CONST_TRUE##
+#else
+$CONST_FALSE##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextName
+## Returns the context name from a specific instrument
+#macro(msn_getInstrumentContextName $instrument)
+#set ($context = $instrument )
+$context##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getDeviceForCommandedGeometry
+## Returns the device id that an Commanded arm geometry labels
+## would apply to.  Context: labels exist in the OBS_REQ_PARMS,
+## but those labels apply to at most one device with an associated
+## *_ARTICULATION_STATE
+#macro(msn_getDeviceForCommandedGeometry)
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+##Empty implementaion of the modification history
+#macro (msn_getModificationHistory)
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+
+#macro (msn_getBrowseLidCollection $pid)
+${CONST_BROWSE}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getInstrumentName $pid )
+#set ($myval = $IDENT.INSTRUMENT_NAME.toString() )
+#set ($myval = $text.capitalize( $myval ))
+${myval}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getInstrumentId $pid )
+#set ($val = $IDENT.INSTRUMENT_ID.toString() )
+#set ($val = $val.toLowerCase())
+${val}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Returns CONST_TRUE if mission wants to include GIT version in
+## output label, CONST_FALSE otherwise
+
+#macro(msn_includeGitVersion)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target type based on mission mapping if mission
+## contains a specific map.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetType()
+## If no mappings are found in either, then $orig_type is returned
+
+#macro(msn_getTargetType $orig_name $orig_type )
+#if ( $orig_name.equalsIgnoreCase('sky')  )
+#set ($m_gttrval = "calibration_field" )
+#else
+#set ($m_gttrval = "#getTargetType($orig_name $orig_type)" )
+#end
+${m_gttrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target name based on mission mapping if mission
+## contains a specific map.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetName()
+## If no mappings are found in either, then $orig_name is returned
+
+#macro(msn_getTargetName $orig_name $orig_type )
+#if ( $orig_name.equalsIgnoreCase('sky')  )
+#set ($m_gtnrval = "sky" )
+#else
+#set ($m_gtnrval = "#getTargetName($orig_name $orig_type)")
+#end
+${m_gtnrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Most missions want Target_Identification to include Internal_Reference
+
+#macro(msn_doesTargetIdentIncludeInternalRef)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+## PDART missions (like MSAM) don't want  Investigation_Area section to
+## include Internal_Reference
+
+#macro(msn_doesInvestigationAreaIncludeInternalRef)
+${CONST_FALSE}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getMissionPhaseName )
+#set ( $msn_gmpn_val = '' )
+#if ( $label.MISSION_PHASE_NAME )
+#set ( $mpn_raw = $!label.MISSION_PHASE_NAME.toString() )
+#set ( $msn_gmpn_val = "#getMissionPhaseName($mpn_raw)" )
+#end
+${msn_gmpn_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------

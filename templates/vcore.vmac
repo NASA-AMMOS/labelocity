@@ -1,0 +1,133 @@
+## This template is made up of core macros for PDS4 Velocity Templates.
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##		#parse ( "vcore.vmac" )
+##
+
+
+## ------------------------------------------------------------------------
+
+## Constant values used throughout 
+
+#set ($CONST_TRUE            = "TRUE")
+#set ($CONST_FALSE           = "FALSE")
+
+#set ($CONST_UNKNOWN         = "UNK")
+#set ($CONST_ERROR           = "error")
+#set ($CONST_NA              = "N/A")
+#set ($CONST_NULL            = "NULL")
+
+## A set of values as part of an Enum to handling nil-values
+#set ($NIL_ALLOWED       = "nil-allowed")   ##When Nil value is allowed for element
+#set ($NIL_REJECTED      = "nil-rejected")  ##When Nil value means element not printed
+#set ($NIL_REPLACED      = "nil-replaced")  ##When Nil value means element will contain xsi:nil="true" 
+
+
+#set ($DEFAULT_VERSION       = "1")
+
+#set ($QUOTE_CHAR            = '"')
+#set ($ATTR_NAME_UNIT        = "unit")
+
+
+#set ($CONST_SOL             = "sol")
+#set ($CONST_TIME            = "time")
+
+#set ($CONST_DATA            = "data")
+#set ($CONST_BROWSE          = "browse")
+
+## Regex and Pattern for: YYYY-MM-DD
+#set ($SIMPLE_DATE_REGEX = '\d{4}-\d{2}-\d{2}')
+#set ($SIMPLE_DATE_PATTERN = 'yyyy-MM-dd')
+
+#set ($BROWSE_EXT            = "PNG")
+
+#set ($PDS_LID_PREFIX         = "urn:nasa:pds:" )
+
+#set ($NO_UNIT            = "")
+
+#set ($CONST_CSR_DEF_NS = "geom")
+
+#set ($PRODUCT_TYPE_EDR      = "EDR")  ##Standard source product type
+#set ($PRODUCT_TYPE_CNF      = "CNF")  ##RGB Image: 'Color, No Illuminant, Float, linear space'
+#set ($PRODUCT_TYPE_EJP      = "EJP")  ##Source product as a JPEG
+
+#set ($SPECIAL_PROC_FLAG_DEFAULT  = "_")    ## Default special flag, essentially non-special
+
+#set ($PROCESSING_LEVEL_RAW  = "Raw")  ##Processing level: Raw
+#set ($COMPRESSION_TYPE_JPEG = "JPEG") ##Compression level: JPEG
+
+
+#set ( $PDS4_VERSION_1900   = "1900" )   ##Version of PDS schema: 1900
+#set ( $PDS4_VERSION_1A10   = "1A10" )   ##Version of PDS schema: 1A10
+#set ( $PDS4_VERSION_1B00   = "1B00" )   ##Version of PDS schema: 1B00
+#set ( $PDS4_VERSION_1B10   = "1B10" )   ##Version of PDS schema: 1B10
+#set ( $PDS4_VERSION_1D00   = "1D00" )   ##Version of PDS schema: 1D00
+#set ( $PDS4_VERSION_1E00   = "1E00" )   ##Version of PDS schema: 1E00
+#set ( $PDS4_VERSION_1F00   = "1F00" )   ##Version of PDS schema: 1F00
+#set ( $PDS4_VERSION_1G00   = "1G00" )   ##Version of PDS schema: 1G00
+
+#set ( $PDS4_VERSION_LATEST = $PDS4_VERSION_1G00 ) ##Latest version of the PDS4 schema
+
+##After over a year of updating versions across missions, it finally occurred
+##to me that there should be a single 'latest/greatest' map, and missions
+##refer to THAT until they become stuck to a version (a'la InSight)
+#set ($LATEST_GREATEST_PROLOG_VERSION_DICT = { 
+  "PDS"          : $PDS4_VERSION_LATEST,
+  "CART"         : "1G00_1970",
+  "DISP"         : "1G00_1500",
+  "GEOM"         : "1G00_1960",
+  "IMG"          : "1G00_1870",
+  "IMG_SURFACE"  : "1G00_1280",
+  "MSN"          : "1G00_1300",
+  "MSN_SURFACE"  : "1G00_1220",
+  "MSSS_CAM_MH"  : "1G00_1030",
+  "PROC"         : "1G00_1210"
+})
+
+## ------------------------------------------------------------------------
+
+## So, the #identification macro is only useful for returning string values
+## not Velocity map nodes, which are used throughout, so this step assigns the 
+## IDENT variable based on whether $label includes an IDENTIFICATION node 
+## (this seems likely to fail, considering an empty IDENTIFICATION could 
+## very well exist...yep)
+#set ($IDENT = $label)
+#if ( $label.IDENTIFICATION )
+    #set ($IDENT = $label.IDENTIFICATION )
+#end
+
+## Vicar treats TELEMETRY as a group, whereas PDS3 ignores it as a group
+## and gets contents from the IDENT (as determined above) section.
+## Find the appropriate one and assign to a common TELEM node
+#set ($TELEM = $IDENT)
+#if ( $label.TELEMETRY )##VIC case
+    #set ($TELEM = $label.TELEMETRY )
+#end
+
+## Vicar has IMAGE_DATA group, whereas PDS3 has IMAGE group.
+## So assign to a common IMAGE node.
+#set ($IMAGE = $label.IMAGE)
+#if ( $label.IMAGE_DATA )##VIC case
+    #set ($IMAGE = $label.IMAGE_DATA )
+#end
+
+## Most mission labels have been using 'GEOMETRIC_CAMERA_MODEL' but
+## Phoenix uses 'GEOMETRIC_CAMERA_MODEL_PARMS', sigh
+#set ($GEO_CAM_MODEL = $label.GEOMETRIC_CAMERA_MODEL )
+#if ( $label.GEOMETRIC_CAMERA_MODEL_PARMS )##PHX case
+    #set ($GEO_CAM_MODEL = $label.GEOMETRIC_CAMERA_MODEL_PARMS )
+#end
+
+## ------------------------------------------------------------------------
+
+## Generally, we follow rules as dictated by PDS Imaging Node.
+## However, there will be cases for which GEO Node rules should be followed.
+## This variable will track this state.  By default, we assume Imaging is active.
+
+#set ($PDS_IMG_NODE_RULES_ENFORCED = $CONST_TRUE )
+
+## ------------------------------------------------------------------------

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+##
+#parse( "vcore.vmac" )
+#parse( "utils.vmac" )
+#parse( "general.vmac" )
+#parse( "image.vmac" )
+#parse( "surface.vmac" )
+#parse( "mission_factory.vmac" )
+
+## Set some needed variables
+
+## We get the PID from FILENAME in the json extras rather than the label
+## Also, there are no version numbers.
+
+#set ($PID_FULL   = "$extra.FILENAME.toString().toLowerCase()" )
+#set ($PID        = "#createPidFromVersionlessName($PID_FULL)" )
+
+#set ($BUNDLE = "$extra.BUNDLE")
+#set ($LID_PREFIX = "${PDS_LID_PREFIX}${BUNDLE}")
+#set ($LID_COLLECTION = "calibration_camera")
+
+#set ($VERSION_ID = "#getExtrasVersion()" )
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Ancillary xmlns="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.xsd">
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    <title>$extra.TITLE</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Ancillary</product_class>
+###    <Citation_Information>
+###      <publication_year>$date.getYear()</publication_year>
+###      <description>$extra.TITLE</description>
+###    </Citation_Information>
+  </Identification_Area>
+  
+### this should be allowed but is not by PDS
+###  <Reference_List>
+###    <Internal_Reference>
+###      <lid_reference>$extra.SIS_LID</lid_reference>
+###      <reference_type>data_to_documentation</reference_type>
+###    </Internal_Reference>
+###  </Reference_List>
+
+  <File_Area_Ancillary>
+    <File>
+      <file_name>$generate.file_name</file_name>
+    </File>
+
+    ### derivedImageType is not applicable here
+    #getArrayDefinition($extra.FILENAME.toLowerCase() $label "na")
+  </File_Area_Ancillary>
+
+</Product_Ancillary>

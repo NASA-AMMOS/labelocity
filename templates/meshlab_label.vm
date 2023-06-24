@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+##
+#parse( "vcore.vmac" )
+#parse( "utils.vmac" )
+#parse( "general.vmac" )
+#parse( "image.vmac" )
+#parse( "surface.vmac" )
+#parse( "mission_factory.vmac" )
+
+## Set some needed variables
+
+## Needed to create the appropriate LID
+#set ($FORCE_MESH = $CONST_TRUE )
+
+## We get the PID from FILENAME in the json extras rather than the label
+## Also, the name needs to include the extension.
+
+#set ($PID_FULL   = "$extra.FILENAME.toString().toLowerCase()" )
+#set ($PID        = "#createPidFromVersionedNameCheckLabel($PID_FULL)" )
+#set ($VERSION_ID = "#getPIDVersion($PID_FULL)" )
+
+#set ($LID_COLLECTION  = "#getProductLidCollectionCheckLabel($PID)" )
+#set ($LID_PREFIX      = "#getProductLidPrefixCheckLabel($PID)" )
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_File_Text xmlns="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.xsd">
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    <title>MeshLab project file, used to load multiple OBJ format meshes at once</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_File_Text</product_class>
+    <Citation_Information>
+      <publication_year>$date.getYear()</publication_year>
+      <description>MeshLab project file</description>
+    </Citation_Information>
+  </Identification_Area>
+  
+  <Reference_List>
+### loop through the OBJs
+    #if ($extra.OBJS)
+      #set ($objs_size = $extra.OBJS.size())
+      #foreach ( $i in [1..$objs_size] )
+        <Source_Product_Internal>
+          #set ($objname = $extra.OBJS.get($foreach.index).replaceAll('"',''))
+          <lidvid_reference>#generateLIDVIDext( $LID_PREFIX $LID_COLLECTION $objname.toLowerCase())</lidvid_reference>
+          <reference_type>data_to_derived_source_product</reference_type>
+          <comment>Pointer to the OBJ files used by this MeshLab file</comment>
+        </Source_Product_Internal>
+      #end
+   #end
+  </Reference_List>
+
+  <File_Area_Text>
+    <File>
+      <file_name>$extra.FILENAME</file_name>
+    </File>
+    <Stream_Text>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>7-Bit ASCII Text</parsing_standard_id>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+    </Stream_Text>
+  </File_Area_Text>
+</Product_File_Text>

@@ -1,0 +1,2209 @@
+## This template is made up of common, generic reusable macros for PDS4 Velocity Templates.
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##		#parse ( "general.vmac" )
+##
+## this test code. 
+
+###set ( $DEBUG = 1 )
+
+## Local import to include GIT hash/version comment
+#parse( "git_hash.vmac" )       ##Git hash version file
+
+## ------------------------------------------------------------------------
+
+#set ($PID_VERSION_SINGLE_CHAR_ROLLOVER_STRING = "_")
+#set ($PID_VERSION_SINGLE_CHAR_ROLLOVER_VALUE  = 36)
+
+## ------------------------------------------------------------------------
+
+
+## List of extensions associated with products that have PID's where
+## extensions should be hidden
+#set ( $PID_HIDDEN_EXTENS = ['.IMG', '.VIC'] )
+
+## ------------------------------------------------------------------------
+  
+##################################
+## generateProlog macro
+##
+## Creates the XML prolog, using the prologVerDict
+## version dictionary to populate xml-model and schema location sections
+#macro(generateProlog $prologVerDict)
+
+#if ($CONST_TRUE.equals("#shouldIncludeGitVersion()") )
+    #generateGitHashComment()
+#end
+
+##Set all versions to empty string, then populate if found in dictionary
+#set ($pdsVer       = '')
+#set ($imgVer       = '')
+#set ($procVer      = '')
+#set ($msnVer       = '')
+#set ($msnSurfVer   = '')
+#set ($imgSurfVer   = '')
+#set ($geomVer      = '')
+#set ($dispVer      = '')
+#set ($cartVer      = '')
+#set ($msssCamMhVer = '')
+#if (  $prologVerDict.containsKey("PDS") )
+  #set ($pdsVer       = $prologVerDict.get("PDS"))
+#end
+#if (  $prologVerDict.containsKey("IMG") )
+  #set ($imgVer       = $prologVerDict.get("IMG"))
+#end
+#if (  $prologVerDict.containsKey("PROC") )
+  #set ($procVer      = $prologVerDict.get("PROC"))
+#end
+#if (  $prologVerDict.containsKey("MSN") )
+  #set ($msnVer       = $prologVerDict.get("MSN"))
+#end
+#if (  $prologVerDict.containsKey("MSN_SURFACE") )
+  #set ($msnSurfVer   = $prologVerDict.get("MSN_SURFACE"))
+#end
+#if (  $prologVerDict.containsKey("IMG_SURFACE") )
+  #set ($imgSurfVer   = $prologVerDict.get("IMG_SURFACE"))
+#end
+#if (  $prologVerDict.containsKey("GEOM") )
+  #set ($geomVer      = $prologVerDict.get("GEOM"))
+#end
+#if (  $prologVerDict.containsKey("DISP") )
+  #set ($dispVer      = $prologVerDict.get("DISP"))
+#end
+#if (  $prologVerDict.containsKey("CART") )
+  #set ($cartVer      = $prologVerDict.get("CART"))
+#end
+#if (  $prologVerDict.containsKey("MSSS_CAM_MH") )
+  #set ($msssCamMhVer = $prologVerDict.get("MSSS_CAM_MH"))
+#end
+
+#if (! $pdsVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${pdsVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $cartVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/cart/v1/PDS4_CART_${cartVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $dispVer.isEmpty() )
+<?xml-model href="https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_${dispVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $imgVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_${imgVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $geomVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_${geomVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $procVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/proc/v1/PDS4_PROC_${procVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $msnVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/msn/v1/PDS4_MSN_${msnVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $msnSurfVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/msn_surface/v1/PDS4_MSN_SURFACE_${msnSurfVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $imgSurfVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/img_surface/v1/PDS4_IMG_SURFACE_${imgSurfVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#if (! $msssCamMhVer.isEmpty() )
+  <?xml-model href="https://pds.nasa.gov/pds4/msss_cam_mh/v1/PDS4_MSSS_CAM_MH_${msssCamMhVer}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+
+#msn_generatePrologXmlModelSection()
+
+<Product_Observational  xmlns="http://pds.nasa.gov/pds4/pds/v1"
+
+#if (! $cartVer.isEmpty() )
+               xmlns:cart="http://pds.nasa.gov/pds4/cart/v1"
+#end
+#if (! $dispVer.isEmpty() )
+               xmlns:disp="http://pds.nasa.gov/pds4/disp/v1"
+#end
+#if (! $geomVer.isEmpty() )
+               xmlns:geom="http://pds.nasa.gov/pds4/geom/v1"
+#end
+#if (! $imgVer.isEmpty() )
+               xmlns:img="http://pds.nasa.gov/pds4/img/v1"
+#end
+#if (! $msnVer.isEmpty() )
+               xmlns:msn="http://pds.nasa.gov/pds4/msn/v1"
+#end
+#if (! $msnSurf.isEmpty() )
+               xmlns:msn_surface="http://pds.nasa.gov/pds4/msn_surface/v1"
+#end
+#if (! $imgSurf.isEmpty() )
+               xmlns:img_surface="http://pds.nasa.gov/pds4/img_surface/v1"
+#end
+#if (! $pdsVer.isEmpty() )
+               xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+#end
+#if (! $procVer.isEmpty() )
+               xmlns:proc="http://pds.nasa.gov/pds4/proc/v1"
+#end
+#if (! $msssCamMhVer.isEmpty() )
+               xmlns:msss_cam_mh="http://pds.nasa.gov/pds4/msss_cam_mh/v1"
+#end
+               xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               #msn_generateMissionNamespaceSection() 
+  xsi:schemaLocation="
+#if (! $pdsVer.isEmpty() )
+  http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${pdsVer}.xsd
+#end
+#if (! $imgVer.isEmpty() )
+  http://pds.nasa.gov/pds4/img/v1 https://pds.nasa.gov/pds4/img/v1/PDS4_IMG_${imgVer}.xsd   
+#end
+#if (! $procVer.isEmpty() )
+  http://pds.nasa.gov/pds4/proc/v1 https://pds.nasa.gov/pds4/proc/v1/PDS4_PROC_${procVer}.xsd   
+#end
+#if (! $msnVer.isEmpty() )  
+  http://pds.nasa.gov/pds4/msn/v1 https://pds.nasa.gov/pds4//msn/v1/PDS4_MSN_${msnVer}.xsd
+#end
+#if (! $msnSurfVer.isEmpty() )  
+  http://pds.nasa.gov/pds4/msn_surface/v1 https://pds.nasa.gov/pds4/msn_surface/v1/PDS4_MSN_SURFACE_${msnSurfVer}.xsd
+#end
+#if (! $imgSurfVer.isEmpty() )  
+  http://pds.nasa.gov/pds4/img_surface/v1 https://pds.nasa.gov/pds4/img_surface/v1/PDS4_IMG_SURFACE_${imgSurfVer}.xsd
+#end
+#if (! $geomVer.isEmpty() )  
+  http://pds.nasa.gov/pds4/geom/v1 https://pds.nasa.gov/pds4/geom/v1/PDS4_GEOM_${geomVer}.xsd
+#end
+#if (! $dispVer.isEmpty() )
+  http://pds.nasa.gov/pds4/disp/v1 https://pds.nasa.gov/pds4/disp/v1/PDS4_DISP_${dispVer}.xsd
+#end  
+#if (! $cartVer.isEmpty() )
+  http://pds.nasa.gov/pds4/cart/v1 https://pds.nasa.gov/pds4/cart/v1/PDS4_CART_${cartVer}.xsd
+#end  
+#if (! $msssCamMhVer.isEmpty() )
+  http://pds.nasa.gov/pds4/msss_cam_mh/v1 https://pds.nasa.gov/pds4/msss_cam_mh/v1/PDS4_MSSS_CAM_MH_${msssCamMhVer}.xsd
+#end  
+  #msn_generatePrologSchemaLocationSection()  
+">##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+##################################
+## identification macro
+##
+## VICAR labels and PDS3 labels built from a
+## vicar file have the same set of early keywords
+## VICAR keywords add IDENTIFICATION. in front of the keyword
+## PDS keywords do not
+## This macro is intended to allow the same velocity template to use
+## a vicar or PDS3 version of the same file
+## PROPERTY or GROUP things look the same
+##
+## could check the $generate.reader_format == "vicar" or "pds"
+###
+## $generate_file_name is the input filename
+##
+#macro(identificationDefunct $var)
+## try prepending "IDENTIFICATION."
+#set ($val = "")
+#set ($idPrefix = "IDENTIFICATION.")
+#set ($key = $idPrefix.concat($var))
+#set ($val = $label.get($key))
+#if ($val && $val.length() > 0)
+$val##
+#else
+#set ($key = $var)
+#set ($val = $label.get($key))
+#if ($val && $val.length() > 0)
+$val##
+#else
+${CONST_ERROR}##
+#end
+#end
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+##################################
+## Get value from inner-group or same level macro
+##
+## VICAR labels and PDS3 labels built from a
+## vicar file have sections within the top-level
+## 'label - or IDENTIFICATION' group sections which 
+## are treated differently:
+## - VIC:  they are treated as sub-group under the top group
+## - PDS3: they are treated as the same level as the top group.
+## Case in point: TELEMETRY.
+## VIC includes the group header: ---- Property: TELEMETRY ----,
+## which implicitly creates the "TELEMETRY" subgroup.
+## PDS3 simply includes an XML comment of TELEMETRY but the
+## following values are in the same level as preceding values.
+##
+## This macro is intended to check first if a value is found in a
+## potential group.  If found, value is returned, otherwise
+## the value is assumed to be at the normal level
+##
+###
+## $groupName is the potential group name 
+## $var is the node name
+##
+#macro(getValueFromLblGroupOrIdent $groupName $var)
+#set ($gvflgoi_val = "")
+#if ( $!label.get( $groupName ) )
+$!label.get($groupName).get($var)##
+#elseif ( $!IDENT.get( $groupName ) )
+$!IDENT.get($groupName).get($var)##
+#else
+$!IDENT.get( $var )##
+#end
+#end
+
+#macro(isValueFromLblGroupOrIdent $groupName $var)
+#set ($ivflgoi_val = "#getValueFromLblGroupOrIdent( $groupName $var )" )
+#if ( $!ivflgoi_val != "" )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getPidFullname
+##
+## Returns the product id from the IDENTIFICATION area
+##
+#macro(getPidFullname)
+#set ($rVal = $IDENT.PRODUCT_ID.toString() )
+#set ($rVal = $rVal.toLowerCase())
+$rVal##
+#end
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## getPIDVersion
+##
+## Returns the version from a full PID name (in numeric form)
+##
+#macro(getPIDVersion $filepath)
+#set ($versionNum = "" )
+#set ($versionLen = "#msn_getPIDVersionSize()")
+#set ($basename   = "#getBasenameNoExten($filepath)")
+#set ($nameLen    = $basename.length())
+#set ($subIndex   = $math.toInteger($nameLen) - $math.toInteger($versionLen) )
+#if ( $subIndex > 0 )
+#set ($versionStr    = $basename.substring($subIndex) )
+#if ($versionStr.equals("$MSN_PID_VERSION_ROLLOVER_STRING"))
+#set ($versionNum = $MSN_PID_VERSION_ROLLOVER_VALUE)
+#else
+#set ($versionNum = "#msn_getPIDVersionAsDecimal($versionStr)")
+#end
+#end
+$versionNum##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getPidFullnameNoVersion
+##
+## Returns the PID fullname without version field
+##
+
+#macro (getPidFullnameNoVersion $filepath)
+#set ($basename   = "#getBasenameNoExten($filepath)")
+#set ($result     = $basename  )##default result
+#set ($nameLen    = $basename.length() )
+#set ($versionLen = "#msn_getPIDVersionSize()")
+#set ($subIndex   = $math.toInteger($nameLen) - $math.toInteger($versionLen) )
+#if ( $subIndex > 0 )
+#set ($result     = $basename.substring( 0, $subIndex )  )
+#end
+${result}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## getPidFullnameNoVersionExt
+##
+## Returns the PID fullname without version field, but with extension
+##
+
+#macro (getPidFullnameNoVersionExt $filepath)
+#set ($result = "#getPidFullnameNoVersion($filepath)" )
+#set ($ext = "#getFileExtension($filepath)")
+${result}.${ext}##
+#end
+
+
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getInstrumentName
+##
+## Returns the Instrument name from the label
+##
+#macro (getInstrumentName $pid)
+#msn_getInstrumentName($pid)##
+#end
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getInstrumentId
+##
+## Returns the Instrument Id from the label
+##
+#macro (getInstrumentId $pid)
+#msn_getInstrumentId($pid)##
+#end
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+##################################
+## It would appear that some missions place label values in one GROUP
+## while others in another, which makes it difficult to handle
+## certain things in a multi-mission way, especially when the info
+## is spread across GROUPs but must be collected for a single PDS4
+## element-structure.
+##
+## This macro takes a list of potential source nodes and the common
+## label name.  If found, then it checks the $units flag to
+## attempt to collect declared unit information.
+## If any value is found, then the XML-element formatted string
+## is returned using the element_name parameter as the element name.
+##
+## Note: If the type of node_list is not a java.util.List, then
+## an internal list will be created and node_list value will be
+## added as the sole entry.  This will support passing in a single
+## node in place of a list.
+##
+## Note:  If $units is:
+##        1) empty or $CONST_FALSE, then no units will be added.
+##        2) $CONST_TRUE, then units will be add IFF in label.
+##        3) otherwise, units-attr be added, and if not found
+##           in label, then the value of $units will be used
+##           as the default.
+##
+##  $allowNilValue controls whether nil values (Null,N/A,UNK)
+##  are considered legal values.
+##
+## Returns XML-element with value and possibly units attribute if
+## label is found amongst nodes in the node_list, else empty string.
+##
+#macro (pollNodes $node_list  $label_name  $element_name  $units  $allowNilValue )
+#set ( $tisfu_parent_name = "" )
+#set ( $tisfu_value = "" )
+#set ( $tisfu_units = "" )
+#if ( $node_list )
+#if ( ! $list_class.isAssignableFrom( $node_list.class ) )
+#set($pn_tmp_list = [])
+#set($pn_tmp_list_shh = $pn_tmp_list.add( $node_list ) )
+#set($node_list = $pn_tmp_list )
+#end
+#foreach ( $node in $node_list )
+#if ( $node.get($label_name) )
+#set ( $tisfu_curVal = $node.get($label_name).toString() )
+#if ( $tisfu_value.isEmpty() && ( $CONST_TRUE.equals($allowNilValue) || $CONST_FALSE.equals("#valueIsNilValue($tisfu_curVal)")  )  )
+#set ( $tisfu_value = $tisfu_curVal )
+#set ( $tisfu_parent_name = $node.getName() )
+#if ( ! ($!units.isEmpty() || $units == $CONST_FALSE ))
+#if ( $units == $CONST_TRUE)
+#set ( $tisfu_units = "#getUnitAttr( $node  $label_name  '')" )
+#else
+#set ( $tisfu_units = "#getUnitAttrOrDefault( $node  $label_name '' $units )" )
+#end
+#end##EndIfIncludeUnits
+#end##EndIfNodeValueIsAccepted
+#end##EndIfNodeHasLabel
+#end##EndForEach
+#if ( $tisfu_value != '' )
+#debug( "${tisfu_parent_name}.${label_name}" )
+<${element_name} $tisfu_units >$tisfu_value</${element_name}>##
+#end
+#end##EndIfNodeList
+#end
+
+
+## ------------------------------------------------------------------------
+
+
+
+##################################
+## This is a wrapper around calss to pollNodes() with a special case
+## of calling printNilElement()
+## The value of $nilHandler is what controls what is called.
+## Legal values are: $NIL_ALLOWED, $NIL_REJECTED, $NIL_REPLACED
+##
+
+#macro (pollNodesNilSwitch  $node_list  $label_name  $element_name  $units  $nilHandler  )
+#if ( $NIL_ALLOWED.equals($nilHandler) )
+  #pollNodes($node_list $label_name $element_name $units $CONST_TRUE )
+#elseif ( $NIL_REJECTED.equals($nilHandler) )
+  #pollNodes($node_list $label_name $element_name $units $CONST_FALSE)
+#else
+  #if ( $node_list )
+    #if ( ! $list_class.isAssignableFrom( $node_list.class ) )
+      #set($pn_tmp_list = [])
+      #set($pn_tmp_list_shh = $pn_tmp_list.add( $node_list ) )
+      #set($node_list = $pn_tmp_list )
+    #end
+    #set ( $tisfu_poll_value_non_nil = '' )
+    #set ( $tisfu_poll_value_non_nil = "#pollValueFromNodes($node_list $label_name $CONST_FALSE)" )
+    #if ( ! $tisfu_poll_value_non_nil.isEmpty() )##If value, then we can rely on pollNodes
+      #pollNodes($node_list $label_name $element_name $units $CONST_FALSE) 
+    #else ##Otherwise, we check for a NIL value: if found, print it, else print nothing.
+      #set ( $tisfu_poll_value_maybe_nil = '' )
+      #set ( $tisfu_poll_value_maybe_nil = "#pollValueFromNodes($node_list $label_name $CONST_TRUE)" )
+      #if ( $CONST_TRUE.equals("#valueIsNilValue($tisfu_poll_value_maybe_nil)") )
+        #printNilElement( $elmt_name  $tisfu_poll_value_maybe_nil )
+      #end
+    #end
+  #end
+#end  
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Simplified version of above which returns the first value found in a list
+## of nodes, and not a formatted XML-element with potential units.
+## Why?  Because we still have to muck around with values sometimes and the 
+## above won't support that....
+
+#macro (pollValueFromNodes $node_list $label_name $allowNilValue )
+#set ( $pvfn_poll_value = "" )
+#if ( $node_list )
+#if ( ! $list_class.isAssignableFrom( $node_list.class ) )
+#set($pn_tmp_list = [])
+#set($pn_tmp_list_shh = $pn_tmp_list.add( $node_list ) )
+#set($node_list = $pn_tmp_list )
+#end
+#foreach ( $node in $node_list )
+#if ( $node.get($label_name) )
+#set ( $pvfn_curVal = $node.get($label_name).toString() )
+#if ( $pvfn_poll_value.isEmpty() && ( $CONST_TRUE.equals($allowNilValue) || $CONST_FALSE.equals("#valueIsNilValue($pvfn_curVal)") ))
+#set ( $pvfn_poll_value = $pvfn_curVal )
+#end##EndIfRevalEmptyAndCurValueIsAccepted
+#end##EndIfNodeHasLabel
+#end##EndFor
+${pvfn_poll_value}##
+#end##EndIfNodeList
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Macro that takes a node with value list and looks for any element
+## that is a nil-value.  If found, $CONST_TRUE is returned.  Else
+## $CONST_FALSE is returned.
+
+#macro (doesNodeValueListContainNilValue $list_node )
+#set ($dnvlcn_rval = $CONST_FALSE )
+#if ( $list_class.isAssignableFrom( $list_node.class ) )
+#set($dnvlcn_count = $list_node.size() - 1)
+#foreach ( $i in [ 0..$dnvlcn_count ] )
+#set ($dnvlcn_curval = $list_node.get($foreach.index) )
+#if ( $CONST_TRUE.equals("#valueIsNilValue($dnvlcn_curval)") )
+#set ($dnvlcn_rval = $CONST_TRUE )
+#end
+#end
+#end
+${dnvlcn_rval}##
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Macro that takes a node with value list and looks for any element
+## that is NOT a nil-value.  If found, $CONST_FALSE is returned.  Else
+## $CONST_TRUE is returned.
+
+#macro (doesNodeValueListContainAllNilValues $list_node )
+#set ($dnvlcanv_rval = $CONST_TRUE )
+#if ( $list_class.isAssignableFrom( $list_node.class ) )
+#set($dnvlcn_count = $list_node.size() - 1)
+#foreach ( $i in [ 0..$dnvlcn_count ] )
+#set ($dnvlcn_curval = $list_node.get($foreach.index) )
+#if ( $CONST_FALSE.equals("#valueIsNilValue($dnvlcn_curval)") )
+#set ($dnvlcanv_rval = $CONST_FALSE )
+#end
+#end
+#else##Its not a list, so return false
+#set ($dnvlcanv_rval = $CONST_FALSE )
+#end
+${dnvlcanv_rval}##
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Macro that takes a node with value list and looks for any element
+## that is NOT a nil-value.  If found, $CONST_FALSE is returned.  Else
+## $CONST_TRUE is returned.
+
+#macro (isNodeChildValueEitherNilOrNilList $parent_node $child_name )
+#set ($incvenonl_rval = $CONST_FALSE )
+#if ( $parent_node.get($child_name) )
+#set ($child_node  = $parent_node.get($child_name) )
+#if ( $list_class.isAssignableFrom( $child_node.class ) )
+#set ($incvenonl_rval = "#doesNodeValueListContainAllNilValues($child_node)" )
+#else
+#set ($incvenonl_rval = "#nodeHasNilValue($parent_node $child_name)" )
+#end
+#end
+${incvenonl_rval}##
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+##################################
+## Target vs. Target Type Mapping
+##
+## These are explicit mappings between target names and target types
+## These may need to be applied at a mission-specific level, but for now
+## will just leave in here.
+##
+##
+#set ($TARGET_NAME_TO_TYPE_MAP = {
+	"ALTAIR" : "Star",
+	"APXSSITE" : "Equipment",
+	"ARCTURUS" : "Star",
+	"CALIMG" : "Calibration",
+	"CALLISTO" : "Satellite",
+	"DEIMOS" : "Satellite",
+	"EARTH" : "Planet",
+	"GANYMEDE" : "Satellite",
+	"IO" : "Satellite",
+	"JUPITER" : "Planet",
+	"LANDER" : "Equipment",
+	"MAG" : "Equipment",
+	"MARS" : "Planet",
+	"MOON" : "Satellite",
+	"PHOBOS" : "Satellite",
+	"ROVER" : "Equipment",
+	"SKY" : "null",
+	"SPACE" : "Calibration Field",
+	"SUN" : "Sun",
+	"VEGA" : "Star",
+	"WINDSOCK" : "null"
+})
+
+## ------------------------------------------------------------------------
+
+## Possibly replaces target type with a new value.
+## Check if name exists in the generic name->type mapping, if so
+## use the associated value.  Otherwise retain the original
+## type value.
+
+#macro(getTargetType $orig_name $orig_type )
+#set ($g_gttrval = $orig_type )
+#set ($orig_name_up = $orig_name.toUpperCase() )
+## special case for 'star.m 31' to 'galaxy.m_31'
+#if ( $orig_type.equalsIgnoreCase('star') && $orig_name_up.startsWith("M") && $orig_name_up.endsWith("31") )
+#set ($g_gttrval = 'galaxy' )
+#elseif ($TARGET_NAME_TO_TYPE_MAP.containsKey($orig_name_up))
+#set ($g_gttrval = $TARGET_NAME_TO_TYPE_MAP.get($orig_name_up))
+#end
+${g_gttrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Possibly replaces target name with a new value.
+## Since templates are generally Mars heavy, we translate
+## 'SKY' to 'MARS' generically.  Missions for which this
+## not apply will need to handle it in their msn_getTargetName()
+## implementaion.
+
+#macro(getTargetName $orig_name $orig_type )
+#set ($g_gtnrval = $orig_name )
+#set ($orig_name_up = $orig_name.toUpperCase() )
+## special case for 'star.m 31' to 'galaxy.m_31'
+#if ( $orig_type.equalsIgnoreCase('star') && $orig_name_up.startsWith("M") && $orig_name_up.endsWith("31") )
+#set ($g_gtnrval = 'm_31' )
+#elseif ( $orig_name_up.equals("SKY") )##hack-ala-issue-198
+#set ($g_gtnrval = 'MARS' )
+#end
+${g_gtnrval}##
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+##TODO: (what the heck is Interstellar??!!!). 
+
+##################################
+## Science Facets
+##
+##
+#macro(getScienceFacetsSection)
+##	#if ($target == "SPACE")
+##		#set ($domain = "Interstellar")
+##	#else
+##		#set ($domain = ${MSN_DOMAIN})
+	<Science_Facets>
+		<wavelength_range>${MSN_WAVELENGTH_RANGE}</wavelength_range>
+		<domain>${MSN_DOMAIN}</domain>
+		<discipline_name>${MSN_DISCIPLINE}</discipline_name>
+	</Science_Facets>
+##	#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+## TODO: Resolve them question mark entries
+##################################
+## Transform VICAR units
+##
+#set ($UNIT_MAP = {
+	"WATT*M**-2*SR**-1*HZ**-1" : "W*m**-2*sr**-1*Hz**-1",
+	"WATT*M**-2*SR**-1*NM**-1" : "W*m**-2*sr**-1*nm**-1",
+	"WATT*M**-2*SR**-1*UM**-1" : "W*m**-2*sr**-1*um**-1",
+	"WATT*M**-3*SR**-1" : "W*m**-3*sr**-1",
+	"WATT/M**2/SR/HZ" : "W/m**2/sr/Hz",
+	"WATT/M**2/SR/NM" : "W/m**2/sr/nm",
+	"?" : "W/m**2/sr/μm",
+	"WATT*M**3/SR" : "W/m**3/sr",
+	"??" : "uW*cm**-2*sr**-1*um**-1",
+	"???" : "μW/cm**2/sr/μm",
+	"DEGREES" : "deg",
+	"PIXELS/DEGREE" : "pixel/deg",
+	"METER" : "m",
+	"M" : "m",
+	"M/PIXEL" : "m/pixel",
+	"us" : "microseconds"
+})
+#macro(transformUnits $unitArg)
+#set ($unitMapKey = $unitArg.toString())
+#if ( $UNIT_MAP.containsKey($unitMapKey) )
+$UNIT_MAP.get($unitMapKey)##
+#else
+$unitArg##
+#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Checks for __UNIT node (Vicar) and getUnits() attribute (ODL)
+
+#macro(getUnitFrom $node $prefix $index)
+#set ( $gen_guf_rval = "" )
+#set ( $lUnitName = "${prefix}__UNIT" )
+#if ( $node.get($lUnitName) )##We found __UNIT node
+##IN __UNIT
+#if ( $index && ! $!index.isEmpty() )##Index was specified
+#set ( $gen_guf_index_num = $math.toInteger( $index ) )
+#set ( $gen_guf_unitnode_len = $node.get($lUnitName).size() )
+#if ( $gen_guf_index_num < $gen_guf_unitnode_len )
+#set ( $gen_guf_rval = $node.get($lUnitName).get($index).toString() )
+#end##If_index_is_legal_range
+#else
+##Classname0a = $node.class.name
+##Classname0b = $node.get($lUnitName).class.name
+##Name0a = $node.getName()
+##Name0b = $node.get($lUnitName).getName()
+#set ( $gen_guf_rval = $!node.get($lUnitName).toString() )
+#end##endIfIndexDefd
+#elseif ( $node.get($prefix) && $node.get($prefix).getUnits() )
+##Classname2a = $node.class.name
+##Classname2b = $node.get($prefix).class.name
+##Name2a = $node.getName()
+##Name2b = $node.get($prefix).getName()
+##Units retrieved by calling prefix.getUnits() on $prefix  $node.get($prefix) $node.get($prefix).getUnits()
+#set ( $gen_guf_rval = $!node.get($prefix).getUnits().toString() )
+#elseif ( $node.get($prefix) && ! $node.get($prefix).getUnits() && $node.getUnits($prefix) )
+##Classname1a = $node.class.name
+##Classname1b = $node.get($prefix).class.name
+##Name1a = $node.getName()
+##Name1b = $node.get($prefix).getName()
+##Units retrieved by calling node.getUnits(prefix) with prefix = $prefix   $node.getUnits($prefix)
+#set ( $gen_guf_rval = $node.getUnits($prefix).toString() )
+#end##endIfContains__UNITnode
+$!{gen_guf_rval}##
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+#macro(getXformedUnitFrom $node $prefix $index)
+#set ( $lunit = "#getUnitFrom($node $prefix $index)" )
+#if  ( $lunit && $lunit.length() > 0 )
+#set ( $l_xformUnit = "#transformUnits( $lunit )")
+$l_xformUnit##
+#end##endIfDef
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Newer macro that attempts to retrieve a unit attribute by examining
+## the arguments to see if a unit entry is found.  If so, then the
+## return value is an element attribute string of form 'unit="{unit}"'
+## If no unit found, then nothing is returned.
+## If a unit is found, it will automatically be translated via a call
+## to the transformUnits() macro.
+##
+## Arguments:
+##   node:   the VTL node that may contain a *__UNIT entry
+##   prefix: the prefix of the unit name, (everything but __UNIT)
+##   index:  optional index value, to account for array values
+##
+## Returns:
+##   'unit="{$extractedUnit}"' or entry string
+##
+
+#macro(getUnitAttr $node $prefix $index)
+#set ( $lunit = "#getUnitFrom($node $prefix $index)" )
+#if  ( $lunit && $lunit.length() > 0 && "$lunit" != 'none')
+#set ( $l_xformUnit = "#transformUnits( $lunit )")
+#if  ( $l_xformUnit && $l_xformUnit.length() > 0 )
+${ATTR_NAME_UNIT}="$l_xformUnit"##
+#end
+#end
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Newer macro that attempts to retrieve a unit attribute by examining
+## the arguments to see if a unit entry is found.  If so, then the
+## return value is an element attribute string of form 'unit="{unit}"'
+## If no unit found, then 'unit="{defaultUnit}"' is returned.
+## If a unit is found, it will automatically be translated via a call
+## to the transformUnits() macro.
+##
+## Arguments:
+##   node:   the VTL node that may contain a *__UNIT entry
+##   prefix: the prefix of the unit name, (everything but __UNIT)
+##   index:  optional index value, to account for array values
+##   defaultUnit: Default unit to use if no unit value found
+##
+## Returns:
+##   'unit="{$extractedUnit}"' if unit found, or 'unit="{$defaultUnit}"'
+##
+
+#macro(getUnitAttrOrDefault $node $prefix $index $defaultUnit )
+#set ( $lunit = "#getUnitFrom($node $prefix $index)" )
+#if  ( $lunit && $lunit.length() > 0 && "$lunit" != 'none')
+#set ( $l_xformUnit = "#transformUnits( $lunit )")
+#if  ( $l_xformUnit && $l_xformUnit.length() > 0 )
+${ATTR_NAME_UNIT}="$l_xformUnit"##
+#end
+#elseif ( $!defaultUnit )
+${ATTR_NAME_UNIT}="$defaultUnit"##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+## Macro that creates an optional XML attribute, checking that either
+## value argument is set, and if so, returns a valid attribute 
+## assignment string.  Otherwise, empty string is returned.
+##
+## Arguments:
+##   attrName:  attribute name
+##   mainVal:   primary value to use, if defined
+##   backVal:   backup value to use, if defined
+##
+## Returns:
+##   '$attrName="{$attrValue}"' or entry string
+##
+
+#macro(getOptAttr $attrName $mainVal  $backVal)
+#set ( $g_goa_rv = "" )
+#if  ( $mainVal && $mainVal.length() > 0 )
+#set ( $g_goa_rv = $mainVal )
+#elseif ( $backVal && $backVal.length() > 0 )
+#set ( $g_goa_rv = $backVal )
+#end 
+#if  ( $g_goa_rv && $g_goa_rv.length() > 0 )
+#set ( $g_goa_rv = "$attrName=${QUOTE_CHAR}${g_goa_rv}${QUOTE_CHAR}" )
+#end
+$g_goa_rv##
+#end
+
+## ------------------------------------------------------------------------
+
+## Macro that creates an optional XML attribute, specifically for
+## 'unit'.  It checks for either mainVal or backVal to be set,
+## and then tries to transform the units.
+## So if either of those value arguments is set, returns 
+## a valid attribute assignment for unit.  Otherwise, empty string is returned.
+##
+## Arguments:
+##   mainVal:   primary value to use, if defined
+##   backVal:   backup value to use, if defined
+##
+## Returns:
+##   'unit="{$attrValue}"' or entry string
+##
+
+#macro(getOptUnitAttr $mainVal  $backVal)
+#set ( $g_goua_rv = "" )
+#if  ( $mainVal && $mainVal.length() > 0 )
+#set ( $g_goua_rv = $mainVal )
+#elseif ( $backVal && $backVal.length() > 0 )
+#set ( $g_goua_rv = $backVal )
+#end
+#if  ( $g_goua_rv && $g_goua_rv.length() > 0 )
+#set ( $g_goua_rv = "#transformUnits( $g_goua_rv )" )
+#set ( $g_goua_rv = "${ATTR_NAME_UNIT}=${QUOTE_CHAR}${g_goua_rv}${QUOTE_CHAR}" )
+#end
+$g_goua_rv##
+#end
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+
+
+
+##################################
+## cartMapProjTagOpen
+##
+## This function will return the opening tag
+## for the CART DD's map projection class.
+##
+#macro(cartMapProjTagOpen $mapProjection)
+    <cart:${mapProjection.replace(' ','_')}>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## cartMapProjTagClose
+##
+## This function will return the closing tag
+## for the CART DD's map projection class.
+##
+#macro(cartMapProjTagClose $mapProjection)
+    </cart:${mapProjection.replace(' ','_')}>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## geomModelTypeTagOpen
+##
+## This function will return the opening tag
+## for the GEOM DD's model type class.
+##
+
+#macro(geomModelTypeTagOpen $modelType)
+    <geom:${modelType}_Model>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## geomModelTypeTagClose
+##
+## This function will return the closing tag
+## for the GEOM DD's model type class.
+##
+
+#macro(geomModelTypeTagClose $modelType)
+    </geom:${modelType}_Model>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+
+##################################
+## getZuluTime
+##
+## This function will return the time argument
+## appended with a 'Z' if it doesn't already exist.
+## Also replaces a 'T' if some **** instr used a space to separate date and time
+
+#macro(getZuluTime $gzt_time)
+#set ($gzt_result = '' )
+#set ($noZtime = '' )
+#set ($noZtime = $gzt_time.toString() )
+#set ($gzt_time = '' )##Clear out the input, why??
+#if ( $noZtime != '')
+#set ($noZtime = $noZtime.replaceAll('Z',''))
+#set ($noZtime = $noZtime.replaceAll(' ','T'))##Cuz of bloody EDL cam
+#set ($gzt_result = "${noZtime}Z" )
+#end
+${gzt_result}##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+
+##################################
+## getDoyTime
+##
+## This function will take a datetime in format:
+## a) yyyy-mm-ddThh:mm:ss.SSSZ  ('day-of-month')
+## b) yyyy-doyThh:mm:ss.SSSZ  ('day-of-year')
+## and return the same date formatted as day-of-year 
+
+#macro(getDoyTime $time)
+#if ( $time.contains("T") && $time.contains("-"))
+#set ( $timeIndex = $time.indexOf("T") )
+#set ( $timeBeforeT = $time.substring(0, $timeIndex) )
+#set ( $timeAfterT  = $time.substring( $math.add($timeIndex, 1)) )
+#if ( $timeBeforeT.length() == 8)##DOY
+$time##
+#else##DOM
+#set ( $dateBeforeT = $date.toDate('yyyy-M-d', $timeBeforeT) )
+#set ( $timeBeforeT = $date.format('yyyy-DDD', $dateBeforeT) )
+${timeBeforeT}T${timeAfterT}##
+#end
+#end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## generateLIDVID from the full product ID, including version_id
+##
+## We now check if pidFull is 'isStandardMissionFilename', and if so, parse
+## for version.  Otherwise, assume version is '1'.
+##
+##
+#macro(generateLIDVID $lid_prefix $collection $pidFull)
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($pid_no_ver_no_ext = "#getPidFullnameNoVersion($pidFull)")
+#set ($pid_version_id    = "#getPIDVersion($pidFull)" )
+#generateLIDVIDWithVersion( $lid_prefix $collection $pid_no_ver_no_ext $pid_version_id )
+#else 
+#generateLIDVIDWithVersion( $lid_prefix $collection $pidFull $DEFAULT_VERSION )
+${lid_prefix}:${lid_suffix}:${pidFull}::1.0##
+#end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## generateLIDVID from the full product ID, including version_id and extension
+##
+## We now check if PID is isStandardMissionFilename, and if so, parse
+## for version.  Otherwise, assume version is '1'.
+##
+#macro(generateLIDVIDext $lid_prefix $collection $pidFull)
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($pid_no_ver     = "#getPidFullnameNoVersion($pidFull)")
+#set ($pid_version_id = "#getPIDVersion($pidFull)" )
+#set ($pid_ext = "")
+#set ($pid_ext = "#getFileExtension($pidFull)" )
+#if ( $pid_ext.equals($CONST_UNKNOWN) )
+#set ($pid_ext = "")
+#else
+#set ($pid_ext = "." + $pid_ext)
+#end
+#set ($pid_no_ver_with_ext  = "${pid_no_ver}${pid_ext}")
+#generateLIDVIDWithVersion( $lid_prefix $collection $pid_no_ver_with_ext $pid_version_id )
+#else
+#generateLIDVIDWithVersion( $lid_prefix $collection $pidFull  $DEFAULT_VERSION )
+#end
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## generateLIDVIDWithVersion builds lidvid from a versionless product ID 
+## (which may include extension) and version_id.  
+##
+#macro(generateLIDVIDWithVersion $lid_prefix $collection $pid_no_ver_maybe_ext $pid_version_id )
+#set ($lid_collection = $collection.toLowerCase())
+${lid_prefix}:${lid_collection}:${pid_no_ver_maybe_ext}::${pid_version_id}.0##
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## generateTaskProcessEntries 
+##
+## Iterates over the Process software tasks and prints out
+## the structure
+##
+##
+##
+#macro(generateTaskProcessEntries)
+
+        #if ( $label.TASK_LIST ) 
+        <proc:Process>
+          #debug("IDENTIFICATION.PRODUCER_INSTITUTION_NAME")
+          <proc:process_owner_institution_name>$!IDENT.PRODUCER_INSTITUTION_NAME</proc:process_owner_institution_name>
+          
+          <proc:Software>
+            #foreach ( $task in $label.TASK_LIST )           
+            #if ( ! $MSN_PROCESS_TASK_SKIP_LIST.contains( $task.TASK.toString()) )
+            <proc:Software_Program>
+              <proc:name>$task.TASK</proc:name>
+              <proc:program_type_name>VICAR</proc:program_type_name>
+              <proc:program_user>$task.USER</proc:program_user>
+              #set ($start_date = $convert.parseDate($task.DAT_TIM.toString(), "EEE MMM dd HH:mm:ss yyyy"))
+              <proc:program_start_date_time>$date.format("yyyy-MM-dd'T'HH:mm:ss.sss'Z'", $start_date)</proc:program_start_date_time>
+              <proc:Software_Program_Parameters>
+                #foreach ( $arg in $task.ARGS )
+                  #foreach ( $entry in $arg.entrySet() )
+                    #set ($argname = $entry.getKey())
+                    #if ( ! $argname.equals("TASK") &&  ! $argname.equals("USER")  &&  ! $argname.equals("DAT_TIM"))
+                    <proc:Parameter>
+                      <proc:name>$entry.getKey()</proc:name>
+                      #foreach ($val in $entry.getValue())
+                        <proc:value>$val</proc:value>
+                      #end
+                    </proc:Parameter>
+                    #end
+                  #end
+                #end
+              </proc:Software_Program_Parameters>
+            </proc:Software_Program>
+            #end
+            #end
+          
+                        
+          </proc:Software>
+          ###end
+        </proc:Process>
+        #end
+#end
+##################################
+
+##################################
+## generateHistoryProcessEntries 
+##
+## Iterates over the Process software tasks and prints out
+## the structure
+##
+#macro(generateHistoryProcessEntries)
+       
+       #if ( $label.VICAR_HISTORY_ARRAY && $label.VICAR_HISTORY_ARRAY.history )
+
+        ## Grab the list of history nodes.
+        #set ( $history_list = $label.VICAR_HISTORY_ARRAY.history )
+
+        ## Check if 'list' is actually single node, if so, make it a list
+        #if ( ! $list_class.isAssignableFrom( $history_list.class ) )
+            #set($his_tmp_list = [])
+            #set($his_tmp_list_shh = $his_tmp_list.add( $history_list ) )
+            #set($history_list = $his_tmp_list )
+        #end
+
+
+        <proc:Process>
+          ###<MSN_PROCESS_TASK_SKIP_LIST>$MSN_PROCESS_TASK_SKIP_LIST</MSN_PROCESS_TASK_SKIP_LIST>
+          #debug("IDENTIFICATION.PRODUCER_INSTITUTION_NAME")
+          <proc:process_owner_institution_name>$!IDENT.PRODUCER_INSTITUTION_NAME</proc:process_owner_institution_name>
+          
+          ###<label_history>history FOUND</label_history>
+          ###<label_VICAR_HISTORY_ARRAY>$label.VICAR_HISTORY_ARRAY</label_VICAR_HISTORY_ARRAY>
+
+          ###<history_array>$history_list</history_array>
+          <proc:Software>
+            #foreach ( $history in $history_list )
+            ###<history>$history</history>
+            #if ( ! $MSN_PROCESS_TASK_SKIP_LIST.contains( $history.task.toString()) )
+            <proc:Software_Program>
+              <proc:name>$history.task</proc:name>
+              <proc:program_type_name>VICAR</proc:program_type_name>
+              <proc:program_user>$history.user</proc:program_user>
+              #set ($start_date = $convert.parseDate($history.dat_tim.toString(), "EEE MMM dd HH:mm:ss yyyy"))
+              <proc:program_start_date_time>$date.format("yyyy-MM-dd'T'HH:mm:ss.sss'Z'", $start_date)</proc:program_start_date_time>
+              <proc:Software_Program_Parameters>
+
+                #set ( $arg_keys = $history.arg_keys.toString() )
+
+                ## IN case someone adds parens later (they aren't there NOW )
+                #set ( $arg_keys = $arg_keys.replace("(", "").replace(")", "") )
+
+                ## If value contains comma, split to list.
+                ## Else add value as sole entry to list
+                #set ( $arg_keys_list = [] )
+                #if ( $arg_keys.contains(","))
+                    #set ( $arg_keys_list = $arg_keys.split(",") ) 
+                #else
+                    #set( $arg_keys_list_shh = $arg_keys_list.add( $arg_keys ) )
+                #end
+
+                #foreach ($key in $arg_keys_list)
+
+                    <proc:Parameter>
+
+                      <proc:name>$key</proc:name>
+                      #set ($proc_val = '' )
+                      #set ($proc_val = $history.ARGS.get($key).toString() )
+
+                      ## Remove potential parens
+                      #set ($proc_val = $proc_val.replace("(", "").replace(")", "") )
+
+                      ## If value contains comma, split to list.
+                      ## Else add value as sole entry to list
+                      #set ( $proc_val_list = [] )
+                      #if ($proc_val.contains(","))
+                        #### multiple values, split to list, print each individually
+                        #set ($proc_val_list = $proc_val.split(","))
+                      #else
+                        #set( $proc_val_list_shh = $proc_val_list.add( $proc_val ) )
+                      #end
+
+                      #foreach ($proc_val_entry in $proc_val_list )
+                        <proc:value>$!proc_val_entry</proc:value>
+                      #end
+
+                    </proc:Parameter>
+                #end
+                
+              </proc:Software_Program_Parameters>
+            </proc:Software_Program>
+            #end
+            #end
+                     
+          </proc:Software>
+          ###end
+        </proc:Process>
+        #end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## generatePdsHistoryProcessEntries 
+##
+## Includes PDS History as Process entry
+##
+##
+##
+#macro(generatePdsHistoryProcessEntries)
+        <proc:Process>
+          <proc:Software>
+            
+            ## Copy over 'PDS_HISTORY' group info contents
+            <proc:Software_Program>
+              <proc:name>$!label.PDS_HISTORY.SOFTWARE_NAME</proc:name>
+              <proc:program_version>$!label.PDS_HISTORY.SOFTWARE_VERSION_ID</proc:program_version>
+              <proc:description>$!label.PDS_HISTORY.PROCESSING_HISTORY_TEXT</proc:description>
+            </proc:Software_Program>
+                        
+          </proc:Software>
+        </proc:Process>
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## generateProcessEntries 
+##
+## Calls all of the <Process> macros
+##
+##
+##
+#macro(generateProcessEntries)
+
+    #### this will only add content from a vicar input file
+    #generateTaskProcessEntries()
+    
+    #### this will only add content from a PDS3 "dualie" input file
+    #generateHistoryProcessEntries
+
+    #generatePdsHistoryProcessEntries()
+    
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## generateProcessingInformation 
+##
+## Creates the Processing_Information structure
+##
+## Note: Only called by mipl_cameras (as of August 17, 2021)
+##
+#macro(generateProcessingInformation $pid)
+<proc:Processing_Information>
+        <Local_Internal_Reference>
+          <local_identifier_reference>$pid</local_identifier_reference>
+          <local_reference_type>processing_information_to_data_object</local_reference_type>
+        </Local_Internal_Reference>
+        
+        <proc:Input_Product_List>
+          #foreach ( $input_product_id in $label.DERIVED_IMAGE_PARMS.INPUT_PRODUCT_ID )
+            #set ($input_product_coll   = "#msn_getProductLidCollection($input_product_id)" )
+  
+            <proc:Input_Product>
+                <Internal_Reference>                
+                    <lidvid_reference>#generateLIDVID( $LID_PREFIX $input_product_coll $input_product_id.toLowerCase() )</lidvid_reference> 
+                    <reference_type>data_to_input_product</reference_type>
+                    <comment>This is the PDS4 logical identifier for an input product.</comment>
+                </Internal_Reference>
+            </proc:Input_Product>
+          #end
+        </proc:Input_Product_List>
+        
+        #generateProcessEntries()
+        
+      </proc:Processing_Information>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+
+
+## ------------------------------------------------------------------------
+
+#macro (generateDetectorEraseCount $node $nodeName)      
+          #if ( $node.DETECTOR_ERASE_COUNT )
+          #debug ("${nodeName}.DETECTOR_ERASE_COUNT")
+          <img:erase_count>$!node.DETECTOR_ERASE_COUNT</img:erase_count>
+          #end    
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+#macro(getProductType $pid)
+#msn_getProductType($pid)
+#end 
+
+## ------------------------------------------------------------------------
+
+#macro(getPlanetDayNumberOrSol $pid)
+#msn_getPlanetDayNumberOrSol($pid)
+#end 
+
+## ------------------------------------------------------------------------
+
+#macro(isMosaic $pid_or_filename)
+#msn_isMosaic( $pid_or_filename )
+#end
+
+## ------------------------------------------------------------------------
+
+#macro(isThumbnail $pid_or_filename)
+#msn_isThumbnail( $pid_or_filename )
+#end
+
+## ------------------------------------------------------------------------
+
+#macro(getCompressionName)
+#set ( $lcl_compName = "" )
+#if($label.COMPRESSION_PARMS.INST_CMPRS_NAME)
+#set ( $lcl_compName = $label.COMPRESSION_PARMS.INST_CMPRS_NAME.toString() )
+#end
+$lcl_compName##
+#end
+
+
+## ------------------------------------------------------------------------
+
+#################################
+## Image utility macro that returns true if datatype is float (and the 
+## label contains required values to make this determination), 
+## false otherwise. 
+##
+## We currently examine the node(s):
+##    $label.PDS4_IMAGE.pds4_data_type
+##
+## and assume float type for the following string prefix(es):
+##    "IEEE"
+##    "Complex"
+##
+#macro(isFloatDataType)
+#set ( $isfdt_rval = $CONST_FALSE)
+#if ( $label.PDS4_IMAGE && $label.PDS4_IMAGE.pds4_data_type.toString() )
+#set ( $isfdt_datatype_str = $label.PDS4_IMAGE.pds4_data_type.toString() )
+#if ( ($isfdt_datatype_str.startsWith("IEEE") || $isfdt_datatype_str.startsWith("Complex")) )
+#set ( $isfdt_rval = $CONST_TRUE)
+#end
+#end
+$isfdt_rval##
+#end
+#################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## getPIDVersionAsDecimalSingleChar
+##
+#macro(getPIDVersionAsDecimalSingleChar $pidVerStr)
+#if ($pidVerStr == $PID_VERSION_SINGLE_CHAR_ROLLOVER_STRING)
+${PID_VERSION_SINGLE_CHAR_ROLLOVER_VALUE}##
+#else
+#set( $Integer = 0 )
+#set ($gpvadsc_val = "" )
+#set ($gpvadsc_val = $Integer.parseInt($pidVerStr, 36))
+${gpvadsc_val}##
+#end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## getObservingSystem
+## Instrument is usually a single value, except in multi-instrument mosaics, so we have to iterate to keep validation happy (2019.06.12)
+## Yes, this is a hacky way of dealing with it, but it seems the only way I can think up that supports IMG, VIC for single and multiple instruments...
+## Because sometimes the return type is an ItemNode and sometimes its a string...
+## TODO: Find a more consistent way of dealing with this...
+
+#macro(getObservingSystem)
+    <Observing_System>
+      <Observing_System_Component>
+        <name>$MSN_SPACECRAFT</name>
+        <type>Host</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:spacecraft.$MSN_PLATFORM.toLowerCase()</lid_reference>
+          <reference_type>is_instrument_host</reference_type>
+          <comment>This is the PDS4 logical identifier for the $MSN_SPACECRAFT spacecraft.</comment>
+        </Internal_Reference>
+      </Observing_System_Component>
+
+      #if ( $IDENT.INSTRUMENT_ID || $INSTRUMENT_ID )
+
+       ## Special case of label INSTRUMENT_ID that contains list of instruments
+       #if  ( $IDENT.INSTRUMENT_ID && $list_class.isAssignableFrom( $IDENT.INSTRUMENT_ID.class ) )
+
+        #set($instrIdCount = $IDENT.INSTRUMENT_ID.size() - 1)
+        #foreach ( $i in [ 0..$instrIdCount ] )
+          #set ( $curInstrId   = $IDENT.INSTRUMENT_ID.get($foreach.index) )
+          ##Set name to id as default, then check for NAME label
+          #set ( $curInstrName = $curInstrId )
+          #if ( $IDENT.INSTRUMENT_NAME )
+            #set ( $curInstrName = $IDENT.INSTRUMENT_NAME.get($foreach.index) )
+          #end
+          #set ( $curInstrName = "$text.capitalize($curInstrName)" )
+          <Observing_System_Component>
+            <name>$curInstrName</name>
+            <type>Instrument</type>
+            <Internal_Reference>
+              #debug("IDENTIFICATION.INSTRUMENT_ID")
+              #set ($oa_osc_instr_instr = $curInstrId.toString().toLowerCase() )
+              #set ($context = "#msn_getInstrumentContextName($oa_osc_instr_instr)" )
+              #set ($oa_osc_instr_instr_urn = "#msn_getInstrumentContextURN($context)" )
+              #set ($oa_osc_instr_instr_urn = $oa_osc_instr_instr_urn.toLowerCase() )
+              <lid_reference>${oa_osc_instr_instr_urn}</lid_reference>
+              <reference_type>is_instrument</reference_type>
+              <comment>This is the PDS4 logical identifier for the $curInstrName onboard the ${MSN_SPACECRAFT} spacecraft.</comment>
+            </Internal_Reference>
+          </Observing_System_Component>
+
+        #end  ##endForEach
+
+       #else  ##Otherwise, handle label IDENT.INSTRUMENT_ID (as single string) or INSTRUMENT_ID variable (the same way)
+
+         #set ( $oa_osc_instr_instr = $INSTRUMENT_ID.toString() )
+         #if ( $IDENT.INSTRUMENT_ID )
+            #set ( $oa_osc_instr_instr = $IDENT.INSTRUMENT_ID.toString() )
+         #end
+
+         ## If there is no discernable INSTRURMENT information (and thus value is '' or 'UNK')
+         ## then do not include this section...(some nonimg labels do not apply to instrument at all)
+
+         #if ( $oa_osc_instr_instr != '' && $CONST_FALSE.equals("#valueIsNilValue($oa_osc_instr_instr)") )
+
+            ## Instrument name variable should already be set, but just in case...
+            #set ( $curInstrName = $oa_osc_instr_instr )
+            #if ( $INSTRUMENT_NAME != '' )
+                #set ( $curInstrName = $INSTRUMENT_NAME )
+            #end
+            #set ( $curInstrName = "$text.capitalize($curInstrName)" )
+
+            <Observing_System_Component>
+              <name>$curInstrName</name>
+              <type>Instrument</type>
+              <Internal_Reference>
+                #set ($oa_osc_instr_instr = $oa_osc_instr_instr.toLowerCase() )
+                #set ($osc_context = "#msn_getInstrumentContextName($oa_osc_instr_instr)" )
+                #set ($oa_osc_instr_instr_urn = "#msn_getInstrumentContextURN($osc_context)" )
+                #set ($oa_osc_instr_instr_urn = $oa_osc_instr_instr_urn.toLowerCase() )
+                <lid_reference>${oa_osc_instr_instr_urn}</lid_reference>
+                <reference_type>is_instrument</reference_type>
+                <comment>This is the PDS4 logical identifier for the $curInstrName onboard the $MSN_SPACECRAFT spacecraft.</comment>
+              </Internal_Reference>
+            </Observing_System_Component>
+         #end ##EndIf oa_osc_instr_instr is non null
+
+       #end  ##endIfElse
+
+
+      #end ##endIfIdentInstrumentIdDefined
+
+    ## (Issue 101) The notion of ACTIVE_FLIGHT_STRING_ID moved to ...
+    ## ... <msn:Mission_Information><msn:Observation_Context> 
+    ## #if ( $!IDENT.ACTIVE_FLIGHT_STRING_ID )
+    ##   #set ($act_flt_str_id = $IDENT.ACTIVE_FLIGHT_STRING_ID.toString() )
+    ##   <Observing_System_Component>
+    ##     <name>$MSN_SPACECRAFT_SHORT Computer $act_flt_str_id</name>
+    ##     <type>Computer</type>
+    ##     <Internal_Reference>
+    ##       #set ($act_flt_str_id_lower = $act_flt_str_id.toLowerCase())
+    ##       #set ($mdin_lower = $MSN_PLATFORM.toLowerCase())
+    ##       <lid_reference>urn:nasa:pds:context:computer:computer_${act_flt_str_id_lower}.${mdin_lower}</lid_reference>
+    ##       <reference_type>is_other</reference_type>
+    ##       <comment>This is the PDS4 logical identifier pointing to the computer used during data acquisition.</comment> 
+    ##     </Internal_Reference>
+    ##   </Observing_System_Component>
+    ## #end
+
+    </Observing_System>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+#macro(getTargetIdentification)
+
+    ## Set initial values to mission defaults
+    #set ($tgt_name_orig = $MSN_TARGET)
+    #set ($tgt_type_orig = $MSN_TARGET_TYPE)
+
+    ## Added so that VGR can be different and not include Internal_Reference section
+    #set ($include_intern_ref = "#msn_doesTargetIdentIncludeInternalRef()")
+
+    ## Check label for values
+    #if ( $IDENT.TARGET_NAME &&  ! $IDENT.TARGET_NAME.toString().isEmpty() )
+        #set ($tgt_name_orig = $IDENT.TARGET_NAME.toString() )
+    #end
+    #if ( $IDENT.TARGET_TYPE &&  ! $IDENT.TARGET_TYPE.toString().isEmpty() )
+        #set ($tgt_type_orig = $IDENT.TARGET_TYPE.toString() )
+    #end
+
+    ## Allow mission or generic to override the current values
+    #set ($target_name = "#msn_getTargetName($tgt_name_orig $tgt_type_orig)")
+    #set ($target_type = "#msn_getTargetType($tgt_name_orig $tgt_type_orig)")
+
+    ## Convert to lower case
+    #set ($target_name = $target_name.toLowerCase() )
+    #set ($target_type = $target_type.toLowerCase() )
+
+    <Target_Identification>
+        <name>$text.capitalize($target_name)</name>
+        <type>$text.capitalize($target_type)</type>
+
+        #if ( $CONST_TRUE.equals($include_intern_ref) )
+         <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:target:${target_type}.${target_name}</lid_reference>
+          <reference_type>data_to_target</reference_type>
+          <comment>This is the PDS4 logical identifier for the $target_type - $target_name.</comment>
+         </Internal_Reference>
+        #end
+    </Target_Identification>
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro(getGeometrySection)
+
+     <geom:Geometry>
+        <geom:SPICE_Kernel_Files>
+          <geom:SPICE_Kernel_Identification>
+            #debug("TELEMETRY.SPICE_FILE_NAME")
+            <geom:spice_kernel_file_name>$!TELEM.SPICE_FILE_NAME</geom:spice_kernel_file_name>            
+          </geom:SPICE_Kernel_Identification>
+        </geom:SPICE_Kernel_Files>
+
+        <geom:Geometry_Lander>
+
+          ## Default to Telemetry.  Check GEO_STATE.  If none, then skip section.  Else use that name.
+          #set ( $ggeosect_state = 'Telemetry' )
+          #if ( $IDENT.GEOMETRY_STATE )
+            #if ( $!IDENT.GEOMETRY_STATE.toString().equalsIgnoreCase("None") )
+                #set ( $ggeosect_state = '' )
+            #else
+                #set ( $ggeosect_state = $!label.GEOMETRY_STATE.toString() )
+            #end
+          #end
+          #if ( $ggeosect_state != '' )
+            <geom:geometry_state>$ggeosect_state</geom:geometry_state>
+            #set ( $ggeosect_state = $ggeosect_state.toLowerCase() )
+            <geom:description>Geometry as reported by the spacecraft in $ggeosect_state</geom:description>
+            <local_identifier>geom_${ggeosect_state}_state</local_identifier>
+          #end
+
+          #generateArticulationDeviceParams( $IS_MOSAIC )
+          
+          #set ($camModelType = "" )
+          #set ($camModelType = $!GEO_CAM_MODEL.MODEL_TYPE.toString() )
+          #if ( $!camModelType != "" && ! $camModelType.toLowerCase().equals("none") )
+
+           <geom:Camera_Model_Parameters>
+            
+            #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_TYPE" )
+            <geom:model_type>$camModelType</geom:model_type>
+          
+              #debug ( "GEOMETRIC_CAMERA_MODEL.CALIBRATION_SOURCE_ID" )
+              <geom:calibration_source_id>$!GEO_CAM_MODEL.CALIBRATION_SOURCE_ID</geom:calibration_source_id>
+
+              #geomModelTypeTagOpen( $camModelType )
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_1 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_1)"))
+                  #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_1" )
+                  #set ($gcm_mc1_vc_unit = "#getOptUnitAttr( $!GEO_CAM_MODEL.MODEL_COMPONENT_UNIT[0] $!GEO_CAM_MODEL.MODEL_COMPONENT_UNIT)")
+                  #if ( $gcm_mc1_vc_unit == "" )
+                    #set ($gcm_mc1_vc_unit = 'unit="m"' )
+                  #end
+                  <geom:Vector_Center>
+                    <geom:x_position $gcm_mc1_vc_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_1[0]</geom:x_position>
+                    <geom:y_position $gcm_mc1_vc_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_1[1]</geom:y_position>
+                    <geom:z_position $gcm_mc1_vc_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_1[2]</geom:z_position>
+                  </geom:Vector_Center>
+                #end
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_2 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_2)"))
+                  #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_2" )                
+                  <geom:Vector_Axis>
+                    ## Hack-alert: Max value is 1.0000, but some labels have rounding error
+                    ## such that value may be 1.00001, which makes Validation unhappy.
+                    ## So we have to do bounds checking...   (Jan'22)
+                    #set ($geo_vaxis_min = '-1.0000' )
+                    #set ($geo_vaxis_max = '1.0000' )
+                    #set ($geo_vaxis_x = $!GEO_CAM_MODEL.MODEL_COMPONENT_2[0].toString() )
+                    #set ($geo_vaxis_y = $!GEO_CAM_MODEL.MODEL_COMPONENT_2[1].toString() )
+                    #set ($geo_vaxis_z = $!GEO_CAM_MODEL.MODEL_COMPONENT_2[2].toString() )
+                    #set ($geo_vaxis_x = "#enforceBoundsDouble($geo_vaxis_x  $geo_vaxis_min  $geo_vaxis_max)" )
+                    #set ($geo_vaxis_y = "#enforceBoundsDouble($geo_vaxis_y  $geo_vaxis_min  $geo_vaxis_max)" )
+                    #set ($geo_vaxis_z = "#enforceBoundsDouble($geo_vaxis_z  $geo_vaxis_min  $geo_vaxis_max)" )
+                    <geom:x_unit>$!geo_vaxis_x</geom:x_unit>
+                    <geom:y_unit>$!geo_vaxis_y</geom:y_unit>
+                    <geom:z_unit>$!geo_vaxis_z</geom:z_unit>
+                  </geom:Vector_Axis>
+                #end
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_3 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_3)"))
+                  #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_3" )
+                  <geom:Vector_Horizontal>
+                    <geom:x_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_3[0]</geom:x_pixel>
+                    <geom:y_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_3[1]</geom:y_pixel>
+                    <geom:z_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_3[2]</geom:z_pixel>
+                  </geom:Vector_Horizontal>
+                #end
+                
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_4 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_4)"))
+                  #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_4" )
+                  <geom:Vector_Vertical>
+                    <geom:x_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_4[0]</geom:x_pixel>
+                    <geom:y_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_4[1]</geom:y_pixel>
+                    <geom:z_pixel>$!GEO_CAM_MODEL.MODEL_COMPONENT_4[2]</geom:z_pixel>
+                  </geom:Vector_Vertical>
+                #end
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_5 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_5)"))
+                  #debug ( "GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_5" )
+                  <geom:Vector_Optical>
+                    <geom:x_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_5[0]</geom:x_unit>
+                    <geom:y_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_5[1]</geom:y_unit>
+                    <geom:z_unit>$!GEO_CAM_MODEL.MODEL_COMPONENT_5[2]</geom:z_unit>
+                  </geom:Vector_Optical>
+                #end
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_6 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_6)"))
+                  #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_6" )
+                  <geom:Radial_Terms>
+                    <geom:c0>$!GEO_CAM_MODEL.MODEL_COMPONENT_6[0]</geom:c0>
+                    <geom:c1>$!GEO_CAM_MODEL.MODEL_COMPONENT_6[1]</geom:c1>
+                    <geom:c2>$!GEO_CAM_MODEL.MODEL_COMPONENT_6[2]</geom:c2>
+                  </geom:Radial_Terms>
+                #end
+
+                #if ( $GEO_CAM_MODEL.MODEL_COMPONENT_7 && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_COMPONENT_7)"))
+                  #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_7")
+                  <geom:Entrance_Terms>
+                    <geom:c0>$!GEO_CAM_MODEL.MODEL_COMPONENT_7[0]</geom:c0>
+                    <geom:c1>$!GEO_CAM_MODEL.MODEL_COMPONENT_7[1]</geom:c1>
+                    <geom:c2>$!GEO_CAM_MODEL.MODEL_COMPONENT_7[2]</geom:c2>
+                  </geom:Entrance_Terms>
+                #end
+
+                #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_8")
+                <geom:cahvore_model_type>$!convert.toNumber($!GEO_CAM_MODEL.MODEL_COMPONENT_8.toString())</geom:cahvore_model_type>
+                
+                #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_COMPONENT_9")
+                <geom:cahvore_model_parameter>$!GEO_CAM_MODEL.MODEL_COMPONENT_9</geom:cahvore_model_parameter>
+
+              #geomModelTypeTagClose( $camModelType )
+
+              #set ( $coordSystemName  = "" )
+              #set ( $coordSystemIndex = "" )
+              #set ( $coordSystemName  = $GEO_CAM_MODEL.REFERENCE_COORD_SYSTEM_NAME ) 
+              #set ( $coordSystemIndex = $GEO_CAM_MODEL.REFERENCE_COORD_SYSTEM_INDEX )
+              #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "geom" "GEOMETRIC_CAMERA_MODEL" )
+      
+              #if ( $GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION && 
+                    $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION)") )
+                #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_TRANSFORM_QUATERNION")
+                <geom:Quaternion_Model_Transform>
+                    <geom:qcos>$!GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION[0]</geom:qcos>
+                    <geom:qsin1>$!GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION[1]</geom:qsin1>
+                    <geom:qsin2>$!GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION[2]</geom:qsin2>
+                    <geom:qsin3>$!GEO_CAM_MODEL.MODEL_TRANSFORM_QUATERNION[3]</geom:qsin3>
+                </geom:Quaternion_Model_Transform>
+              #end
+
+              #if ( $GEO_CAM_MODEL.MODEL_TRANSFORM_VECTOR && 
+                    $CONST_FALSE.equals("#doesNodeValueListContainNilValue($GEO_CAM_MODEL.MODEL_TRANSFORM_VECTOR)") )
+                #debug ("GEOMETRIC_CAMERA_MODEL.MODEL_TRANSFORM_VECTOR")
+                <geom:Vector_Model_Transform>
+                    <geom:x>$!GEO_CAM_MODEL.MODEL_TRANSFORM_VECTOR[0]</geom:x>
+                    <geom:y>$!GEO_CAM_MODEL.MODEL_TRANSFORM_VECTOR[1]</geom:y>
+                    <geom:z>$!GEO_CAM_MODEL.MODEL_TRANSFORM_VECTOR[2]</geom:z>
+                </geom:Vector_Model_Transform>
+              #end
+              
+              #generateGeomInterpolation()
+
+            </geom:Camera_Model_Parameters>
+
+          #end ##If_CamModelType_not_none_or_emptystring
+            
+          ## TODO - Bug Fix for initial peer review - REMOVE FOR DELTA PEER REVIEW
+          #getCoordinateSystemDefinitions($IS_MOSAIC)
+
+
+          #debug ("LANDER_DERIVED_GEOMETRY_PARMS")
+          #if ( $label.LANDER_DERIVED_GEOMETRY_PARMS )
+            #generateDerivedGeometry( $label.LANDER_DERIVED_GEOMETRY_PARMS  'LANDER_DERIVED_GEOMETRY_PARMS')
+          #end
+
+          #debug ("ROVER_DERIVED_GEOMETRY_PARMS")
+          #if ( $label.ROVER_DERIVED_GEOMETRY_PARMS )
+            #generateDerivedGeometry( $label.ROVER_DERIVED_GEOMETRY_PARMS  'ROVER_DERIVED_GEOMETRY_PARMS')
+          #end
+
+          #debug ("SITE_DERIVED_GEOMETRY_PARMS")
+          #if ( $label.SITE_DERIVED_GEOMETRY_PARMS )
+            #generateDerivedGeometry( $label.SITE_DERIVED_GEOMETRY_PARMS  'SITE_DERIVED_GEOMETRY_PARMS')
+          #end
+
+          #generateSpiceDerivedGeometry()
+
+
+          #generateGeomMotionCounter( $IDENT )
+
+        </geom:Geometry_Lander>
+
+        #if ( $label.INITIAL_STATE_PARMS )
+
+          <geom:Geometry_Lander>
+
+            <geom:geometry_state>Initial</geom:geometry_state>
+            <geom:description>Initial state of geometry before onboard updates (e.g. visual odometry)</geom:description>
+            <local_identifier>geom_initial_state</local_identifier>
+
+            #if ($label.INITIAL_STATE_PARMS.ROVER_MOTION_COUNTER )
+
+
+              ## Per Issue 145: The INITIAL_STATE code needs to suppress the CS definition of
+              ## the INITIAL_STATE's RMC is the same as the primary RMC.
+              #set ( $odggl_init_state_include_coordsysdef = $CONST_FALSE )
+              #set ( $odggl_init_state_rmc_str = "" )
+              #set ( $odggl_ident_rmc_str      = "" )
+              #set ( $odggl_init_state_rmc_str = "#convertListToCommaSepString( $!label.INITIAL_STATE_PARMS.ROVER_MOTION_COUNTER )" )
+              #set ( $odggl_ident_rmc_str      = "#convertListToCommaSepString( $!IDENT.ROVER_MOTION_COUNTER )" )
+
+              #if ( $!odggl_init_state_rmc_str != "" && $!odggl_ident_rmc_str != "" && 
+                    (! $!odggl_init_state_rmc_str.equals( $!odggl_ident_rmc_str )) )
+                    #set ( $odggl_init_state_include_coordsysdef = $CONST_TRUE )
+              #end  ##If-RMCs-differ
+
+              #if ( $CONST_TRUE.equals( $odggl_init_state_include_coordsysdef ))
+
+                ## This seem insane, but I am told to trust things...
+                ## Arg0: INITIAL_STATE_PARMS node
+                ## Arg1: INITIAL_STATE_PARMS.ROVER_MOTION_COUNTER for indexes
+                ## Arg2: IDENT.ROVER_MOTION_COUNTER_NAME for index-names 
+
+                #getCoordinateSystemDefinitionForInitialState( $label.INITIAL_STATE_PARMS $label.INITIAL_STATE_PARMS.ROVER_MOTION_COUNTER $!IDENT.ROVER_MOTION_COUNTER_NAME )
+              #end 
+
+              #generateGeomMotionCounter( $label.INITIAL_STATE_PARMS )
+
+            #end
+            
+          </geom:Geometry_Lander>
+        #end
+
+
+      </geom:Geometry>
+
+#end 
+
+## ------------------------------------------------------------------------
+
+#macro (getInvestigationArea)
+    <Investigation_Area>
+      <name>$MSN_INVESTIGATION_NAME</name>
+      <type>$MSN_INVESTIGATION_TYPE</type>
+
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:$MSN_INVESTIGATION_SUBTYPE.$MSN_INVESTIGATION_MISSION.toLowerCase()</lid_reference>        
+        <reference_type>data_to_investigation</reference_type>
+        <comment>This is the PDS4 logical identifier for the $MSN_INVESTIGATION_MISSION Mission.</comment>
+      </Internal_Reference>
+
+    </Investigation_Area>
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (getModificationHistory)
+#msn_getModificationHistory()
+#end
+
+
+## ------------------------------------------------------------------------
+
+##NEW PID MACROS to use for all of the VM files (July '21):
+
+#macro (shouldPidHideExtension $exten)
+#set ( $she_result = $CONST_FALSE )
+#set ( $lcl_exten = $exten.toUpperCase() )
+#if ( ! $lcl_exten.startsWith("."))
+#set ( $lcl_exten = "." + $lcl_exten )
+#end
+#foreach ( $exten_to_hide in $PID_HIDDEN_EXTENS )
+#set ($exten_to_hide = $exten_to_hide.toUpperCase() )
+#if ( $exten_to_hide.equalsIgnoreCase($lcl_exten) )
+#set ( $she_result = $CONST_TRUE )
+#end
+#end
+${she_result}##
+#end
+
+
+
+##################################
+## createPidFromVersionedName
+##
+## Returns the PID from a filename/filepath that originally has version field.
+## The version string is removed.  
+## Extension is included IFF extension is neither .IMG/.VIC (case-insensitive)
+
+#macro (createPidFromVersionedName $filepath)
+#set ($filename = "#getBasename($filepath)" )
+#set ($exten    = "#getFileExtensionBestEffort($filepath)")
+#set ($nameSansVer = "#getPidFullnameNoVersion($filename)" )
+#if ( $exten == '' || $CONST_TRUE.equals("#shouldPidHideExtension($exten)") )
+${nameSansVer}##
+#else
+${nameSansVer}.${exten}##
+#end
+#end
+
+##################################
+## createPidFromVersionlessName
+##
+## Returns the PID from a filename/filepath that contains no version field.
+## Extension is included IFF extension is neither .IMG/.VIC (case-insensitive)
+
+#macro (createPidFromVersionlessName $filepath)
+#set ($basename = "#getBasenameNoExten($filepath)")
+#set ($exten = "#getFileExtensionBestEffort($filepath)")
+#if ( $exten == '' || $CONST_TRUE.equals("#shouldPidHideExtension($exten)") )
+${basename}##
+#else
+${basename}.${exten}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+
+## Checks various parts of the label to make an educated guess about the
+## file extension
+
+#macro(getFileExtensionBestEffort $filepath_maybe )
+#set ($gfebe_filext = "")
+#set ($gfebe_filename = "" )
+#if ( $filepath_maybe != '' && $filepath_maybe.toString().contains(".") )
+#set ($gfebe_filename = $filepath_maybe.toString() )
+#elseif ( $IDENT.PRODUCT_ID && $IDENT.PRODUCT_ID.toString().contains("."))
+#set ($gfebe_filename = $IDENT.PRODUCT_ID.toString() )
+#elseif ( $label.PDS4_IMAGE && $label.PDS4_IMAGE.detached_filename )
+#set ($gfebe_filename = $label.PDS4_IMAGE.detached_filename.toString() )
+#elseif ( $extra && $extra.FILENAME )
+#set ($gfebe_filename =  $extra.FILENAME.toString() )
+#end
+#if ( $gfebe_filename != '' )
+#set ($gfebe_filext = "#getFileExtension($gfebe_filename)")
+#end
+#if ( $gfebe_filext.equalsIgnoreCase($CONST_UNKNOWN) || $gfebe_filext.equalsIgnoreCase("LBL"))
+#set ( $gfebe_filext   = "")
+#end
+${gfebe_filext}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Originally part of the M20 macros, making it more generic for others
+## to use.  If there are conflicts, the it should be moved as a msn_ macro.
+
+#macro (getMissionPhaseName $mpn_raw )
+#set ( $mpn_raw = $mpn_raw.toString() )
+#set ( $gen_gmpn_val = $mpn_raw )
+#set ( $mpn_raw = $mpn_raw.toUpperCase() )
+#if ($mpn_raw.startsWith("SURFACE") )
+#set ( $gen_gmpn_val = "Surface Mission" )
+#elseif ($mpn_raw.equals("ATLO") )
+#set ( $gen_gmpn_val = "ATLO" )
+#elseif ($mpn_raw.equals("CRUISE")  )
+#set ( $gen_gmpn_val = "Cruise" )
+#elseif ($mpn_raw.equals("DEVELOPMENT"))
+#set ( $gen_gmpn_val = "Development" )
+#elseif ($mpn_raw.equals("TEST"))
+#set ( $gen_gmpn_val = "Test" )
+#elseif ($mpn_raw.equals("PRIMARY_SURFACE_MISSION") || $mpn_raw.equals("PRIMARY SURFACE MISSION"))##FirstBundleUsedThisName
+#set ( $gen_gmpn_val = "Surface Mission" )
+#else
+#set ( $gen_gmpn_val = $mpn_raw.replace('_','') )
+#end
+${gen_gmpn_val}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+## Macro that checks label to see if label declares that the source filename  
+## adheres to the expected mission filename syntax.
+## It assumes True unless the label says otherwise 
+
+#macro (isStandardMissionFilename)
+#set ( $ismf_rval = $CONST_TRUE )
+#if ( $IDENT && $IDENT.STANDARD_MISSION_FILENAME && $!IDENT.STANDARD_MISSION_FILENAME.toString().equalsIgnoreCase('false'))
+#set ( $ismf_rval = $CONST_FALSE )
+#elseif ( $extra && $extra.STANDARD_MISSION_FILENAME && $!extra.STANDARD_MISSION_FILENAME.toString().equalsIgnoreCase('false'))
+#set ( $ismf_rval = $CONST_FALSE )
+#end
+${ismf_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Utility macro that extamines the $extra label for a VERSION_NUMBER
+## and then VERSION (used in older scripts) in the label.
+## If a value is found, that value is returned. Else '1' is returned.
+
+#macro (getExtrasVersion)
+#set ($gev_rval = '1' )
+#if ( $extra )
+#if ( $extra.VERSION_NUMBER )
+#set ($gev_rval = $extra.VERSION_NUMBER.toString() )
+#elseif ( $extra.VERSION )
+#set ($gev_rval = $extra.VERSION.toString() )
+#end
+#end
+${gev_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Wrapper around msn_getProductLidCollection() which first checks if
+## the label includes value for $IDENT.PDS4_COLLECTION, 
+## $extra.PDS4_COLLECTION, or $extra.COLLECTION, in that order. If found,
+## then the associated value is returned.
+
+#macro (getProductLidCollectionCheckLabel $pid )
+#set ( $gplccl_rval = '' )
+#if ( $IDENT && $IDENT.PDS4_COLLECTION )
+#set ( $gplccl_rval = $IDENT.PDS4_COLLECTION.toString() )
+#elseif ( $extra && $extra.PDS4_COLLECTION )
+#set ( $gplccl_rval = $extra.PDS4_COLLECTION.toString() )
+#elseif ( $extra && $extra.COLLECTION )
+#set ( $gplccl_rval = $extra.COLLECTION.toString() )
+#else
+#set ( $gplccl_rval = "#msn_getProductLidCollection($pid)")
+#end
+${gplccl_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Wrapper around msn_getProductLidPrefix() which first checks if
+## the label includes value for $IDENT.PDS4_BUNDLE, $extra.PDS4_BUNDLE,
+## or $extra.BUNDLE, in that order.  If found, then the associated value 
+## is returned.
+
+#macro (getProductLidPrefixCheckLabel $pid )
+#set ( $gplpcl_bundle = '' )
+#set ( $gplpcl_rval = '' )
+#if ( $IDENT && $IDENT.PDS4_BUNDLE )
+#set ( $gplpcl_bundle = $IDENT.PDS4_BUNDLE.toString() )
+#elseif ( $extra && $extra.PDS4_BUNDLE )
+#set ( $gplpcl_bundle = $extra.PDS4_BUNDLE.toString() )
+#elseif ( $extra && $extra.BUNDLE )
+#set ( $gplpcl_bundle = $extra.BUNDLE.toString() )
+#end
+#if ( $gplpcl_bundle.isEmpty() )
+#set ( $gplpcl_rval = "#msn_getProductLidPrefix($pid)")
+#else
+#set ( $gplpcl_rval = "${PDS_LID_PREFIX}${gplpcl_bundle}" )
+#end
+${gplpcl_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Wrapper around msn_getBrowseLidCollection() which first checks if
+## the label includes value for $IDENT.BROWSE_COLLECTION, 
+## $extra.BROWSE_COLLECTION, in that order. If found,
+## then the associated value is returned.
+
+#macro (getBrowseLidCollectionCheckLabel $pid )
+#set ( $gblccl_rval = '' )
+#if ( $IDENT && $IDENT.BROWSE_COLLECTION )
+#set ( $gblccl_rval = $IDENT.BROWSE_COLLECTION.toString() )
+#elseif ( $extra && $extra.BROWSE_COLLECTION )
+#set ( $gblccl_rval = $extra.BROWSE_COLLECTION.toString() )
+#else
+#set ( $gblccl_rval = "#msn_getBrowseLidCollection($pid)")
+#end
+${gblccl_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Wrapper around msn_getProcessingLevel() which first checks if
+## the label includes value for $IDENT.PROCESSING_LEVEL, 
+## $extra.PROCESSING_LEVEL, in that order. If found,
+## then the associated value is returned.
+
+#macro (getProcessingLevelCheckLabel $prod_type $is_mosaic )
+#set ( $gplcl_rval = '' )
+#if ( $IDENT && $IDENT.PROCESSING_LEVEL )
+#set ( $gplcl_rval = $IDENT.PROCESSING_LEVEL.toString() )
+#elseif ( $extra && $extra.PROCESSING_LEVEL )
+#set ( $gplcl_rval = $extra.PROCESSING_LEVEL.toString() )
+#else
+#set ( $gplcl_rval = "#msn_getProcessingLevel($prod_type $is_mosaic)")
+#end
+${gplcl_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Wrapper around #createPidFromVersionedName(), which first checks if the 
+## label indicates that the $filename does NOT adhere to the mission
+## specification for filenames.  If that's the case the result of 
+## createPidFromVersionlessName() is returned instead.
+
+#macro (createPidFromVersionedNameCheckLabel $filepath)
+#set ( $cpfvncl_rval = '' )
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ( $cpfvncl_rval = "#createPidFromVersionedName($filepath)" )
+#else
+#set ( $cpfvncl_rval = "#createPidFromVersionlessName($filepath)" )
+#end
+${cpfvncl_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## getPIDVersion
+##
+## Returns the version from a full PID name (in numeric form)
+## Also checks if IDENTIFICATION declares a VERSION_NUMBER, 
+## and returns that if found.
+## If label indicates the filename does not adhere to expected
+## structure, then UNK is returned.
+##
+
+#macro(getPIDVersionCheckLabel $filepath)
+#set ($versionNum = "" )
+#if ( $IDENT && $IDENT.VERSION_NUMBER )
+#set ($versionNum = $IDENT.VERSION_NUMBER.toString() )
+#elseif ( $extra && $extra.VERSION_NUMBER )
+#set ($versionNum = $extra.VERSION_NUMBER.toString() )
+#elseif ( $CONST_FALSE.equals("#isStandardMissionFilename()"))
+#set ($versionNum = $CONST_UNKNOWN )
+#else
+#set ($versionNum = "#getPIDVersion($filepath)" )
+#end
+${versionNum}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+##
+## hack macro: Labels are combined by the transcoder at times.
+## Until this is fixed, we need to handle in the templates, yuck.
+## Issue is we get value of $node as 'nodeValue$followingLabel=$followingValue'
+## This macro examines the value of $node to see if string value of $followingLabel is found within.
+## If true, then a list-string is returned with cleaned up values for each label "nodeValue;followingValue"
+## ...use split(';') and isSplitListFromJoinStrListEmpty() to parse
+## If not found, then $CONST_FALSE is returned
+
+#macro(hackSeparateLabelValues $node $followingLabel )
+#set ($hslv_rval = $CONST_FALSE )
+#set ($hslv_nodeval = $node.toString() )
+#if ( $hslv_nodeval.contains($followingLabel) )
+#set ( $hslv_nodeval_wtf = $hslv_nodeval )
+#set ( $hslv_nodeval_wtf_idx_1 = $hslv_nodeval_wtf.indexOf($followingLabel) )
+#set ( $hslv_nodeval_wtf_idx_2 = $hslv_nodeval_wtf.indexOf("=") )
+#set ( $hslv_nodeval_wtf_idx_2 = $math.add($hslv_nodeval_wtf_idx_2, '1') ) 
+#set ( $hslv_nodeval_val1 = $hslv_nodeval_wtf.substring(0, $hslv_nodeval_wtf_idx_1)) 
+#set ( $hslv_nodeval_val2 = $hslv_nodeval_wtf.substring($hslv_nodeval_wtf_idx_2) )
+#set ( $hslv_nodeval_val1 = $hslv_nodeval_val1.trim() )
+#set ( $hslv_nodeval_val2 = $hslv_nodeval_val2.trim() )
+#set ($hslv_rval = "${hslv_nodeval_val1};${hslv_nodeval_val2}" )
+#end
+${hslv_rval}##
+#end
+
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+## Returns the value of msn_includeGitVersion()
+## However, if $extra.INCLUDE_GIT_VERSION is defined, then
+## $CONST_TRUE will be returned if value is 'true', $CONST_FALSE
+## for any other value.
+
+#macro(shouldIncludeGitVersion)
+#set ( $gigv_rval = "#msn_includeGitVersion()" )
+#if ( $extra && $extra.INCLUDE_GIT_VERSION )
+#if ( $extra.INCLUDE_GIT_VERSION.toString().equalsIgnoreCase("true") )
+#set ( $gigv_rval = $CONST_TRUE )
+#else
+#set ( $gigv_rval = $CONST_FALSE )
+#end
+#end
+${gigv_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Macro which generates the <geom:Motion_Counter> section, checking that
+## ROVER_MOTION_COUNTER and ROVER_MOTION_COUNTER_NAME children nodes exist,
+## and ROVER_MOTION_COUNTER values are not all nil.
+## If so, then iterates over value and names list, checking if current
+## value is non-nil.  If so, then <geom:Motion_Counter_Index> is printend.
+## $rmcs_parent_node Parent node containing the ROVER_MOTION_COUNTER(_NAME) nodes
+
+#macro(generateGeomMotionCounter $rmcs_parent_node )
+
+    #if ( $rmcs_parent_node.ROVER_MOTION_COUNTER && $rmcs_parent_node.ROVER_MOTION_COUNTER_NAME &&
+          $CONST_FALSE.equals("#isNodeChildValueEitherNilOrNilList( $rmcs_parent_node 'ROVER_MOTION_COUNTER')") )
+
+      #set ($pmc_rmcValueNode = $rmcs_parent_node.ROVER_MOTION_COUNTER )
+      #set ($pmc_rmcNameNode  = $rmcs_parent_node.ROVER_MOTION_COUNTER_NAME )
+
+      <geom:Motion_Counter>
+        <geom:name>RMC</geom:name>
+
+        #set ($pmc_rmcValueNode_count = $pmc_rmcValueNode.size() - 1)
+        #foreach ( $i in [ 0..$pmc_rmcValueNode_count ] )
+          #set ( $pmc_rmc_val  = '' )
+          #set ( $pmc_rmc_name = '' )
+          #set ( $pmc_rmc_val  = $pmc_rmcValueNode.get($foreach.index).toString() )
+          #set ( $pmc_rmc_name = $pmc_rmcNameNode.get($foreach.index).toString() )
+
+          ##Check the both name,val are defined, and val is not nil
+          #if ( $pmc_rmc_name != '' && $pmc_rmc_val != '' && $CONST_FALSE.equals("#valueIsNilValue($pmc_rmc_val)") )
+            <geom:Motion_Counter_Index>
+              <geom:index_id>$pmc_rmc_name</geom:index_id>
+              <geom:index_value_number>$pmc_rmc_val</geom:index_value_number>
+            </geom:Motion_Counter_Index>
+          #end ##EndIf
+        #end ##EndForEach
+
+      </geom:Motion_Counter>
+
+    #end ##EndIf
+#end
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------

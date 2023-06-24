@@ -1,0 +1,1166 @@
+## Mission-specific variables and macros for: RAV1CIUN PDART, Voyager Project.
+## All constants and macros with 'MSN_'/'msn_' prefix, respectively,
+## must be implemented by any other mission-implementaion.
+
+## ========================================================================
+## GLOBALS 
+## ========================================================================
+
+
+#set ($MSN_PRODUCT_LID_PREFIX         = "urn:nasa:pds:wenkert_pdart16_vgr_rav1ciun")  ##This is just the default tho, see msn_getProductLidCollection()
+#set ($MSN_MODEL_VERSION              = "1.16.0.0")
+#set ($MSN_WAVELENGTH_RANGE           = "Visible")
+#set ($MSN_DOMAIN                     = "Surface")
+#set ($MSN_DISCIPLINE                 = "Imaging")
+#set ($MSN_TARGET             = "outer_planets")
+#set ($MSN_TARGET_TYPE        = "planet")
+#set ($MSN_INVESTIGATION_MISSION  = "Voyager")
+#set ($MSN_INVESTIGATION_NAME = "RAV1CIUN")
+#set ($MSN_INVESTIGATION_TYPE = "Individual Investigation")
+#set ($MSN_INVESTIGATION_SUBTYPE = "mission")
+#set ($MSN_PLATFORM           = "vg1")
+#set ($MSN_SPACECRAFT         = "Voyager 1")
+#set ($MSN_SPACECRAFT_SHORT   = "VGR1")
+#set ($MSN_IDENTIFICATION_AREA_TITLE_PREFIX = $MSN_INVESTIGATION_NAME)
+
+#set ($MSN_AUTO_EXPOSURE_ALGORITHM_NAME = "UNK")
+
+## TODO: should not be needed any more with the above fixes.
+##!!!! NOT UPDATED FOR VGR
+#set ($DEPRECATED_PID_LENGTH = 54)
+#set ($DEPRECATED_MOSAIC_PID_LENGTH = 40)
+
+## No versions for RAV1CIUN
+#set ($MSN_PID_VERSION_SIZE = 0)
+
+## Note, we go 00-99, A0-A9, AA-AZ, B0-B9, ... ZA-ZZ
+#set ($MSN_PID_VERSION_ROLLOVER_STRING = "_")
+#set ($MSN_PID_VERSION_ROLLOVER_VALUE  = 36)
+
+## All of the keys in this map are REQUIRED
+## PROLOG GLOBALS --------------------------------------
+#set ( $MSN_DEFAULT_VERSION = $PDS4_VERSION_LATEST )  
+#set ($MSN_PROLOG_VERSION_DICT = $LATEST_GREATEST_PROLOG_VERSION_DICT )
+
+
+#set ( $PDS4_RAV1CIUN_SCHEMA_VERSION = "1G00_0100" )
+
+
+## List of Process task names that we should skip
+## when outputting task history
+#set ($MSN_PROCESS_TASK_SKIP_LIST = ([ "VICARIMAGEWRITER" ]))
+
+## Mapping of flight_software_mode numeric value
+## to mission-specific name
+##!!!! NOT UPDATED FOR VGR
+#set ($MSN_FLIGHT_SOFTWARE_MODE_DICT = { 
+  "0"   : "UNKNOWN",
+  "1"   : "TEST",
+  "2"   : "PRELAUNCH",
+  "3"   : "LAUNCH",
+  "4"   : "ECLIPSE",
+  "5"   : "CRUISE",
+  "6"   : "EDL_APPROACH",
+  "7"   : "EDL_MAIN",
+  "8"   : "SURFACE_NOMINAL",
+  "9"   : "SURFACE_STANDBY",
+  "10"  : "NONPRIME_TEST",
+  "11"  : "NONPRIME_PRELAUNCH",
+  "12"  : "NONPRIME_LAUNCH",
+  "13"  : "NONPRIME_ECLIPSE",
+  "14"  : "NONPRIME_CRUISE",
+  "15"  : "NONPRIME_EDL_APPROACH",
+  "16"  : "NONPRIME_EDL_MAIN",
+  "17"  : "NONPRIME_SURFACE_NOMINAL",
+  "18"  : "NONPRIME_SURFACE_STANDBY"
+})
+
+## In September 2021, IDS decided to restructure the bundles.
+## Part of that process requires looking at the product-code 
+## to get associated name.  
+##
+## Want to know how this map was made?
+## Then see: https://github.jpl.nasa.gov/MIPL/mm_velocity_templates/issues/320
+##
+## Note: this is Different from the multimission processing stage map.
+
+##!!!! NOT UPDATED FOR VGR
+#set ($M20_PRODUCT_ID_TO_BUNDLE_NAME_MAP = {
+"ECM" : "raw",
+"EJP" : "raw",
+"ECV" : "raw",
+"ECZ" : "raw",
+"EDM" : "raw",
+"ECR" : "raw",
+"ERP" : "raw",
+"ERS" : "raw",
+"ECS" : "raw",
+"EHG" : "raw",
+"EAU" : "raw",
+"EDR" : "raw",
+"EVD" : "raw",
+"EZS" : "raw",
+"ERD" : "raw",
+"EBY" : "raw",
+"FDR" : "calibrated",
+"TDR" : "calibrated",
+"FAU" : "calibrated",
+"IOF" : "calibrated",
+"IOI" : "calibrated",
+"RAF" : "calibrated",
+"RAD" : "calibrated",
+"RAS" : "calibrated",
+"RAY" : "calibrated",
+"RDM" : "calibrated",
+"RIE" : "calibrated",
+"RIF" : "calibrated",
+"RSM" : "calibrated",
+"RAG" : "calibrated",
+"RZF" : "calibrated",
+"RZD" : "calibrated",
+"RZS" : "calibrated",
+"RZY" : "calibrated",
+"CNR" : "calibrated",
+"CNS" : "calibrated",
+"CNF" : "calibrated",
+"CNB" : "calibrated",
+"CNG" : "calibrated",
+"CSD" : "calibrated",
+"CSS" : "calibrated",
+"CSF" : "calibrated",
+"CSB" : "calibrated",
+"CSG" : "calibrated",
+"CPD" : "calibrated",
+"CPS" : "calibrated",
+"CPF" : "calibrated",
+"CPB" : "calibrated",
+"CPG" : "calibrated",
+"CWD" : "calibrated",
+"CWS" : "calibrated",
+"CWF" : "calibrated",
+"CWB" : "calibrated",
+"CWG" : "calibrated",
+"DNR" : "calibrated",
+"DNS" : "calibrated",
+"DNF" : "calibrated",
+"DNB" : "calibrated",
+"DNG" : "calibrated",
+"DSD" : "calibrated",
+"DSS" : "calibrated",
+"DSF" : "calibrated",
+"DSB" : "calibrated",
+"DSG" : "calibrated",
+"DPD" : "calibrated",
+"DPS" : "calibrated",
+"DPF" : "calibrated",
+"DPB" : "calibrated",
+"DPG" : "calibrated",
+"DWD" : "calibrated",
+"DWS" : "calibrated",
+"DWF" : "calibrated",
+"DWB" : "calibrated",
+"DWG" : "calibrated",
+"ZNR" : "calibrated",
+"ZNS" : "calibrated",
+"ZNF" : "calibrated",
+"ZNB" : "calibrated",
+"ZNG" : "calibrated",
+"ZSD" : "calibrated",
+"ZSS" : "calibrated",
+"ZSF" : "calibrated",
+"ZSB" : "calibrated",
+"ZSG" : "calibrated",
+"ZPD" : "calibrated",
+"ZPS" : "calibrated",
+"ZPF" : "calibrated",
+"ZPB" : "calibrated",
+"ZPG" : "calibrated",
+"ZWD" : "calibrated",
+"ZWS" : "calibrated",
+"ZWF" : "calibrated",
+"ZWB" : "calibrated",
+"ZWG" : "calibrated",
+"MNR" : "calibrated",
+"MNS" : "calibrated",
+"MNF" : "calibrated",
+"MNB" : "calibrated",
+"MNG" : "calibrated",
+"MSD" : "calibrated",
+"MSS" : "calibrated",
+"MSF" : "calibrated",
+"MSB" : "calibrated",
+"MSG" : "calibrated",
+"MPD" : "calibrated",
+"MPS" : "calibrated",
+"MPF" : "calibrated",
+"MPB" : "calibrated",
+"MPG" : "calibrated",
+"MWD" : "calibrated",
+"MWS" : "calibrated",
+"MWF" : "calibrated",
+"MWB" : "calibrated",
+"MWG" : "calibrated",
+"MSK" : "calibrated",
+"IDM" : "calibrated",
+"IDX" : "calibrated",
+"ICM" : "calibrated",
+"DDD" : "stereo",
+"DDL" : "stereo",
+"DDS" : "stereo",
+"DSE" : "stereo",
+"DSP" : "stereo",
+"DSR" : "stereo",
+"MDS" : "stereo",
+"DFF" : "stereo",
+"DFL" : "stereo",
+"DFS" : "stereo",
+"XYZ" : "stereo",
+"XYM" : "stereo",
+"XYR" : "stereo",
+"XRM" : "stereo",
+"XYE" : "stereo",
+"MXY" : "stereo",
+"XYF" : "stereo",
+"XYO" : "stereo",
+"XRZ" : "stereo",
+"XRR" : "stereo",
+"XXX" : "stereo",
+"YYY" : "stereo",
+"ZZZ" : "stereo",
+"DEM" : "stereo",
+"XOZ" : "stereo",
+"XXF" : "stereo",
+"YYF" : "stereo",
+"ZZF" : "stereo",
+"ZIH" : "stereo",
+"RNE" : "stereo",
+"RNF" : "stereo",
+"RNG" : "stereo",
+"RNM" : "stereo",
+"RNR" : "stereo",
+"RNO" : "stereo",
+"UVF" : "stereo",
+"UVO" : "stereo",
+"UVP" : "stereo",
+"UVS" : "stereo",
+"UVT" : "stereo",
+"UVW" : "stereo",
+"UUU" : "stereo",
+"VVV" : "stereo",
+"WWW" : "stereo",
+"UUF" : "stereo",
+"VVF" : "stereo",
+"WWF" : "stereo",
+"UIH" : "stereo",
+"TFH" : "stereo",
+"SEN" : "stereo",
+"SHD" : "stereo",
+"SHO" : "stereo",
+"SLO" : "stereo",
+"SLP" : "stereo",
+"SMG" : "stereo",
+"SMO" : "stereo",
+"SNO" : "stereo",
+"SNT" : "stereo",
+"SRD" : "stereo",
+"ARK" : "stereo",
+"ARM" : "stereo",
+"ARO" : "stereo",
+"MAR" : "stereo",
+"RUF" : "stereo",
+"RUS" : "stereo",
+"RUC" : "stereo",
+"RUH" : "stereo",
+"GUN" : "stereo",
+"GUA" : "stereo",
+"GUC" : "stereo",
+"GRN" : "stereo",
+"GRA" : "stereo",
+"GRC" : "stereo",
+"GSR" : "stereo",
+"GUH" : "stereo",
+"SLH" : "stereo",
+"TEN" : "stereo",
+"TER" : "stereo",
+"IEF" : "stereo",
+"IEP" : "stereo",
+"COF" : "stereo"
+})
+
+## Min length of a potentnial MESH filename
+##!!!! NOT UPDATED FOR VGR
+#set ( $M20_MESH_BASE_MIN_LEN = 40 )
+
+## Voyager-specific mapping of target names (uppercase)
+## to target types.
+#set ($VGR_TARGET_NAME_TO_TYPE_MAP = {
+})
+
+
+## ========================================================================
+## MACROS 
+## ========================================================================
+
+
+## ========================================================================
+## PROLOG Section
+
+##################################
+## msn_generatePrologXmlModelSection
+##
+#macro(msn_generatePrologXmlModelSection)
+#if (! $PDS4_RAV1CIUN_SCHEMA_VERSION.isEmpty() )
+<?xml-model href="https://pds.nasa.gov/pds4/mission/vgr/v1/PDS4_VGR_${PDS4_RAV1CIUN_SCHEMA_VERSION}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generateMissionNamespaceSection
+##
+#macro(msn_generateMissionNamespaceSection)
+#if (! $PDS4_RAV1CIUN_SCHEMA_VERSION.isEmpty() )
+xmlns:vgr="http://pds.nasa.gov/pds4/mission/vgr/v0"##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generatePrologSchemaLocationSection
+##
+#macro(msn_generatePrologSchemaLocationSection)
+#if (! $PDS4_RAV1CIUN_SCHEMA_VERSION.isEmpty() )
+http://pds.nasa.gov/pds4/mission/vgr/v0 https://pds.nasa.gov/pds4/mission/vgr/v1/PDS4_VGR_${PDS4_RAV1CIUN_SCHEMA_VERSION}.xsd##
+#end
+##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Returns an array containing all possible RMC names.
+##
+##!!!! NOT UPDATED FOR VGR
+#macro(msn_getRMCNames)
+#set ($MSN_RMC_NAMES = ['SITE','DRIVE','POSE','ARM','SHA','DRILL','RSM','HGA','BITCAR','SEAL','RTT','PMC'])
+$MSN_RMC_NAMES##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##TODO: NEW isColorImage().  Returns whether an image is color (vs. bw or something noncolor like xyz etc). Replaces the direct logic in defaultDisplaySettings but is the same code.
+##################################
+## Returns a TRUE if image is color, FALSE otherwise
+##
+#macro(msn_isColorImage)
+#set($axes = $label.PDS4_IMAGE.axes[0])
+    #if ( $axes == 3 )
+        #set( $derived_img_type = $label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE.toString() )
+        #set ( $img_type = $label.IDENTIFICATION.IMAGE_TYPE.toString() )
+        #if ( ($derived_img_type && $derived_img_type.equals("IMAGE")) || (!$derived_img_type && ( $img_type.equals("REGULAR") || $img_type.equals("THUMBNAIL") ) ) )
+${CONST_TRUE}##
+        #else
+${CONST_FALSE}##
+        #end
+     #else
+${CONST_FALSE}##
+    #end
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProcessingLevel  from the product type
+##
+#set ($MSN_PROCESSING_LEVEL_SPECIFIC = {
+"DATA" : "RAW",
+"RAW" : "Partially Processed",
+"CALIBRATED" : "Calibrated",
+"FIXED" : "Derived"
+})
+#macro(msn_getProcessingLevel $ptype $isMosaic)
+#if ( $MSN_PROCESSING_LEVEL_SPECIFIC.containsKey($ptype) )
+$MSN_PROCESSING_LEVEL_SPECIFIC.get($ptype)##
+#elseif ( $CORE_PROCESSING_LEVEL_MAP.containsKey($ptype) )
+$CORE_PROCESSING_LEVEL_MAP.get($ptype)##
+#else
+Derived##
+#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: Returns whether or not the PID should have the extension. For all current missions, no extension if the extension is VIC or IMG, yes otherwise.
+
+##################################
+## msn_doesPIDHaveExtension
+##
+#macro(msn_doesPIDHaveExtension $filename)
+#set ($exten = "#getFileExtension($filename)")
+#if ($exten && ( $exten.equalsIgnoreCase('VIC') || $exten.equalsIgnoreCase('IMG')) )
+${CONST_FALSE}##
+#else
+${CONST_TRUE}##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionSize
+##
+#macro(msn_getPIDVersionSize)
+${MSN_PID_VERSION_SIZE}##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: useRadianceInImageArray - specific.  Returns true if radiance offset and scaling factor should be included, false otherwise. Can use the same logic as currently in image::getArrayDefinition().
+
+##################################
+## msn_useRadianceInImageArray
+##
+##!!!! NOT UPDATED FOR VGR
+#macro(msn_useRadianceInImageArray)
+${CONST_TRUE}## 1 or 2 depending on mission
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_isMosaic
+##
+## Returns TRUE if product is considered a mosaic, FALSE otherwise.
+## No mosaics for RAV1CIUN
+##
+#macro(msn_isMosaic $pid )
+${CONST_FALSE}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+##################################
+## msn_isThumbnail
+##
+## Returns TRUE if product is considered a thumbnail, FALSE otherwise.
+## No thumbs for RAV1CIUN
+
+#macro(msn_isThumbnail $pid_or_filename )
+${CONST_FALSE}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductType
+## The product types are:
+## DATA - the raw EDRs converted from QEDRs
+## RAW
+## CALIBRATED
+## FIXED
+##
+## Returns PID for this missing 
+#macro(msn_getProductType $pid)
+#set ($pid_up = $pid.toUpperCase() )
+#set ($prodtype = "RAW" )##default product if we cannot determine
+#if ( $pid_up.contains("DATA"))
+#set ($prodtype = "DATA")
+#elseif ($pid_up.contains("RAW"))
+#set ($prodtype = "RAW")
+#elseif ($pid_up.contains("CALIBRATED"))
+#set ($prodtype = "CALIBRATED")
+#elseif ($pid_up.contains("FIXED"))
+#set ($prodtype = "FIXED")
+#end
+#set ($prodtype = $prodtype.toUpperCase())
+${prodtype}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPlanetDayNumberOrSol
+##
+## check if PLANET_DAY_NUMBER exists. If not, fall back to SOL extract from filename
+##!!!! NOT UPDATED FOR VGR
+#macro(msn_getPlanetDayNumberOrSol $pid)
+##
+#set ($mgpdnos_val = "")
+#if ( $!IDENT.PLANET_DAY_NUMBER )
+#set ($mgpdnos_val = $!IDENT.PLANET_DAY_NUMBER)
+#elseif ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($mgpdnos_val = "#msn_getSolFromPid($pid)")
+#end
+${mgpdnos_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSolFromPid
+##
+## Returns SOL field extracted from PID.
+
+#macro(msn_getSolFromPid $pid)
+#set ($mgsfp_val = "" )
+$mgsfp_val##
+#end
+
+
+## ------------------------------------------------------------------------
+
+  
+##################################
+## msn_includeBrowseSection
+##
+## Flag to determine if template inserts <Internal_Reference> if it is  appropriate
+## could add something from $input_filename to help decide
+##
+##!!!! Just return TRUE for now, but not every file has a browse...
+
+#macro(msn_includeBrowseSection $product_type $derived_image_type $input_filename)
+$CONST_TRUE##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextName
+## Returns the context name from a specific instrument
+#macro(msn_getInstrumentContextName $instrument)
+#set ( $context = '' )
+#set ( $instrUp = $instrument.toUpperCase() )
+#if ( $instrUp.equals("ISSNA") || $instrUp.equals("ISSN") )
+#set ( $context = "issn" )
+#elseif ( $instrUp.equals("ISSWA") || $instrUp.equals("ISSW") )
+#set ( $context = "issw" )
+#else
+#set ( $context = $instrument )
+#end
+#set ( $context = $context.toLowerCase() )
+${context}##
+#end
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasEjpJpegs
+##
+## Returns TRUE if mission supports EJP product 
+## types (JPEGS built from EDR), FALSE otherwise.
+
+#macro(msn_hasEjpJpegs)
+$CONST_FALSE##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_hasAssociatedFitsFile
+##
+## Returns TRUE if mission supports FITS product,
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+## M20 checks PID to see if instrument is SuperCam RMI
+
+#macro(msn_hasAssociatedFitsFile $pid)
+$CONST_FALSE##
+#end
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasAssociatedMaskFile
+##
+## Returns TRUE if mission supports MASK product (for FAOS),
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+
+#macro(msn_hasAssociatedMaskFile $pid)
+$CONST_FALSE##
+#end
+
+## ------------------------------------------------------------------------
+
+## On April 23, 2019, Bob requested this be added to the mission API, saying "Unfortunately we're not going to get units of responsivity added in time for insight.  So please add a flag/macro/whatever to the mission-specific API that says whether or not to include units with responsivity values."  Not sure where we call it yet tho....
+
+##################################
+## msn_includeResponsivityUnits
+##
+#macro(msn_includeResponsivityUnits)
+${CONST_FALSE}
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionAsDecimal
+##
+## No versions for RAV1CIUN so just return 1
+##
+#macro(msn_getPIDVersionAsDecimal $pidVerStr)
+1##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextURN
+## Returns the standard URN format.
+#macro(msn_getInstrumentContextURN $instrument)
+urn:nasa:pds:context:instrument:${MSN_PLATFORM.toLowerCase()}.${instrument}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSpecialProcessingFlag
+## Returns the product special flag value.
+## No SPF for RAV1CIUN
+#macro(msn_getSpecialProcessingFlag $filename)
+#set ($mgspf_val = "" )
+$mgspf_val##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getLegalFileExtension
+## Returns the possibly mission-modified filename extension.
+#macro(msn_getLegalFileExtension $exten )
+$exten##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidPrefix
+## Returns the product LID prefix, that can be based on the filename
+#macro(msn_getProductLidPrefix $filename )
+$MSN_PRODUCT_LID_PREFIX##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidCollection
+## Returns the product lid collection value, that can be based on the filename
+
+##!!!! UPDATE THIS
+
+#macro(msn_getProductLidCollection $filename )
+#set ( $ptype = "#msn_getProductType($filename)" )
+#set ( $lid_coll = "unknown" )
+#if ( $ptype.equalsIgnoreCase("DATA") )
+#set ( $lid_coll = "data_edr" )
+#elseif ( $ptype.equalsIgnoreCase("RAW") )
+#set ( $lid_coll = "data_final" )
+#elseif ( $ptype.equalsIgnoreCase("FIXED") )
+#set ( $lid_coll = "data_final" )
+#elseif ( $ptype.equalsIgnoreCase("CALIBRATED") )
+#set ( $lid_coll = "data_calibrated" )
+#end
+${lid_coll}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## msn_getAutoExposureAlgorithm
+## Returns the auto-exposure algorithm name associated with 
+## a mission. 
+##!!!! NOT UPDATED FOR VGR
+## For M2020, we always return the same value: Maki 2003, unless SCAM instrument
+#macro(msn_getAutoExposureAlgorithm $filename )
+#if  ( $CONST_TRUE.equals("#isStandardMissionFilename()") && $filename.toUpperCase().startsWith("L") )
+Maurice 2020##
+#else
+$MSN_AUTO_EXPOSURE_ALGORITHM_NAME##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+#macro(vgr_translateFilterName $filt_name_in)
+#set ( $filt_name_out = $filt_name_in )
+#set ( $filt_name_up = $filt_name_in.toUpperCase() )
+#if ( $filt_name_up.startsWith("CH4") || $filt_name_up.equals("UV") )
+#set ( $filt_name_out = $filt_name_up)
+#else
+#set ( $filt_name_out = $text.capitalize($filt_name_in) )
+#end
+${filt_name_out}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Not used for now....delete if not needed (later tho!)
+#macro(vgr_removeDecimalFromTimestamp $ts_in)
+#set ( $ts_no_dec = $ts_in )
+#set ( $ts_str_len = $ts_in.length())
+#set ( $sepIdx = '')
+#set ( $sepIdx = $ts_in.lastIndexOf("."))
+#if ( $sepIdx < ($ts_str_len - 1))
+#set ($sepIdx = $sepIdx + 1)
+#set ($ts_no_dec = $ts_in.substring($sepIdx))
+#end
+${ts_no_dec}##
+#end
+
+#macro(vgr_formatSpacecraftClock $ts_in)
+#set ( $ts_out = $ts_in.replace(".", ":") )
+#if ( ! $ts_out.contains("/") )
+    #set ( $ts_out = "0/"+$ts_out )
+#end
+${ts_out}##
+#end
+
+
+##################################
+## msn_generateMissionAreaSection
+## Returns the mission-specific content that will be placed
+## under the <Mission_Area> section.
+##!!!! Update for RAV1CIUN if needed
+
+#macro(msn_generateMissionAreaSection $filename )
+
+    <vgr:Voyager>
+
+        #if ( $label.LEGACY_LABEL )
+            #vgr_printLegacyLabelValues()
+        #end
+
+
+        <vgr:Voyager_Telemetry>
+            <vgr:edr_tape_id>$!label.TELEMETRY.EDR_TAPE_ID</vgr:edr_tape_id>
+            <vgr:edr_file_number>$!label.TELEMETRY.EDR_FILE_NUMBER</vgr:edr_file_number>
+            <vgr:dsn_station_number>$!label.TELEMETRY.DSN_STATION_NUMBER</vgr:dsn_station_number>
+            <vgr:dsn_station_name>$!label.TELEMETRY.DSN_STATION_NAME</vgr:dsn_station_name>
+        </vgr:Voyager_Telemetry>
+
+
+
+        <vgr:Voyager_Timing>
+
+            #set ( $vgr_mis_phase_name = "#msn_getMissionPhaseName()" )
+            <vgr:mission_phase_name>$!mis_phase_name</vgr:mission_phase_name>
+
+            <vgr:spacecraft_clock_count_partition>$!IDENT.SPACECRAFT_CLOCK_COUNT_PARTITION</vgr:spacecraft_clock_count_partition>
+            <vgr:spacecraft_clock_start_count>#vgr_formatSpacecraftClock($!IDENT.SPACECRAFT_CLOCK_START_COUNT.toString())</vgr:spacecraft_clock_start_count>
+            <vgr:spacecraft_clock_stop_count>#vgr_formatSpacecraftClock($!IDENT.SPACECRAFT_CLOCK_STOP_COUNT.toString())</vgr:spacecraft_clock_stop_count>
+            
+            ##NOTE: I think I have seen CHRONOS_SCET_V_1_1 XOR CHRONOS_SCET_V_2_1 in example
+            ##labels, so.....just gonna check for one-then-the-other for now....
+
+            <vgr:fds_scet_epoch_1>#vgr_getChronoScetZulu(1)</vgr:fds_scet_epoch_1>
+            <vgr:fds_scet_epoch_2>#vgr_getChronoScetZulu(2)</vgr:fds_scet_epoch_2>
+            <vgr:fds_scet_epoch_3>#vgr_getChronoScetZulu(3)</vgr:fds_scet_epoch_3>
+            <vgr:fds_scet_epoch_4>#vgr_getChronoScetZulu(4)</vgr:fds_scet_epoch_4>
+
+        
+        </vgr:Voyager_Timing>
+
+        <vgr:ISS>
+            <vgr:image_id xsi:nil="true" nilReason="inapplicable"/>
+
+            ## Use SPACECRAFT_CLOCK_START_COUNT if label does not have ISP.IMAGE_NUMBER
+            #if ( $label.INSTRUMENT_STATE_PARMS.IMAGE_NUMBER ) 
+                <vgr:image_number>$!label.INSTRUMENT_STATE_PARMS.IMAGE_NUMBER</vgr:image_number>
+            #elseif ( $IDENT.SPACECRAFT_CLOCK_START_COUNT )
+                ## For VGR, value has colon, but image-num wants decimal:
+                #set ( $vgr_imgnum = $IDENT.SPACECRAFT_CLOCK_START_COUNT.toString().replaceAll(":", ".") )
+                <vgr:image_number>$vgr_imgnum</vgr:image_number>
+            #end
+
+
+            <vgr:earth_received_time>#getZuluTime($!TELEM.EARTH_RECEIVED_START_TIME.toString())</vgr:earth_received_time>
+            <vgr:scan_mode_id>$!label.INSTRUMENT_STATE_PARMS.SCAN_MODE_ID</vgr:scan_mode_id>  
+            <vgr:shutter_mode_id>$!label.INSTRUMENT_STATE_PARMS.SHUTTER_MODE_ID</vgr:shutter_mode_id>
+            <vgr:gain_mode_id>$text.capitalize($!label.INSTRUMENT_STATE_PARMS.GAIN_MODE_ID.toString())</vgr:gain_mode_id>
+            <vgr:edit_mode_id>$!label.INSTRUMENT_STATE_PARMS.EDIT_MODE_ID</vgr:edit_mode_id>
+            <vgr:filter_name>#vgr_translateFilterName($!label.INSTRUMENT_STATE_PARMS.FILTER_NAME.toString())</vgr:filter_name>
+            <vgr:filter_number>$!label.INSTRUMENT_STATE_PARMS.FILTER_NUMBER</vgr:filter_number>
+            
+            <vgr:exposure_duration unit="ms">$!label.INSTRUMENT_STATE_PARMS.EXPOSURE_DURATION</vgr:exposure_duration>
+
+            
+            #getNodeWithValueOrAsNil( $IDENT  'SOURCE_PRODUCT_TARGET_NAME'  'vgr:pds_source_product_target_name'  $NO_UNIT   $CONST_TRUE )
+            <vgr:pds_source_product_note xsi:nil="true" nilReason="missing"/>
+            
+            ## Include both options just in case
+            <vgr:pds_source_product_description>$!IDENT.PDS_SOURCE_PRODUCT_DESC</vgr:pds_source_product_description>
+            <vgr:pds_source_product_description>$!IDENT.PDS_SOURCE_PRODUCT_DESCRIPTION</vgr:pds_source_product_description>
+            <vgr:pds_source_product_data_anomaly_type xsi:nil="true" nilReason="missing"/>
+        </vgr:ISS>
+
+
+        <vgr:ISS_Legacy_Label>  
+            <vgr:legacy_label_signal_to_noise_ratio>$!label.INSTRUMENT_STATE_PARMS.SIGNAL_TO_NOISE_RATIO</vgr:legacy_label_signal_to_noise_ratio>
+            <vgr:legacy_label_pixel_dn_average_threshold>$!label.INSTRUMENT_STATE_PARMS.PIXEL_DN_AVERAGE_THRESH</vgr:legacy_label_pixel_dn_average_threshold>
+            <vgr:legacy_label_pixel_dn_average_status>$!label.INSTRUMENT_STATE_PARMS.PIXEL_DN_AVERAGE_STATUS</vgr:legacy_label_pixel_dn_average_status>
+            <vgr:legacy_label_lsb_truncate>$text.capitalize($!label.INSTRUMENT_STATE_PARMS.LSB_TRUNC.toString())</vgr:legacy_label_lsb_truncate>
+            <vgr:legacy_label_telemetry_mode>$!label.INSTRUMENT_STATE_PARMS.TLM_MODE</vgr:legacy_label_telemetry_mode>
+            <vgr:legacy_label_compression_state>$text.capitalize($!label.INSTRUMENT_STATE_PARMS.COMPRESSION.toString())</vgr:legacy_label_compression_state>
+            
+            <vgr:legacy_label_na_elec_cal>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.ELEC_CAL.toString())</vgr:legacy_label_na_elec_cal>
+            <vgr:legacy_label_na_image_type>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.IMAGE_TYPE.toString())</vgr:legacy_label_na_image_type>
+            <vgr:legacy_label_na_beam>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.BEAM.toString())</vgr:legacy_label_na_beam>
+            <vgr:legacy_label_na_shutter_reset>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.SHUTTER_RESET.toString())</vgr:legacy_label_na_shutter_reset>
+            <vgr:legacy_label_na_shutter_open>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.SHUTTER_OPEN.toString())</vgr:legacy_label_na_shutter_open>
+            <vgr:legacy_label_na_shutter_close>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.SHUTTER_CLOSE.toString())</vgr:legacy_label_na_shutter_close>
+            <vgr:legacy_label_na_flood>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.FLOOD.toString())</vgr:legacy_label_na_flood>
+            <vgr:legacy_label_na_exposure_type>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.EXPOSURE_TYPE.toString())</vgr:legacy_label_na_exposure_type>
+            <vgr:legacy_label_na_filter_position>$!label.NARROW_ANGLE_INSTRUMENT_STATE.FILTER_POSITION</vgr:legacy_label_na_filter_position>
+            <vgr:legacy_label_na_filter_step>$!label.NARROW_ANGLE_INSTRUMENT_STATE.FILTER_STEP</vgr:legacy_label_na_filter_step>
+            <vgr:legacy_label_na_g1_voltage_count>$!label.NARROW_ANGLE_INSTRUMENT_STATE.G1_VOLTAGE_COUNT</vgr:legacy_label_na_g1_voltage_count>
+            <vgr:legacy_label_na_shutter_exposure>$text.capitalize($!label.NARROW_ANGLE_INSTRUMENT_STATE.SHUTTER_EXPOSURE.toString())</vgr:legacy_label_na_shutter_exposure>
+            
+            <vgr:legacy_label_wa_elec_cal>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.ELEC_CAL.toString())</vgr:legacy_label_wa_elec_cal>
+            <vgr:legacy_label_wa_image_type>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.IMAGE_TYPE.toString())</vgr:legacy_label_wa_image_type>
+            <vgr:legacy_label_wa_beam>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.BEAM.toString())</vgr:legacy_label_wa_beam>
+            <vgr:legacy_label_wa_shutter_reset>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.SHUTTER_RESET.toString())</vgr:legacy_label_wa_shutter_reset>
+            <vgr:legacy_label_wa_shutter_open>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.SHUTTER_OPEN.toString())</vgr:legacy_label_wa_shutter_open>
+            <vgr:legacy_label_wa_shutter_close>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.SHUTTER_CLOSE.toString())</vgr:legacy_label_wa_shutter_close>
+            <vgr:legacy_label_wa_flood>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.FLOOD.toString())</vgr:legacy_label_wa_flood>
+            <vgr:legacy_label_wa_exposure_type>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.EXPOSURE_TYPE.toString())</vgr:legacy_label_wa_exposure_type>
+            <vgr:legacy_label_wa_filter_position>$!label.WIDE_ANGLE_INSTRUMENT_STATE.FILTER_POSITION</vgr:legacy_label_wa_filter_position>
+            <vgr:legacy_label_wa_filter_step>$!label.WIDE_ANGLE_INSTRUMENT_STATE.FILTER_STEP</vgr:legacy_label_wa_filter_step>
+            <vgr:legacy_label_wa_g1_voltage_count>$!label.WIDE_ANGLE_INSTRUMENT_STATE.G1_VOLTAGE_COUNT</vgr:legacy_label_wa_g1_voltage_count>
+            <vgr:legacy_label_wa_shutter_exposure>$text.capitalize($!label.WIDE_ANGLE_INSTRUMENT_STATE.SHUTTER_EXPOSURE.toString())</vgr:legacy_label_wa_shutter_exposure>
+        </vgr:ISS_Legacy_Label>
+
+    </vgr:Voyager>
+
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## msn_getDeviceForCommandedGeometry
+## Returns the device id that an Commanded arm geometry labels
+## would apply to.  Context: labels exist in the OBS_REQ_PARMS,
+## but those labels apply to at most one device with an associated
+## *_ARTICULATION_STATE
+#macro(msn_getDeviceForCommandedGeometry)
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getModificationHistory)
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getBrowseLidCollection $pid)
+##!!!! UPDATE THIS
+#set ( $ptype = "#msn_getProductType($filename)" )
+#set ( $lid_coll = "unknown" )
+#if ( $ptype.equalsIgnoreCase("DATA") )
+#set ( $lid_coll = "browse_edr" )
+#elseif ( $ptyle.equalsIgnoreCase("RAW") )
+#set ( $lid_coll = "browse_final" )
+#elseif ( $ptyle.equalsIgnoreCase("FIXED") )
+#set ( $lid_coll = "browse_final" )
+#elseif ( $ptyle.equalsIgnoreCase("CALIBRATED") )
+#set ( $lid_coll = "browse_calibrated" )
+#end
+${lid_coll}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+
+#macro (msn_getInstrumentId $pid )
+#set ($myval = $IDENT.INSTRUMENT_ID.toString() )
+#if ( $myval.equalsIgnoreCase("issna") )
+#set ( $myval = "issn" )
+#elseif ( $myval.equalsIgnoreCase("isswa") )
+#set ($myval = "issw" )
+#end
+#set ($myval = $text.capitalize( $myval ))
+${myval}##
+#end
+ 
+## ------------------------------------------------------------------------
+
+## Return the same value as msn_getInstrumentId()
+
+#macro (msn_getInstrumentName $pid )
+#set ($myval = "#msn_getInstrumentId($pid)" )
+${myval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target type based on mission mapping.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetType()
+## If no mappings are found in either, then $orig_type is returned
+
+#macro(msn_getTargetType $orig_name $orig_type )
+#set ($m_gttrval = $orig_type )
+#set ($v_tnttm_key = $orig_name.toUpperCase() )
+#if ($VGR_TARGET_NAME_TO_TYPE_MAP.containsKey($v_tnttm_key))
+#set ($m_gttrval = $VGR_TARGET_NAME_TO_TYPE_MAP.get($v_tnttm_key))
+#else
+#set ($m_gttrval = "#getTargetType($orig_name $orig_type)" )
+#end
+${m_gttrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target name based on mission mapping if mission
+## contains a specific map.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetName()
+## If no mappings are found in either, then $orig_name is returned
+
+#macro(msn_getTargetName $orig_name $orig_type )
+#set ($m_gtnrval = "#getTargetName($orig_name $orig_type)" )
+${m_gtnrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Prints the <vgr:legacy_label_VICAR1> section.
+## Uses NLABS and building label names since I feel we can't
+## assume everything is in order, but maybe?
+
+#macro(vgr_printLegacyLabelValues)
+  #if ( $label.LEGACY_LABEL && $label.LEGACY_LABEL.NLABS )
+    #set ($lbl_cnt = $math.toInteger($label.LEGACY_LABEL.NLABS.toString()) )
+    <vgr:legacy_label_VICAR1>
+    #foreach ( $i in [ 0..$lbl_cnt ] )
+      #set ($lbl_idx = $math.toInteger($foreach.count) )
+      #set ($lbl_name = "LAB0" + $lbl_idx )
+      #if ( $lbl_idx > 9 )
+        #set ($lbl_name = "LAB" + $lbl_idx )
+      #end
+      #if ( $label.LEGACY_LABEL.get($lbl_name) )
+        #set ($lbl_value = $label.LEGACY_LABEL.get($lbl_name).toString())
+        #set ($lbl_line = $lbl_name + "='" + $lbl_value + "'" )
+        #set ($lbl_line = $lbl_line.trim() )
+        $lbl_line
+      #end
+    #end
+    </vgr:legacy_label_VICAR1>
+  #end
+#end
+
+
+## ------------------------------------------------------------------------
+
+## Vgr doesn't want Target_Identification to include Internal_Reference
+
+#macro(msn_doesTargetIdentIncludeInternalRef)
+${CONST_FALSE}##
+#end
+
+## ------------------------------------------------------------------------
+
+## PDART missions (like RAV1CIUN) don't want  Investigation_Area section to
+## include Internal_Reference
+
+#macro(msn_doesInvestigationAreaIncludeInternalRef)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Quick utility for retrieving value of CHRONOS_SCET_V_{1,2}_${INDEX}
+## Why? Because VGR1 CHRONOS_SCET_V_1_1, while VGR2 have 
+## CHRONOS_SCET_V_2_1.  So just have this macro check for either
+
+#macro(vgr_getChronoScet $scet_index )
+#set ($v_gcs_rval = '')
+#set ($v_gcs_label_vgr1 = "CHRONOS_SCET_V_1_${scet_index}")
+#set ($v_gcs_label_vgr2 = "CHRONOS_SCET_V_2_${scet_index}")
+#if ( $IDENT.get($v_gcs_label_vgr1) )
+#set ( $v_gcs_rval = $IDENT.get($v_gcs_label_vgr1).toString() )
+#elseif ( $IDENT.get($v_gcs_label_vgr2) )
+#set ( $v_gcs_rval = $IDENT.get($v_gcs_label_vgr2).toString() )
+#end
+${v_gcs_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro(vgr_getChronoScetZulu $scet_index )
+#set ($v_gcsz_rval = '')
+#set ($v_gcsz_rval = "#vgr_getChronoScet($scet_index)")
+#if ( ! $v_gcsz_rval.isEmpty() )
+#set ($v_gcsz_rval = "#getZuluTime($v_gcsz_rval)")
+#end
+${v_gcsz_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## VGR DD does not like the idea of Unknown, so despite being 
+## inaccurate, 'Interstellar Mission' will be the default
+#set ( $VGR_MSN_PHASE_NAME_DEFAULT = 'Interstellar Mission' )
+
+## Mission Phase and Start-time list for VGR1
+#set ($VGR_MSN_PHASE_TIME_LIST = [
+"1900-01-01;Instellar Mission",
+"1977-09-05;Launch",
+"1977-09-05;Earth-Jupiter Cruise",
+"1979-01-06;Jupiter Encounter",
+"1979-04-13;Jupiter-Saturn Cruise",
+"1980-08-22;Saturn Encounter",
+"1980-12-14;Interstellar Mission"
+] )
+
+## -----------------
+
+## VGR's implementation will defer to the label value for
+## MISSION_PHASE_NAME if defined (without any checks on if
+## value is legal in VGR DD).
+## Otherwise, it will determine phase name based on the
+## labels ERT, comparing it to values in variable 
+## $VGR_MSN_PHASE_TIME_LIST (which is overriden for VGR2)
+
+#macro (msn_getMissionPhaseName )
+#set ( $msn_gmpn_rval = $CONST_UNKNOWN )
+#if ( $label.MISSION_PHASE_NAME )
+#set ( $mpn_raw = $!label.MISSION_PHASE_NAME.toString() )
+#set ( $msn_gmpn_rval = "#getMissionPhaseName($mpn_raw)" )
+#else
+#set ( $msn_gmpn_rval = "#vgr_getPhaseNameFromDates()" )
+#if ( $CONST_UNKNOWN.equals($msn_gmpn_rval) )
+#set ( $msn_gmpn_rval = $VGR_MSN_PHASE_NAME_DEFAULT )
+#end
+#end
+${msn_gmpn_rval}##
+#end
+
+## -----------------
+
+## Uses date from label to determine phase name.
+## At this point, we only examine IDENT.START_DATE
+
+#macro(vgr_getPhaseNameFromDates)
+#set ( $v_gmpnfds_rval = $CONST_UNKNOWN )
+#set ( $v_gmpnfds_input = '' )
+#set ( $v_gmpnfds_input = "#vgr_getPhaseNameInputDate()" )
+#if ( ! $CONST_UNKNOWN.equals($v_gmpnfds_input) )
+#set ( $v_gmpnfds_rval = "#vgr_getPhaseNameFromDate($v_gmpnfds_input)" )
+#end
+${v_gmpnfds_rval}##
+#end
+
+
+## -----------------
+
+
+## -----------------
+
+## Returns the closest Chronos Scet value to START_TIME that 
+## occurs before the START_TIME
+## Iterates over Chronos Scet values and compares the START_TIME.
+## If not match is found, then $CONST_UNKNOWN is returned.
+## Note: The Chronos Scet times had better be sorted in 
+## ascending order!
+
+#macro(vgr_getPhaseNameInputDate)
+#set ( $v_gpnid_rval = $CONST_UNKNOWN )
+#if ( $TELEM.EARTH_RECEIVED_START_TIME )
+#set ( $target_date = $TELEM.EARTH_RECEIVED_START_TIME.toString() )
+#set ( $scet_indices = ["4", "3", "2", "1"] )
+#foreach ( $scet_index in $scet_indices )
+#set ( $cur_scet_value = '' )
+#set ( $cur_scet_value = "#vgr_getChronoScet($scet_index)" )
+#if ( ! $cur_scet_value.isEmpty() )
+#set ( $dateCompare = "#compareSimpleDate($target_date $cur_scet_value)" )
+#set ( $dateCompare = $math.toInteger($dateCompare) )
+#if ( $dateCompare >= 0)
+#set ( $v_gpnid_rval = $cur_scet_value )
+#end##EndIfDateCompare
+#end##EndIfValueNotEmpty
+#end##EndForEach
+#end##EndIfStartTimeDefd
+${v_gpnid_rval}##
+#end
+
+
+## -----------------
+
+## Macro which does the mechanics of 1) extracting date 
+## string from datetime str, 2) iterates over startDate-Phase
+## list to determine which entry matches, 3) returns the 
+## phase name of associated match.
+## If no match is found, then $CONST_UNKNOWN is returned.
+
+#macro(vgr_getPhaseNameFromDate $date_str)
+#set ( $vgr_gmpnfd_rval = $CONST_UNKNOWN )
+#set ( $date_str = "#extractSimpleDate($date_str)" )
+#if ( $date_str.matches($SIMPLE_DATE_REGEX) )##Sanity check for length
+#set ( $found_list_idx = -1 )
+#set( $phaseListLastIdx = $VGR_MSN_PHASE_TIME_LIST.size() - 1)
+#foreach ( $i in [ 0..$phaseListLastIdx ] )
+#set ( $curPhaseItem = $VGR_MSN_PHASE_TIME_LIST.get($foreach.index) )
+#set ( $curPhaseItemAsList = $curPhaseItem.split(";") )
+#set ( $curPhaseDate = $curPhaseItemAsList.get(0) )
+#set ( $dateCompare = "#compareSimpleDate($date_str $curPhaseDate)" )
+#set ( $dateCompare = $math.toInteger($dateCompare) )
+#if ( $dateCompare >= 0)
+#set ( $found_list_idx = $math.add($found_list_idx, 1) )
+#end##EndIfDateAfter
+#end##EndForEach
+## If our search idx is not -1, then grab the entry from list and 
+## extract the phase name.
+#if ( $found_list_idx != -1 )
+#set ( $foundPhaseItem = $VGR_MSN_PHASE_TIME_LIST.get($found_list_idx) )
+#set ( $foundPhaseItemAsList = $foundPhaseItem.split(";") )
+#set ( $vgr_gmpnfd_rval = $foundPhaseItemAsList.get(1) )##Assign phase name
+#end
+#end##EndIfStrLenIs10
+${vgr_gmpnfd_rval}##
+#end
+
+## ------------------------------------------------------------------------

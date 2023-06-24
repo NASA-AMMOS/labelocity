@@ -1,0 +1,31 @@
+#!/bin/csh
+#
+# Create a pds4 label for an image.
+#
+# Usage:
+#   LabelImage imgfile
+#
+# Creates imgfile with .xml instead of existing extension.  Output goes
+# in same dir as input
+#
+if ($# != 1) then
+  head -10 $0
+  exit
+endif
+
+echo "LabelImage CLASSPATH $CLASSPATH"
+# setenv CLASSPATH /home/nsytmipl/magic_jars/a_dev_srl_generate-0.14.0.jar:/home/nsytmipl/magic_jars/a_vicario_msl.jar:"$CLASSPATH"
+
+set img = $1
+set out = ${img:r}.xml
+
+set templ = $V2TEMPLATES/mipl_cameras.vm
+java -version
+echo "LabelImage"
+
+echo "java jpl.mipl.io.jConvertIIO inp=$img out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ"
+java jpl.mipl.io.jConvertIIO inp=$img out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ
+
+rm -f output.xml
+rm -f velocity.log
+

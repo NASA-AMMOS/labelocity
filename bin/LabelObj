@@ -1,0 +1,51 @@
+#!/bin/csh
+#
+# Create a pds4 label for an obj file
+#
+# Usage:
+#   LabelObj objfile
+#
+# Creates objfile with .xml in addition to existing extension.  Output goes
+# in same dir as input.  There should be a .VIC and .mtl as well as the .obj
+#
+if ($# != 1) then
+  head -10 $0
+  exit
+endif
+
+# setenv CLASSPATH /home/nsytmipl/magic_jars/a_dev_srl_generate-0.14.0.jar:/home/nsytmipl/magic_jars/a_vicario_msl.jar:"$CLASSPATH"
+
+set obj = $1
+set vic = ${obj:r}.VIC
+if (! -f $vic) set vic = ${obj:r}.vic
+if (! -f $vic) set vic = ${obj:r}.IMG
+if (! -f $vic) set vic = ${obj:r}.img
+
+set delete_vic = 0
+if (! -f $vic) then
+    echo "Failed to identify a valid image file. Creating dummy file with gen."
+    set vic = ${obj:r}.IMG
+    ### $R2LIB/gen $vic nl=100 ns=100 nb=3
+    cp $V2JBIN/LabelocityDummyImage.VIC $vic
+    set delete_vic = 1
+  endif
+
+set mtl = ${obj:r}.mtl
+
+set json = ${obj}.json
+
+set out = ${obj}.xml
+
+python $V2JBIN/build_mesh_extras.py --in $vic --out $json --mtl $mtl
+
+set templ = $V2TEMPLATES/mesh_obj_label.vm
+
+# echo java jpl.mipl.io.jConvertIIO inp=$vic out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ extra_file_name=$json extra_file_type=json
+java jpl.mipl.io.jConvertIIO inp=$vic out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ extra_file_name=$json extra_file_type=json
+
+rm $json
+
+if ($delete_vic != 0) then
+    echo "Cleaning up $vic"
+    rm $vic
+  endif

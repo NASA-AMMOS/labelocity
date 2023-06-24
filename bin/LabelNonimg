@@ -1,0 +1,33 @@
+#!/bin/csh
+#
+# Create a pds4 label from an non-imaging ODL label.
+#
+# Usage:
+#   LabelNonimg odlLabel
+#
+# Creates pds4file with .xml instead of existing extension.  Output goes
+# in same dir as input
+#
+if ($# != 1) then
+  head -10 $0
+  exit
+endif
+
+echo "LabelNonimg CLASSPATH $CLASSPATH"
+
+
+set img = $1
+set out = ${img:r}.xml
+
+## This may be replaced by a multimission non-imaging VM one day...but not today.
+set templ = $V2TEMPLATES/m2020_non_imaging.vm
+
+java -version
+echo "LabelNonimg"
+
+echo "java jpl.mipl.io.jConvertIIO inp=$img out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ"
+java jpl.mipl.io.jConvertIIO inp=$img out=$out ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ
+
+rm -f output.xml
+rm -f velocity.log
+

@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+##
+#parse( "vcore.vmac" )
+#parse( "utils.vmac" )
+#parse( "general.vmac" )
+#parse( "image.vmac" )
+#parse( "surface.vmac" )
+#parse( "mission_factory.vmac" )
+
+## Set some needed variables
+
+## We get the PID from FILENAME in the json extras rather than the label
+## Also, there are no version numbers in the filename.
+
+#set ($PID_FULL   = "$extra.FILENAME.toString().toLowerCase()" )
+#set ($PID        = "#createPidFromVersionlessName($PID_FULL)" )
+
+#set ($VERSION_ID = "#getExtrasVersion()" )
+
+
+#set ($BUNDLE = "$extra.BUNDLE")
+#set ($LID_PREFIX = "${PDS_LID_PREFIX}${BUNDLE}")
+
+#set ($LID_COLLECTION = "#getProductLidCollectionCheckLabel($PID)" )
+## Originally was checking for extra.COLLECTION so add extra check for now...
+#if ( $extra.COLLECTION )
+    #set ($LID_COLLECTION = "$extra.COLLECTION")
+#end
+
+
+<?xml-model href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Document xmlns="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.xsd">
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    <title>$extra.TITLE</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Document</product_class>
+    <Citation_Information>
+      <author_list>$extra.AUTHOR</author_list>
+      <publication_year>$date.getYear()</publication_year>
+      <description>$extra.DESCRIPTION</description>
+    </Citation_Information>
+  </Identification_Area>
+  
+  <Context_Area>
+    <Investigation_Area>
+      <name>$MSN_INVESTIGATION_NAME</name>
+      <type>$MSN_INVESTIGATION_TYPE</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:$MSN_INVESTIGATION_SUBTYPE.$MSN_INVESTIGATION_MISSION.toLowerCase()</lid_reference>
+        <reference_type>document_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+    <Observing_System>
+      <name>$MSN_INVESTIGATION_NAME</name>
+      <Observing_System_Component>
+        <name>$MSN_SPACECRAFT</name>
+        <type>Host</type>
+        <Internal_Reference>
+          <lid_reference>urn:nasa:pds:context:instrument_host:spacecraft.$MSN_PLATFORM.toLowerCase()</lid_reference>
+          <reference_type>is_instrument_host</reference_type>
+        </Internal_Reference>
+      </Observing_System_Component>
+    </Observing_System>
+  </Context_Area>
+
+  <Document>
+    <copyright>Jet Propulsion Laboratory</copyright>
+    <publication_date>$date.get("yyyy-MM-dd")</publication_date>
+    <Document_Edition>
+      <edition_name>$extra.EDITION</edition_name>
+      <language>English</language>
+      <files>1</files>
+      <Document_File>
+        <file_name>$extra.FILENAME</file_name>
+        <document_standard_id>$extra.DOCSTD</document_standard_id>
+      </Document_File>
+    </Document_Edition>
+  </Document>
+</Product_Document>

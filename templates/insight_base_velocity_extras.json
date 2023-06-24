@@ -1,0 +1,14 @@
+{
+"PRODUCT_LID_PREFIX" : "urn:nasa:pds:insight_cameras",
+"PID_LENGTH" : "35",
+"MOSAIC_PID_LENGTH" : 37,
+"MODEL_VERSION" : "1.11.1.0",
+"WAVELENGTH_RANGE" : "Visible",
+"DOMAIN" : "Surface",
+"DISCIPLINE" : "Imaging",
+
+"DEFAULT_TARGET" : "mars",
+"DEFAULT_TARGET_TYPE" : "planet",
+"DEFAULT_INVESTIGATION" : "InSight",
+"DEFAULT_SPACECRAFT" : "InSight Lander"
+}

@@ -1,0 +1,1935 @@
+## Mission-specific variables and macros for: M2020 Project.
+## All constants and macros with 'MSN_'/'msn_' prefix, respectively,
+## must be implemented by any other mission-implementaion.
+
+## ========================================================================
+## GLOBALS 
+## ========================================================================
+
+
+#set ($MSN_PRODUCT_LID_PREFIX         = "urn:nasa:pds:m2020_cameras")  ##This is just the default tho, see msn_getProductLidCollection()
+#set ($MSN_MODEL_VERSION              = "1.16.0.0")
+#set ($MSN_WAVELENGTH_RANGE           = "Visible")
+#set ($MSN_DOMAIN                     = "Surface")
+#set ($MSN_DISCIPLINE                 = "Imaging")
+#set ($MSN_TARGET             = "mars")
+#set ($MSN_TARGET_TYPE        = "planet")
+#set ($MSN_INVESTIGATION_MISSION  = "Mars2020")
+#set ($MSN_INVESTIGATION_NAME = "Mars2020")
+#set ($MSN_INVESTIGATION_TYPE = "Mission")
+#set ($MSN_INVESTIGATION_SUBTYPE = "mission")
+#set ($MSN_PLATFORM           = "mars2020")
+#set ($MSN_SPACECRAFT         = "Mars 2020")
+#set ($MSN_SPACECRAFT_SHORT   = "M2020")
+#set ($MSN_IDENTIFICATION_AREA_TITLE_PREFIX = $MSN_INVESTIGATION_NAME)
+
+#set ($MSN_AUTO_EXPOSURE_ALGORITHM_NAME = "Maki 2003")
+
+## TODO: should not be needed any more with the above fixes.
+#set ($DEPRECATED_PID_LENGTH = 54)
+#set ($DEPRECATED_MOSAIC_PID_LENGTH = 40)
+
+## M20 filename has a version field of size 2
+#set ($MSN_PID_VERSION_SIZE = 2)
+
+## Note, we go 00-99, A0-A9, AA-AZ, B0-B9, ... ZA-ZZ
+#set ($MSN_PID_VERSION_ROLLOVER_STRING = "__")
+#set ($MSN_PID_VERSION_ROLLOVER_VALUE  = 1036)
+
+## All of the keys in this map are REQUIRED
+## PROLOG GLOBALS --------------------------------------
+#set ( $MSN_DEFAULT_VERSION = $PDS4_VERSION_LATEST )  
+#set ($MSN_PROLOG_VERSION_DICT = $LATEST_GREATEST_PROLOG_VERSION_DICT )
+
+
+#set ( $PDS4_M20_SCHEMA_VERSION = "1G00_1010" )
+
+
+## List of Process task names that we should skip
+## when outputting task history
+#set ($MSN_PROCESS_TASK_SKIP_LIST = ([ "VICARIMAGEWRITER" ]))
+
+## Mapping of flight_software_mode numeric value
+## to mission-specific name
+#set ($MSN_FLIGHT_SOFTWARE_MODE_DICT = { 
+  "0"   : "UNKNOWN",
+  "1"   : "TEST",
+  "2"   : "PRELAUNCH",
+  "3"   : "LAUNCH",
+  "4"   : "ECLIPSE",
+  "5"   : "CRUISE",
+  "6"   : "EDL_APPROACH",
+  "7"   : "EDL_MAIN",
+  "8"   : "SURFACE_NOMINAL",
+  "9"   : "SURFACE_STANDBY",
+  "10"  : "NONPRIME_TEST",
+  "11"  : "NONPRIME_PRELAUNCH",
+  "12"  : "NONPRIME_LAUNCH",
+  "13"  : "NONPRIME_ECLIPSE",
+  "14"  : "NONPRIME_CRUISE",
+  "15"  : "NONPRIME_EDL_APPROACH",
+  "16"  : "NONPRIME_EDL_MAIN",
+  "17"  : "NONPRIME_SURFACE_NOMINAL",
+  "18"  : "NONPRIME_SURFACE_STANDBY"
+})
+
+## In September 2021, IDS decided to restructure the bundles.
+## Part of that process requires looking at the product-code 
+## to get associated name.  
+##
+## Want to know how this map was made?
+## Then see: https://github.jpl.nasa.gov/MIPL/mm_velocity_templates/issues/320
+##
+## Note: this is Different from the multimission processing stage map.
+
+#set ($M20_PRODUCT_ID_TO_BUNDLE_NAME_MAP = {
+"ECM" : "raw",
+"EJP" : "raw",
+"ECV" : "raw",
+"ECZ" : "raw",
+"EDM" : "raw",
+"ECR" : "raw",
+"ERP" : "raw",
+"ERS" : "raw",
+"ECS" : "raw",
+"EHG" : "raw",
+"EAU" : "raw",
+"EDR" : "raw",
+"EVD" : "raw",
+"EZS" : "raw",
+"ERD" : "raw",
+"EBY" : "raw",
+"FDR" : "calibrated",
+"TDR" : "calibrated",
+"FAU" : "calibrated",
+"IOF" : "calibrated",
+"IOI" : "calibrated",
+"RAF" : "calibrated",
+"RAD" : "calibrated",
+"RAS" : "calibrated",
+"RAY" : "calibrated",
+"RDM" : "calibrated",
+"RIE" : "calibrated",
+"RIF" : "calibrated",
+"RSM" : "calibrated",
+"RAG" : "calibrated",
+"RZF" : "calibrated",
+"RZD" : "calibrated",
+"RZS" : "calibrated",
+"RZY" : "calibrated",
+"CNR" : "calibrated",
+"CNS" : "calibrated",
+"CNF" : "calibrated",
+"CNB" : "calibrated",
+"CNG" : "calibrated",
+"CSD" : "calibrated",
+"CSS" : "calibrated",
+"CSF" : "calibrated",
+"CSB" : "calibrated",
+"CSG" : "calibrated",
+"CPD" : "calibrated",
+"CPS" : "calibrated",
+"CPF" : "calibrated",
+"CPB" : "calibrated",
+"CPG" : "calibrated",
+"CWD" : "calibrated",
+"CWS" : "calibrated",
+"CWF" : "calibrated",
+"CWB" : "calibrated",
+"CWG" : "calibrated",
+"DNR" : "calibrated",
+"DNS" : "calibrated",
+"DNF" : "calibrated",
+"DNB" : "calibrated",
+"DNG" : "calibrated",
+"DSD" : "calibrated",
+"DSS" : "calibrated",
+"DSF" : "calibrated",
+"DSB" : "calibrated",
+"DSG" : "calibrated",
+"DPD" : "calibrated",
+"DPS" : "calibrated",
+"DPF" : "calibrated",
+"DPB" : "calibrated",
+"DPG" : "calibrated",
+"DWD" : "calibrated",
+"DWS" : "calibrated",
+"DWF" : "calibrated",
+"DWB" : "calibrated",
+"DWG" : "calibrated",
+"ZNR" : "calibrated",
+"ZNS" : "calibrated",
+"ZNF" : "calibrated",
+"ZNB" : "calibrated",
+"ZNG" : "calibrated",
+"ZSD" : "calibrated",
+"ZSS" : "calibrated",
+"ZSF" : "calibrated",
+"ZSB" : "calibrated",
+"ZSG" : "calibrated",
+"ZPD" : "calibrated",
+"ZPS" : "calibrated",
+"ZPF" : "calibrated",
+"ZPB" : "calibrated",
+"ZPG" : "calibrated",
+"ZWD" : "calibrated",
+"ZWS" : "calibrated",
+"ZWF" : "calibrated",
+"ZWB" : "calibrated",
+"ZWG" : "calibrated",
+"MNR" : "calibrated",
+"MNS" : "calibrated",
+"MNF" : "calibrated",
+"MNB" : "calibrated",
+"MNG" : "calibrated",
+"MSD" : "calibrated",
+"MSS" : "calibrated",
+"MSF" : "calibrated",
+"MSB" : "calibrated",
+"MSG" : "calibrated",
+"MPD" : "calibrated",
+"MPS" : "calibrated",
+"MPF" : "calibrated",
+"MPB" : "calibrated",
+"MPG" : "calibrated",
+"MWD" : "calibrated",
+"MWS" : "calibrated",
+"MWF" : "calibrated",
+"MWB" : "calibrated",
+"MWG" : "calibrated",
+"MSK" : "calibrated",
+"IDM" : "calibrated",
+"IDX" : "calibrated",
+"ICM" : "calibrated",
+"DDD" : "stereo",
+"DDL" : "stereo",
+"DDS" : "stereo",
+"DSE" : "stereo",
+"DSP" : "stereo",
+"DSR" : "stereo",
+"MDS" : "stereo",
+"DFF" : "stereo",
+"DFL" : "stereo",
+"DFS" : "stereo",
+"XYZ" : "stereo",
+"XYM" : "stereo",
+"XYR" : "stereo",
+"XRM" : "stereo",
+"XYE" : "stereo",
+"MXY" : "stereo",
+"XYF" : "stereo",
+"XYO" : "stereo",
+"XRZ" : "stereo",
+"XRR" : "stereo",
+"XXX" : "stereo",
+"YYY" : "stereo",
+"ZZZ" : "stereo",
+"DEM" : "stereo",
+"XOZ" : "stereo",
+"XXF" : "stereo",
+"YYF" : "stereo",
+"ZZF" : "stereo",
+"ZIH" : "stereo",
+"RNE" : "stereo",
+"RNF" : "stereo",
+"RNG" : "stereo",
+"RNM" : "stereo",
+"RNR" : "stereo",
+"RNO" : "stereo",
+"UVF" : "stereo",
+"UVO" : "stereo",
+"UVP" : "stereo",
+"UVS" : "stereo",
+"UVT" : "stereo",
+"UVW" : "stereo",
+"UUU" : "stereo",
+"VVV" : "stereo",
+"WWW" : "stereo",
+"UUF" : "stereo",
+"VVF" : "stereo",
+"WWF" : "stereo",
+"UIH" : "stereo",
+"TFH" : "stereo",
+"SEN" : "stereo",
+"SHD" : "stereo",
+"SHO" : "stereo",
+"SLO" : "stereo",
+"SLP" : "stereo",
+"SMG" : "stereo",
+"SMO" : "stereo",
+"SNO" : "stereo",
+"SNT" : "stereo",
+"SRD" : "stereo",
+"ARK" : "stereo",
+"ARM" : "stereo",
+"ARO" : "stereo",
+"MAR" : "stereo",
+"RUF" : "stereo",
+"RUS" : "stereo",
+"RUC" : "stereo",
+"RUH" : "stereo",
+"GUN" : "stereo",
+"GUA" : "stereo",
+"GUC" : "stereo",
+"GRN" : "stereo",
+"GRA" : "stereo",
+"GRC" : "stereo",
+"GSR" : "stereo",
+"GUH" : "stereo",
+"SLH" : "stereo",
+"TEN" : "stereo",
+"TER" : "stereo",
+"IEF" : "stereo",
+"IEP" : "stereo",
+"COF" : "stereo"
+})
+
+## Min length of a potentnial MESH filename
+#set ( $M20_MESH_BASE_MIN_LEN = 40 )
+
+## ========================================================================
+## MACROS 
+## ========================================================================
+
+
+## ========================================================================
+## PROLOG Section
+
+##################################
+## msn_generatePrologXmlModelSection
+##
+#macro(msn_generatePrologXmlModelSection)
+#if (! $PDS4_M20_SCHEMA_VERSION.isEmpty() )
+<?xml-model href="https://pds.nasa.gov/pds4/mission/mars2020/v1/PDS4_MARS2020_${PDS4_M20_SCHEMA_VERSION}.sch" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generateMissionNamespaceSection
+##
+#macro(msn_generateMissionNamespaceSection)
+#if (! $PDS4_M20_SCHEMA_VERSION.isEmpty() )
+xmlns:mars2020="http://pds.nasa.gov/pds4/mission/mars2020/v1"##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_generatePrologSchemaLocationSection
+##
+#macro(msn_generatePrologSchemaLocationSection)
+#if (! $PDS4_M20_SCHEMA_VERSION.isEmpty() )
+http://pds.nasa.gov/pds4/mission/mars2020/v1 https://pds.nasa.gov/pds4/mission/mars2020/v1/PDS4_MARS2020_${PDS4_M20_SCHEMA_VERSION}.xsd##
+#end
+##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Returns an array containing all possible RMC names.
+##
+#macro(msn_getRMCNames)
+#set ($MSN_RMC_NAMES = ['SITE','DRIVE','POSE','ARM','SHA','DRILL','RSM','HGA','BITCAR','SEAL','RTT','PMC'])
+$MSN_RMC_NAMES##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##TODO: NEW isColorImage().  Returns whether an image is color (vs. bw or something noncolor like xyz etc). Replaces the direct logic in defaultDisplaySettings but is the same code.
+##################################
+## Returns a TRUE if image is color, FALSE otherwise
+##
+#macro(msn_isColorImage)
+#set($axes = $label.PDS4_IMAGE.axes[0])
+    #if ( $axes == 3 )
+        #set( $derived_img_type = $label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE.toString() )
+        #set ( $img_type = $label.IDENTIFICATION.IMAGE_TYPE.toString() )
+        #if ( ($derived_img_type && $derived_img_type.equals("IMAGE")) || (!$derived_img_type && ( $img_type.equals("REGULAR") || $img_type.equals("THUMBNAIL") ) ) )
+${CONST_TRUE}##
+        #else
+${CONST_FALSE}##
+        #end
+     #else
+${CONST_FALSE}##
+    #end
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProcessingLevel  from the product type
+##
+## !!!! These need to be updated....
+#set ($MSN_PROCESSING_LEVEL_SPECIFIC = {
+"RUF" : "Derived",
+"ARK" : "Derived",
+"ARM" : "Derived",
+"ARO" : "Derived",
+"MAR" : "Derived",
+"SEN" : "Derived",
+"SHD" : "Derived",
+"SHO" : "Derived",
+"SLO" : "Derived",
+"TEN" : "Derived",
+"TER" : "Derived",
+"ECM" : "Raw",
+"ECV" : "Raw",
+"ECZ" : "Raw",
+"ECR" : "Raw",
+"EJP" : "Raw",
+"EDR" : "Partially Processed",
+"EZS" : "Partially Processed",
+"EVD" : "Partially Processed",
+"ERD" : "Partially Processed",
+"EBY" : "Partially Processed",
+"XOZ" : "Derived",
+"RAG" : "Derived"
+})
+#macro(msn_getProcessingLevel $ptype $isMosaic)
+#if ($isMosaic eq $CONST_TRUE)
+Derived##
+#elseif ( $MSN_PROCESSING_LEVEL_SPECIFIC.containsKey($ptype) )
+$MSN_PROCESSING_LEVEL_SPECIFIC.get($ptype)##
+#elseif ( $CORE_PROCESSING_LEVEL_MAP.containsKey($ptype) )
+$CORE_PROCESSING_LEVEL_MAP.get($ptype)##
+#else
+Derived##
+#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: Returns whether or not the PID should have the extension. For all current missions, no extension if the extension is VIC or IMG, yes otherwise.
+
+##################################
+## msn_doesPIDHaveExtension
+##
+#macro(msn_doesPIDHaveExtension $filename)
+#set ($exten = "#getFileExtension($filename)")
+#if ($exten && ( $exten.equalsIgnoreCase('VIC') || $exten.equalsIgnoreCase('IMG')) )
+${CONST_FALSE}##
+#else
+${CONST_TRUE}##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionSize
+##
+#macro(msn_getPIDVersionSize)
+${MSN_PID_VERSION_SIZE}##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Implement: useRadianceInImageArray - specific.  Returns true if radiance offset and scaling factor should be included, false otherwise. Can use the same logic as currently in image::getArrayDefinition().
+
+##################################
+## msn_useRadianceInImageArray
+##
+#macro(msn_useRadianceInImageArray)
+${CONST_TRUE}## 1 or 2 depending on mission
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## m20_labelLooksLikeMosaic
+##
+## Returns CONST_TRUE if product's label looks like mosaic, CONST_FALSE otherwise.
+##
+
+#macro(m20_labelLooksLikeMosaic)
+#if ( ( $IDENT.GEOMETRY_PROJECTION_TYPE && $IDENT.GEOMETRY_PROJECTION_TYPE.toString().equalsIgnoreCase('TRAPEZOID') ) ||
+      ( $label.GEOMETRY_PROJECTION_TYPE && $label.GEOMETRY_PROJECTION_TYPE.toString().equalsIgnoreCase('TRAPEZOID') ) )
+${CONST_FALSE}##
+#elseif ( $IDENT.SURFACE_PROJECTION_PARMS || $label.SURFACE_PROJECTION_PARMS )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_isMosaic
+##
+## Returns TRUE if product is considered a mosaic, FALSE otherwise.
+##
+#macro(msn_isMosaic $pid )
+#if ( $CONST_TRUE.equals("#m20_labelLooksLikeMosaic()"))
+${CONST_TRUE}##
+#elseif ( $CONST_TRUE.equals("#isStandardMissionFilename()") && $pid.length() > 11 && ($pid.substring(11,12).equals("_") || $pid.substring(11,12).equalsIgnoreCase("X")))
+${CONST_TRUE}##
+#elseif ( $CONST_TRUE.equals($FORCE_MOSAIC) )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## m20_isMesh
+##
+## Returns TRUE if product is considered a mesh, FALSE otherwise.
+##
+## If mesh, the instrument section is variable length, so we have to remove instruments.
+## Then ensure first char is _ and...that  multi{sol,site,drive} values are all in {_,X}
+##
+#macro(m20_isMesh $pid )
+#set ( $m20ismesh_rval = $CONST_FALSE )
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($basename    = "#getBasenameNoExten($pid)")
+#set ($basename    = $basename.toUpperCase())
+#set ($basenameLen =  $basename.length() )
+#if ( $basenameLen > $M20_MESH_BASE_MIN_LEN )
+#set ($instrStrLen = $math.sub( $basenameLen, $M20_MESH_BASE_MIN_LEN ))
+#set ($instrStrLen = $math.add( $instrStrLen, 1))
+#set ($noInstrStr  = $basename.substring($instrStrLen))
+#if ( $noInstrStr.startsWith('_'))
+#set ( $msol   = $noInstrStr.charAt(8) )
+#set ( $msite  = $noInstrStr.charAt(23) )
+#set ( $mdrive = $noInstrStr.charAt(28) )
+#if ( ( $msol == '_' || $msol == 'X' ) && ( $msite == '_' || $msite == 'X' ) && ( $mdrive == '_' || $mdrive == 'X' ) )
+#set ( $m20ismesh_rval = $CONST_TRUE )
+#end##IfMultiSol,Site,DriveIsXor_
+#end##IfStartsWithUnderscore
+#end##IfLenGTMinLen
+#end##IfStandardMsnName
+#if ( $CONST_TRUE.equals($FORCE_MESH) )
+#set ( $m20ismesh_rval = $CONST_TRUE )
+#end
+${m20ismesh_rval}##
+#end
+
+## ------------------------------------------------------------------------
+##################################
+## msn_isThumbnail
+##
+## Returns TRUE if product is considered a thumbnail, FALSE otherwise.
+
+#macro(msn_isThumbnail $pid_or_filename )
+#set ($isMosaic = "#msn_isMosaic($pid_or_filename)")
+#if ($isMosaic eq $CONST_TRUE)
+${CONST_FALSE}##
+#else
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") && $pid_or_filename.substring(27,28).toUpperCase().equals("T"))
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductType
+##
+## Returns PID for this missing 
+#macro(msn_getProductType $pid)
+#set ($isMosaic = "#msn_isMosaic($pid)")
+#set ($prodtype = "ECM" )##default product if we cannot determine
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#if ($isMosaic eq $CONST_TRUE && $pid.length() > 14)
+#set ($prodtype = $pid.substring(12,15)) 
+#elseif ($isMosaic eq $CONST_FALSE && $pid.length() > 25)
+#set ($prodtype = $pid.substring(23,26))
+#end
+#set ($prodtype = $prodtype.toUpperCase())
+#end
+${prodtype}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPlanetDayNumberOrSol
+##
+## check if PLANET_DAY_NUMBER exists. If not, fall back to SOL extract from filename
+
+#macro(msn_getPlanetDayNumberOrSol $pid)
+##
+#set ($mgpdnos_val = "")
+#if ( $!IDENT.PLANET_DAY_NUMBER )
+#set ($mgpdnos_val = $!IDENT.PLANET_DAY_NUMBER)
+#elseif ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($mgpdnos_val = "#msn_getSolFromPid($pid)")
+#end
+${mgpdnos_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSolFromPid
+##
+## Returns SOL field extracted from PID.
+
+#macro(msn_getSolFromPid $pid)
+#set ($mgsfp_val = "" )
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($isMosaic = "#msn_isMosaic($pid)")
+#if ($isMosaic eq $CONST_TRUE && $pid.length() > 10)
+#set ($mgsfp_val = $pid.substring(7,11) )
+#elseif ($isMosaic eq $CONST_FALSE && $pid.length() > 7)
+#set ($mgsfp_val = $pid.substring(4,8) )
+#end
+#end
+$mgsfp_val##
+#end
+
+
+## ------------------------------------------------------------------------
+
+  
+##################################
+## msn_includeBrowseSection
+##
+## Flag to determine if template inserts <Internal_Reference> if it is  appropriate
+## could add something from $input_filename to help decide
+##
+#macro(msn_includeBrowseSection $product_type $derived_image_type $input_filename)
+##Before we only looked for 'EDR', but there are other types that are EDR-like
+#set ( $mibs_isecmtype = "#m20_isProductTypeEcmClass($product_type)" )
+#if (  ( $CONST_TRUE.equals($mibs_isecmtype) || $derived_image_type.equals('IMAGE')) && ( $CONST_FALSE.equals($IS_DATATYPE_FLOAT) ) )
+$CONST_TRUE##
+#else
+$CONST_FALSE##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextName
+## Returns the context name from a specific instrument
+#macro(msn_getInstrumentContextName $instrument)
+#set ( $context = '' )
+#set ( $instrUp = $instrument.toUpperCase() )
+#if ( $instrUp eq "CACHECAM" )
+#set ( $context = "ecam" )
+#elseif ( $instrUp.startsWith("EDL") )
+#set ( $context = "edlcam" )
+#elseif ( $instrUp.contains("HAZCAM") )
+#set ( $context = "ecam" )
+#elseif ( $instrUp.contains("NAVCAM") )
+#set ( $context = "ecam" )
+#elseif ( $instrUp.startsWith("MCZ") )
+#set ( $context = "mastcamz" )
+#elseif ( $instrUp.startsWith("PIXL") )
+#set ( $context = "pixl" )
+#elseif ( $instrUp.startsWith("SHERLOC") )
+#set ( $context = "sherloc" )
+#elseif ( $instrUp.startsWith("SKYCAM") )
+#set ( $context = "meda" )
+#elseif ( $instrUp.startsWith("SUPERCAM") )
+#set ( $context = "supercam" )
+#elseif ( $instrUp.startsWith("LVSCAM") )
+#set ( $context = "lvs" )
+#elseif ( $instrUp.startsWith("HELI") )
+#set ( $context = "helicam" )
+#elseif ( $instrUp.startsWith("MOXIE") )
+#set ( $context = "moxie" )
+#elseif ( $instrUp.startsWith("MEDA") )
+#set ( $context = "meda" )
+#elseif ( $instrUp.startsWith("RIMFAX") )
+#set ( $context = "rimfax" )
+#else
+#set ( $context = $instrument )
+#end
+#set ( $context = $context.toLowerCase() )
+${context}##
+#end
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasEjpJpegs
+##
+## Returns TRUE if mission supports EJP product 
+## types (JPEGS built from EDR), FALSE otherwise.
+
+#macro(msn_hasEjpJpegs)
+$CONST_TRUE##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_hasAssociatedFitsFile
+##
+## Returns TRUE if mission supports FITS product,
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+## M20 checks PID to see if instrument is SuperCam RMI
+
+#macro(msn_hasAssociatedFitsFile $pid)
+#set ($isMosaic = "#msn_isMosaic($pid)")
+#if ($isMosaic eq $CONST_FALSE && $CONST_TRUE.equals("#isStandardMissionFilename()") && $pid.toString().toUpperCase().startsWith("LR"))
+$CONST_TRUE##
+#else 
+$CONST_FALSE##
+#end
+#end
+
+## ------------------------------------------------------------------------
+  
+##################################
+## msn_hasAssociatedMaskFile
+##
+## Returns TRUE if mission supports MASK product (for FAOS),
+## and optionally checking the PID to check if particular product,
+## should support it, FALSE otherwise.
+
+#macro(msn_hasAssociatedMaskFile $pid)
+$CONST_FALSE##
+#end
+
+## ------------------------------------------------------------------------
+
+## On April 23, 2019, Bob requested this be added to the mission API, saying "Unfortunately we're not going to get units of responsivity added in time for insight.  So please add a flag/macro/whatever to the mission-specific API that says whether or not to include units with responsivity values."  Not sure where we call it yet tho....
+
+##################################
+## msn_includeResponsivityUnits
+##
+#macro(msn_includeResponsivityUnits)
+${CONST_FALSE}
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getPIDVersionAsDecimal
+##
+## Note, we go 00-99, A0-A9, AA-AZ, B0-B9, ... ZA-ZZ
+## So we get 0-9A-Z for each digit separately.  Then rebuild the number.
+## if first digit is 0-9, it's simply 00-99.  If not, then A starts at 100,
+## B starts at 100+36, C at 100+36*2, etc. and then we just add the second
+## digit.
+##
+#macro(msn_getPIDVersionAsDecimal $pidVerStr)
+#set ($mgpvad_val = 0 )
+#if ( $pidVerStr.length() > 1 )
+#set ($mgpvad_c1 = $pidVerStr.substring(0,1) )
+#set ($mgpvad_c2 = $pidVerStr.substring(1,2) )
+#set ($mgpvad_v1s = "#getPIDVersionAsDecimalSingleChar($mgpvad_c1)" )
+#set ($mgpvad_v2s = "#getPIDVersionAsDecimalSingleChar($mgpvad_c2)" )
+#set ($mgpvad_v1 = $math.toInteger($mgpvad_v1s) )
+#set ($mgpvad_v2 = $math.toInteger($mgpvad_v2s) )
+#if ($mgpvad_v1 < 10)
+#set ($mgpvad_val = $mgpvad_v1 * 10 + $mgpvad_v2)
+#else
+#set ($mgpvad_val = 100 + ($mgpvad_v1 - 10) * 36 + $mgpvad_v2)
+#end
+#end
+${mgpvad_val}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getInstrumentContextURN
+## Returns the standard URN format.
+#macro(msn_getInstrumentContextURN $instrument)
+urn:nasa:pds:context:instrument:${MSN_INVESTIGATION_NAME.toLowerCase()}.${instrument}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getSpecialProcessingFlag
+## Returns the product special flag value.
+#macro(msn_getSpecialProcessingFlag $filename)
+#set ($mgspf_val = "" )
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($isMosaic = "#msn_isMosaic($filename)")
+#if ($isMosaic eq $CONST_TRUE && $filename.length() > 6)
+#set ($mgspf_val = $filename.substring(6,7) )
+#elseif ($isMosaic eq $CONST_FALSE && $filename.length() > 3)
+#set ($mgspf_val = $filename.substring(3,4) )
+#end
+#end
+$mgspf_val##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getLegalFileExtension
+## Returns the possibly mission-modified filename extension.
+#macro(msn_getLegalFileExtension $exten )
+$exten##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##Helper macro that maps filename to associated LID Bundle
+##datatype/stage/whatever name.
+##First it checks for mosaic, then compares the product type 
+##to whats in M20_PRODUCT_ID_TO_BUNDLE_NAME_MAP.
+#macro( m20_getLidPrefixBundleTypeName $filename )
+#set ( $m20glpbt_rval = '' )
+#set ( $fileup   = $filename.toUpperCase() )
+#if ( $CONST_TRUE.equals("#msn_isMosaic($filename)") )
+#set ( $m20glpbt_rval = 'mosaic' )
+#elseif ( $CONST_TRUE.equals("#m20_isMesh($filename)") )
+#set ( $m20glpbt_rval = 'mesh' )
+#else
+#set ( $produp = "#getProductType($fileup)" )
+#if ( $M20_PRODUCT_ID_TO_BUNDLE_NAME_MAP.containsKey( $produp ) )
+#set ( $m20glpbt_rval = $M20_PRODUCT_ID_TO_BUNDLE_NAME_MAP.get( $produp ) )
+#else 
+#set ( $m20glpbt_rval = $CONST_UNKNOWN )
+#end
+#end
+${m20glpbt_rval}##
+#end
+
+
+
+## ------------------------------------------------------------------------
+
+
+## Per GIT Issue 127: M20 Bundle and collection names
+## Used in msn_getProductLidPrefix() and msn_getProductLidCollection()
+## ECAM - filenames N*, F*, B*, C*, E*, R* ## mars2020_ecam:data  [OLD]
+## Mastcam-Z - filenames Z* ## mars2020_mastcamz:data  [OLD]
+## SuperCam - filenames LR* ## mars2020_imgops:data_rmi_imgops
+## SHERLOC ACI - filenames SC* ## mars2020_imgops:data_aci_imgops
+## SHERLOC Watson - filenames SI*, SA*, SG*, SL*, SR*, SE* ## mars2020_imgops:data_watson_imgops
+## PIXL - filenames PC* ## mars2020_imgops:data_mcc_imgops
+## MEDA - filenames WS* ## mars2020_meda:data_skycam
+## Helicopter - filenames HN*, HS* ## mars2020_helicopter:data
+## **Update Sept'21: ECAM and MastcamZ are now more complicated and get their own macros...
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidPrefix
+## Returns the product LID prefix, that can be based on the filename
+## For M20, this will be replaced with mission-specific logic
+#macro(msn_getProductLidPrefix $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_lid_prfx_end = "")
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#if ( $fileup.startsWith("N") || $fileup.startsWith("F") || $fileup.startsWith("B") || $fileup.startsWith("C") || $fileup.startsWith("E") || $fileup.startsWith("R"))
+#set ( $m20_lid_prfx_end = "#m20_getProductLidPrefixPart_Ecam($filename)")
+#elseif ( $fileup.startsWith("Z") )
+#set ( $m20_lid_prfx_end = "#m20_getProductLidPrefixPart_Mastcamz($filename)")
+#elseif ( $fileup.startsWith("L") )
+#set ( $m20_lid_prfx_end = "mars2020_imgops")
+#elseif ( $fileup.startsWith("SC") )
+#set ( $m20_lid_prfx_end = "mars2020_imgops")
+#elseif ( $fileup.startsWith("SI") || $fileup.startsWith("SA") || $fileup.startsWith("SG") || $fileup.startsWith("SL") || $fileup.startsWith("SR") || $fileup.startsWith("SE"))
+#set ( $m20_lid_prfx_end = "mars2020_imgops")
+#elseif ( $fileup.startsWith("P") )
+#set ( $m20_lid_prfx_end = "mars2020_imgops")
+#elseif ( $fileup.startsWith("I") )
+#set ( $m20_lid_prfx_end = "mars2020_imgops")
+#elseif ( $fileup.startsWith("WS") )
+#set ( $m20_lid_prfx_end = "mars2020_meda")
+#elseif ( $fileup.startsWith("H") || $fileup.startsWith("V") )
+#set ( $m20_lid_prfx_end = "mars2020_helicam")
+#else
+#set ( $m20_lid_prfx_end = "m2020_cameras")
+#end
+#else 
+#set ( $m20_lid_prfx_end = "m2020_cameras")
+#end
+${PDS_LID_PREFIX}${m20_lid_prfx_end}##
+#end
+##################################
+
+
+##################################
+## ECAM follows the same general rule of: 'mars2020' + $instr + 'ops' + $bundletypename 
+#macro(m20_getProductLidPrefixPart_Ecam $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_lid_prfx_msn   = $MSN_PLATFORM)
+#set ( $m20_lid_prfx_instr = '')
+#set ( $m20_lid_prfx_stage = 'ops')
+#set ( $m20_lid_prfx_data  = "#m20_getLidPrefixBundleTypeName($filename)" )
+#if ( $fileup.startsWith("N"))
+#set ( $m20_lid_prfx_instr = "navcam")
+#elseif ( $fileup.startsWith("F") || $fileup.startsWith("B") || $fileup.startsWith("R") )
+#set ( $m20_lid_prfx_instr = "hazcam")
+#elseif ( $fileup.startsWith("C") )
+#set ( $m20_lid_prfx_instr = "cachecam")
+#elseif ( $fileup.startsWith("E"))
+#set ( $m20_lid_prfx_instr = "edlcam")
+#else
+#set ( $m20_lid_prfx_instr = "unknown")
+#end
+${m20_lid_prfx_msn}_${m20_lid_prfx_instr}_${m20_lid_prfx_stage}_${m20_lid_prfx_data}##
+#end
+
+##################
+
+#macro(m20_getProductLidPrefixPart_Mastcamz $filename )
+#set ( $m20gplppmz_rval = '' )
+#set ( $m20_lid_prfx_msn   = $MSN_PLATFORM)
+#set ( $m20_lid_prfx_instr = 'mastcamz')
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $producerUp = '' )
+#if ( $CONST_TRUE.equals("#msn_isMosaic($filename)") )
+#set ( $producerUp = $fileup.substring(37,38) )
+#else
+#set ( $producerUp = $fileup.substring(51,52) )
+#end
+#if ( $producerUp.equals("A") || $producerUp.equals("P") )##produced-by-ASU
+#set ($m20gplppmz_rval = "${m20_lid_prfx_msn}_${m20_lid_prfx_instr}_sci_calibrated" )
+#else
+#set ( $m20_lid_prfx_stage = 'ops')
+#set ( $m20_lid_prfx_data  = "#m20_getLidPrefixBundleTypeName($filename)" )
+#set ( $m20gplppmz_rval = "${m20_lid_prfx_msn}_${m20_lid_prfx_instr}_${m20_lid_prfx_stage}_${m20_lid_prfx_data}") 
+#end
+${m20gplppmz_rval}##
+#end
+
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getProductLidCollection
+## Returns the product lid collection value, that can be based on the filename
+## For M20, this will be replaced with mission-specific logic
+#macro(msn_getProductLidCollection $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_lid_coll = "")
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#if ( $fileup.startsWith("L") )
+#set ( $m20_lid_coll = "data_rmi_imgops")
+#elseif ( $fileup.startsWith("SC") )
+#set ( $m20_lid_coll = "data_aci_imgops")
+#elseif ( $fileup.startsWith("SI") || $fileup.startsWith("SA") || $fileup.startsWith("SG") || $fileup.startsWith("SL") || $fileup.startsWith("SR") || $fileup.startsWith("SE") || $fileup.startsWith("I") )
+#set ( $m20_lid_coll = "data_watson_imgops")
+#elseif ( $fileup.startsWith("P") )
+#set ( $m20_lid_coll = "data_mcc_imgops")
+#elseif ( $fileup.startsWith("WS") )
+#set ( $m20_lid_coll = "data_skycam")
+#elseif ( $fileup.startsWith("Z") )##We removed the IDS-v-ASU in Sept'21
+#set ( $m20_lid_coll = $CONST_DATA)
+#elseif ( $CONST_TRUE.equals("#m20_isEdlCamSol0Collection($filename)") )
+#set ( $m20_lid_coll = "#m20_getEdlCamSol0Collection( $CONST_DATA  $filename)")
+#else
+#set ( $m20_lid_coll = $CONST_DATA )
+#end
+#else
+#set ( $m20_lid_coll = $CONST_DATA )
+#end
+${m20_lid_coll}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+## Macro that decides special LID COLLECTION logic for: SOL0 EDLCAM (Delivery 3)
+#macro (m20_isEdlCamSol0Collection $filename)
+#set ( $miecsc_rval = $CONST_FALSE )
+#set ( $fileup = $filename.toUpperCase() )
+#if ( $fileup.startsWith("E") )
+#set ( $miecsc_sol = "" )##We need SOL for ecam decision
+#set ( $miecsc_sol = "#msn_getPlanetDayNumberOrSol($filename)" )
+#if ( $miecsc_sol )##Need integer to convert '0000' and '000' to 0
+#set ( $miecsc_sol_int = $math.toInteger($miecsc_sol) )
+#if ( 0 == $miecsc_sol_int )
+#set ( $miecsc_rval = $CONST_TRUE )
+#end
+#end
+#end
+${miecsc_rval}##
+#end
+
+##
+## Macro that handles special LID COLLECTION logic for: SOL0 EDLCAM (Delivery 3)
+## Returned string will be in format of:  ${coll_prefix}_sol0_${mgplc_sol0_cam}
+## where mgplc_sol0_cam is the value mapped using the beginning of filename arg:
+## {EA -> puc1, EB -> puc2, EC -> puc3, ED -> rdc, EL -> lcam, ES -> ddc, EU -> ruc}
+##
+#macro (m20_getEdlCamSol0Collection $coll_prefix $filename)
+#set ( $mgplc_sol0_cam = "" )##Camera code
+#set ( $fileup = $filename.toUpperCase() )
+#if ( $fileup.startsWith("EA") )
+#set ( $mgplc_sol0_cam = "puc1" )
+#elseif ( $fileup.startsWith("EB") )
+#set ( $mgplc_sol0_cam = "puc2" )
+#elseif ( $fileup.startsWith("EC") )
+#set ( $mgplc_sol0_cam = "puc3" )
+#elseif ( $fileup.startsWith("ED") )
+#set ( $mgplc_sol0_cam = "rdc" )
+#elseif ( $fileup.startsWith("EL") )
+#set ( $mgplc_sol0_cam = "lcam" )
+#elseif ( $fileup.startsWith("ES") )
+#set ( $mgplc_sol0_cam = "ddc" )
+#elseif ( $fileup.startsWith("EU") )
+#set ( $mgplc_sol0_cam = "ruc" )
+#end
+${coll_prefix}_sol0_${mgplc_sol0_cam}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## msn_getAutoExposureAlgorithm
+## Returns the auto-exposure algorithm name associated with 
+## a mission. 
+## For M2020, we always return the same value: Maki 2003, unless SCAM instrument
+#macro(msn_getAutoExposureAlgorithm $filename )
+#if  ( $CONST_TRUE.equals("#isStandardMissionFilename()") && $filename.toUpperCase().startsWith("L") )
+Maurice 2020##
+#else
+$MSN_AUTO_EXPOSURE_ALGORITHM_NAME##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## m20_generateM20PIXLIllumination
+## Generates the PIXL_Illumination section for  the the passed in node
+#macro(m20_generateM20PIXLIllumination $illum_node $illum_name )
+      
+        <mars2020:PIXL_Illumination>
+           
+          #if ( $illum_node.PIXL_ILLUM_CURRENT_NAME )
+            <mars2020:Device_Currents>
+              #set($m20pliIcnLength = $illum_node.PIXL_ILLUM_CURRENT_NAME.size())
+              #foreach ( $i in [1..$m20pliIcnLength] )
+                <mars2020:Device_Current>
+                  #set ( $m20pli_ic_name   = $!illum_node.PIXL_ILLUM_CURRENT_NAME.get($foreach.index).toString() )
+                  #set ( $m20pli_ic_value  = $!illum_node.PIXL_ILLUM_CURRENT.get($foreach.index).toString() )
+                  <mars2020:device_name>$m20pli_ic_name</mars2020:device_name>
+                  <mars2020:current_value #getUnitAttrOrDefault( $illum_node   'PIXL_ILLUM_CURRENT'   $foreach.index  'mA' )>$m20pli_ic_value</mars2020:current_value>
+                </mars2020:Device_Current>
+              #end
+            </mars2020:Device_Currents>
+          #end
+
+          #if ( $illum_node.PIXL_ILLUM_FLASH_DUR_NAME )
+            <mars2020:Device_Flashes>
+              #set($m20pliIfdnLength = $illum_node.PIXL_ILLUM_FLASH_DUR_NAME.size())
+              #foreach ( $i in [1..$m20pliIfdnLength] )
+                <mars2020:Device_Flash>
+                  #set ( $m20pli_ifd_name   = $!illum_node.PIXL_ILLUM_FLASH_DUR_NAME.get($foreach.index).toString() )
+                  #set ( $m20pli_ifd_value  = $!illum_node.PIXL_ILLUM_FLASH_DUR.get($foreach.index).toString() )
+                  <mars2020:device_name>$m20pli_ifd_name</mars2020:device_name>
+                  <mars2020:flash_duration #getUnitAttrOrDefault( $illum_node   'PIXL_ILLUM_FLASH_DUR'   $foreach.index  's')>$m20pli_ifd_value</mars2020:flash_duration>
+                </mars2020:Device_Flash>
+              #end
+            </mars2020:Device_Flashes>
+          #end
+
+          #if ( $illum_node.PIXL_ILLUM_TEMPERATURE_NAME )
+            <mars2020:Device_Temperatures>
+              #set($m20pliItnLength = $illum_node.PIXL_ILLUM_TEMPERATURE_NAME.size())
+              #foreach ( $i in [1..$m20pliItnLength] )
+                <mars2020:Device_Temperature>
+                  #set ( $m20pli_it_temp_name   = $!illum_node.PIXL_ILLUM_TEMPERATURE_NAME.get($foreach.index).toString() )
+                  #set ( $m20pli_it_temp_value  = $!illum_node.PIXL_ILLUM_TEMPERATURE.get($foreach.index).toString() )
+                  <mars2020:device_name>$m20pli_it_temp_name</mars2020:device_name>
+                  <mars2020:temperature_value #getUnitAttrOrDefault( $illum_node   'PIXL_ILLUM_TEMPERATURE'   $foreach.index  'degC')>$m20pli_it_temp_value</mars2020:temperature_value>
+                </mars2020:Device_Temperature>
+              #end
+            </mars2020:Device_Temperatures>
+          #end
+
+          #if ( $illum_node.PIXL_ILLUM_VOLTAGE_NAME )
+            <mars2020:Device_Voltages>
+              #set($m20pliIvnLength = $illum_node.PIXL_ILLUM_VOLTAGE_NAME.size())
+              #foreach ( $i in [1..$m20pliIvnLength] )
+                <mars2020:Device_Voltage>
+                  #set ( $m20pli_iv_name   = $!illum_node.PIXL_ILLUM_VOLTAGE_NAME.get($foreach.index).toString() )
+                  #set ( $m20pli_iv_value  = $!illum_node.PIXL_ILLUM_VOLTAGE.get($foreach.index).toString() )
+                  <mars2020:device_name>$m20pli_iv_name</mars2020:device_name>
+                  <mars2020:voltage_value #getUnitAttrOrDefault( $illum_node   'PIXL_ILLUM_VOLTAGE'   $foreach.index  'V')>$m20pli_iv_value</mars2020:voltage_value>
+                </mars2020:Device_Voltage>
+              #end
+            </mars2020:Device_Voltages>
+          #end
+
+          ## Commented out per Issue 165
+          ## #if ( $led_illum.PIXL_ILLUM_ADC_OFFSET )
+          ##  <mars2020:pixl_adc_offset_FLI_A>$!led_illum.PIXL_ILLUM_ADC_OFFSET[0]</mars2020:pixl_adc_offset_FLI_A>
+          ##  <mars2020:pixl_adc_offset_FLI_B>$!led_illum.PIXL_ILLUM_ADC_OFFSET[1]</mars2020:pixl_adc_offset_FLI_B>
+          ## #end
+
+          ## import PIXL Motion counter from the IDENTIFICATION node (if available)
+          ## #getNodeWithValueOrAsNil( $IDENT 'PIXL_MOTION_COUNTER'   'mars2020:pixl_motion_counter'  $NO_UNIT   $CONST_FALSE )
+          ## <mars2020:pixl_motion_counter>$!IDENT.PIXL_MOTION_COUNTER</mars2020:pixl_motion_counter>
+
+          ## Per email from Susie on Jan 26, 2021, these are the labels that should be nillable
+          ##           <mars2020:pdp_category>26</>
+          ##           <mars2020:pdp_category_name>Histogram Bulk Sum A</>
+          ##           <mars2020:pdp_size>3636</>
+          ##           <mars2020:pdp_nvm_usn>1472114</>
+          ##           <mars2020:pdp_nvm_chunks>1</>
+          ##           <mars2020:pdp_nvm_block>6314</>
+          ##           <mars2020:pdp_nvm_page>99</>
+          ##           <mars2020:PIXL_Compression>
+          ##               <mars2020:inst_compression_mode>0</>
+          ##               <mars2020:inst_compression_name>NONE</>
+          ##           </mars2020:PIXL_Compression>
+          ##           mars2020:pixl_motion_counter
+
+
+        </mars2020:PIXL_Illumination>
+
+#end
+
+
+
+
+##################################
+## msn_generateMissionAreaSection
+## Returns the mission-specific content that will be placed
+## under the <Mission_Area> section.
+## M20 has some particulars it may add.
+#macro(msn_generateMissionAreaSection $filename )
+
+
+    <mars2020:Mars2020_Parameters>
+
+
+      ##---------------------------------------
+      ## Observation information (from M20 nonimg macros)
+
+      #set ( $lcl_msn_phase_name = "" )
+      #if ( $label.MISSION_PHASE_NAME )
+        #set ( $lcl_msn_phase_name = "#getMissionPhaseName( $!label.MISSION_PHASE_NAME.toString() )" )
+      #end
+
+      <mars2020:Observation_Information>
+
+          ##Use nil-entry if RELEASE_ID is not in label
+          ## Nov'21: Bob requests that IMG case not include mars2020:release_number
+          ## So we will include it if 1) the flag is not set ; or 2) it is set to CONST_FALSE
+          #if ( $!PDS_IMG_NODE_RULES_ENFORCED == '' || $CONST_FALSE.equals($PDS_IMG_NODE_RULES_ENFORCED) )
+              #getNodeWithValueOrAsNil( $label  'RELEASE_ID'   'mars2020:release_number'  $NO_UNIT   $CONST_TRUE )
+          #end
+
+          <mars2020:mission_phase_name>$lcl_msn_phase_name</mars2020:mission_phase_name>
+          
+          <mars2020:product_type_name></mars2020:product_type_name>
+
+          #getNodeValueNotNil( $label 'SPACECRAFT_CLOCK_START_COUNT'  'mars2020:spacecraft_clock_start'  '' )       
+          #getNodeValueNotNil( $label 'SPACECRAFT_CLOCK_STOP_COUNT'   'mars2020:spacecraft_clock_stop'   '' )
+
+          <mars2020:spacecraft_clock_partition>$!label.SPACECRAFT_CLOCK_CNT_PARTITION</mars2020:spacecraft_clock_partition>
+          <mars2020:sol_number>$!label.PLANET_DAY_NUMBER</mars2020:sol_number>
+
+          #getNodeValueNotNil( $label 'LOCAL_MEAN_SOLAR_TIME'      'mars2020:start_local_mean_solar_time'     '')
+          <mars2020:stop_local_mean_solar_time></mars2020:stop_local_mean_solar_time>
+
+          #getNodeValueNotNil( $label 'LOCAL_TRUE_SOLAR_TIME'      'mars2020:start_local_true_solar_time'     '')
+          #getNodeValueNotNil( $label 'LOCAL_TRUE_SOLAR_TIME_SOL'  'mars2020:start_local_true_solar_time_sol' '')
+
+          <mars2020:stop_local_true_solar_time></mars2020:stop_local_true_solar_time>
+          <mars2020:stop_local_true_solar_time_sol></mars2020:stop_local_true_solar_time_sol>
+          
+          
+
+          #getNodeValueNotNil( $label 'SOLAR_LONGITUDE'            'mars2020:start_solar_longitude'           'deg')
+          <mars2020:stop_solar_longitude></mars2020:stop_solar_longitude>
+
+          <mars2020:active_flight_computer>$!label.ACTIVE_FLIGHT_STRING_ID</mars2020:active_flight_computer>
+        
+          <mars2020:start_mars_year></mars2020:start_mars_year>
+          <mars2020:stop_mars_year></mars2020:stop_mars_year>
+
+
+      </mars2020:Observation_Information>
+
+      ##---------------------------------------
+      ## MEDA 
+
+      ##  No content for MEDA_Parameters in the Mars2020 LDD as of April 7, 2021
+     
+      #if ( $CONST_FALSE.equals($CONST_TRUE) )
+      
+        <mars2020:MEDA_Parameters>
+            
+        </mars2020:MEDA_Parameters>
+
+      #end ##IfMeda
+
+      ##---------------------------------------
+      ## MOXIE
+      
+      ##Don't have any test data yet, so force this false...
+
+      #if ( $CONST_FALSE.equals($CONST_TRUE) )
+
+        <mars2020:MOXIE_Parameters>
+            ##Placeholders for DD-attributes found in the Mars2020 LDD for MOXIE
+            ##To-recreate: Collect subsection of DD_Attribute, remove the commented, store in list2
+            ##  grep '<name>' list2 | sed -e 's/<[^>]*>//g' | awk '{$1=$1};1' > list3
+            ##  foreach f ( `cat list3` )
+            ##    echo "<mars2020:${f}></mars2020:${f}>"
+            ##    end
+
+            ##Note: not yet added to Label Spreadsheet https://docs.google.com/spreadsheets/d/1fzOyB8QZuaCo4ceeVDHkAc9YIG2WjASZeMReCKKU494/edit?ts=5f3424ca#gid=0 (04.15.21)
+
+            <mars2020:cl_ics123_h_calibrated></mars2020:cl_ics123_h_calibrated>
+            <mars2020:cl_ics123_h_digital_number></mars2020:cl_ics123_h_digital_number>
+            <mars2020:cl_ics123_t></mars2020:cl_ics123_t>
+            <mars2020:cl_ics4_h_calibrated></mars2020:cl_ics4_h_calibrated>
+            <mars2020:cl_ics4_h_digital_number></mars2020:cl_ics4_h_digital_number>
+            <mars2020:cl_ics4_t></mars2020:cl_ics4_t>
+            <mars2020:comments></mars2020:comments>
+            <mars2020:cs123_en></mars2020:cs123_en>
+            <mars2020:cs4_en></mars2020:cs4_en>
+            <mars2020:experiment_name></mars2020:experiment_name>
+            <mars2020:file_name_digital_numbers></mars2020:file_name_digital_numbers>
+            <mars2020:file_name_experiment_intent></mars2020:file_name_experiment_intent>
+            <mars2020:file_name_stem></mars2020:file_name_stem>
+            <mars2020:hb_vbh_h_calibrated></mars2020:hb_vbh_h_calibrated>
+            <mars2020:hb_vbh_h_digital_number></mars2020:hb_vbh_h_digital_number>
+            <mars2020:hb_vbl_h_calibrated></mars2020:hb_vbl_h_calibrated>
+            <mars2020:hb_vbl_h_digital_number></mars2020:hb_vbl_h_digital_number>
+            <mars2020:hs_en></mars2020:hs_en>
+            <mars2020:ht_vth_h_calibrated></mars2020:ht_vth_h_calibrated>
+            <mars2020:ht_vth_h_digital_number></mars2020:ht_vth_h_digital_number>
+            <mars2020:ht_vtl_h_calibrated></mars2020:ht_vtl_h_calibrated>
+            <mars2020:ht_vtl_h_digital_number></mars2020:ht_vtl_h_digital_number>
+            <mars2020:m1_en></mars2020:m1_en>
+            <mars2020:major_version_number></mars2020:major_version_number>
+            <mars2020:minor_version_number></mars2020:minor_version_number>
+            <mars2020:ol_p4_h_calibrated></mars2020:ol_p4_h_calibrated>
+            <mars2020:ol_p4_h_digital_number></mars2020:ol_p4_h_digital_number>
+            <mars2020:ol_p4_l_calibrated></mars2020:ol_p4_l_calibrated>
+            <mars2020:ol_p4_l_digital_number></mars2020:ol_p4_l_digital_number>
+            <mars2020:ol_p4_t></mars2020:ol_p4_t>
+            <mars2020:ol_tb_h_calibrated></mars2020:ol_tb_h_calibrated>
+            <mars2020:ol_tb_h_digital_number></mars2020:ol_tb_h_digital_number>
+            <mars2020:ol_tb_l_calibrated></mars2020:ol_tb_l_calibrated>
+            <mars2020:ol_tb_l_digital_number></mars2020:ol_tb_l_digital_number>
+            <mars2020:ol_tb_t></mars2020:ol_tb_t>
+            <mars2020:ol_tt_h_calibrated></mars2020:ol_tt_h_calibrated>
+            <mars2020:ol_tt_h_digital_number></mars2020:ol_tt_h_digital_number>
+            <mars2020:ol_tt_l_calibrated></mars2020:ol_tt_l_calibrated>
+            <mars2020:ol_tt_l_digital_number></mars2020:ol_tt_l_digital_number>
+            <mars2020:ol_tt_t></mars2020:ol_tt_t>
+            <mars2020:ol_xibp4_h_calibrated></mars2020:ol_xibp4_h_calibrated>
+            <mars2020:ol_xibp4_h_digital_number></mars2020:ol_xibp4_h_digital_number>
+            <mars2020:ol_xibp4_l_calibrated></mars2020:ol_xibp4_l_calibrated>
+            <mars2020:ol_xibp4_l_digital_number></mars2020:ol_xibp4_l_digital_number>
+            <mars2020:ol_xibp4_t></mars2020:ol_xibp4_t>
+            <mars2020:ol_xitp4_h_calibrated></mars2020:ol_xitp4_h_calibrated>
+            <mars2020:ol_xitp4_h_digital_number></mars2020:ol_xitp4_h_digital_number>
+            <mars2020:ol_xitp4_l_calibrated></mars2020:ol_xitp4_l_calibrated>
+            <mars2020:ol_xitp4_l_digital_number></mars2020:ol_xitp4_l_digital_number>
+            <mars2020:ol_xitp4_t></mars2020:ol_xitp4_t>
+            <mars2020:persistence_en></mars2020:persistence_en>
+            <mars2020:primary_objective></mars2020:primary_objective>
+            <mars2020:run_id></mars2020:run_id>
+            <mars2020:secondary_objective></mars2020:secondary_objective>
+            <mars2020:sl_ib_h_calibrated></mars2020:sl_ib_h_calibrated>
+            <mars2020:sl_ib_h_digital_number></mars2020:sl_ib_h_digital_number>
+            <mars2020:sl_ib_t></mars2020:sl_ib_t>
+            <mars2020:sl_it_h_calibrated></mars2020:sl_it_h_calibrated>
+            <mars2020:sl_it_h_digital_number></mars2020:sl_it_h_digital_number>
+            <mars2020:sl_it_t></mars2020:sl_it_t>
+            <mars2020:sl_p2_h_calibrated></mars2020:sl_p2_h_calibrated>
+            <mars2020:sl_p2_h_digital_number></mars2020:sl_p2_h_digital_number>
+            <mars2020:sl_p2_t></mars2020:sl_p2_t>
+            <mars2020:sl_p3_h_calibrated></mars2020:sl_p3_h_calibrated>
+            <mars2020:sl_p3_h_digital_number></mars2020:sl_p3_h_digital_number>
+            <mars2020:sl_p3_t></mars2020:sl_p3_t>
+            <mars2020:sl_p4_h_calibrated></mars2020:sl_p4_h_calibrated>
+            <mars2020:sl_p4_h_digital_number></mars2020:sl_p4_h_digital_number>
+            <mars2020:sl_p4_t></mars2020:sl_p4_t>
+            <mars2020:sl_p5_h_calibrated></mars2020:sl_p5_h_calibrated>
+            <mars2020:sl_p5_h_digital_number></mars2020:sl_p5_h_digital_number>
+            <mars2020:sl_p5_t></mars2020:sl_p5_t>
+            <mars2020:sl_t1_h_calibrated></mars2020:sl_t1_h_calibrated>
+            <mars2020:sl_t1_h_digital_number></mars2020:sl_t1_h_digital_number>
+            <mars2020:sl_t1_t></mars2020:sl_t1_t>
+            <mars2020:sl_t22_h_calibrated></mars2020:sl_t22_h_calibrated>
+            <mars2020:sl_t22_h_digital_number></mars2020:sl_t22_h_digital_number>
+            <mars2020:sl_t22_t></mars2020:sl_t22_t>
+            <mars2020:sl_t3_h_calibrated></mars2020:sl_t3_h_calibrated>
+            <mars2020:sl_t3_h_digital_number></mars2020:sl_t3_h_digital_number>
+            <mars2020:sl_t3_t></mars2020:sl_t3_t>
+            <mars2020:sl_t4_h_calibrated></mars2020:sl_t4_h_calibrated>
+            <mars2020:sl_t4_h_digital_number></mars2020:sl_t4_h_digital_number>
+            <mars2020:sl_t4_t></mars2020:sl_t4_t>
+            <mars2020:sl_t7_h_calibrated></mars2020:sl_t7_h_calibrated>
+            <mars2020:sl_t7_h_digital_number></mars2020:sl_t7_h_digital_number>
+            <mars2020:sl_t7_l_calibrated></mars2020:sl_t7_l_calibrated>
+            <mars2020:sl_t7_l_digital_number></mars2020:sl_t7_l_digital_number>
+            <mars2020:sl_t7_t></mars2020:sl_t7_t>
+            <mars2020:sl_tb_h_calibrated></mars2020:sl_tb_h_calibrated>
+            <mars2020:sl_tb_h_digital_number></mars2020:sl_tb_h_digital_number>
+            <mars2020:sl_tb_t></mars2020:sl_tb_t>
+            <mars2020:sl_tt_h_calibrated></mars2020:sl_tt_h_calibrated>
+            <mars2020:sl_tt_h_digital_number></mars2020:sl_tt_h_digital_number>
+            <mars2020:sl_tt_t></mars2020:sl_tt_t>
+            <mars2020:sl_v28vm_h_calibrated></mars2020:sl_v28vm_h_calibrated>
+            <mars2020:sl_v28vm_h_digital_number></mars2020:sl_v28vm_h_digital_number>
+            <mars2020:sl_v28vm_l_calibrated></mars2020:sl_v28vm_l_calibrated>
+            <mars2020:sl_v28vm_l_digital_number></mars2020:sl_v28vm_l_digital_number>
+            <mars2020:sl_v28vm_t></mars2020:sl_v28vm_t>
+            <mars2020:sl_v28vs_h_calibrated></mars2020:sl_v28vs_h_calibrated>
+            <mars2020:sl_v28vs_h_digital_number></mars2020:sl_v28vs_h_digital_number>
+            <mars2020:sl_v28vs_l_calibrated></mars2020:sl_v28vs_l_calibrated>
+            <mars2020:sl_v28vs_l_digital_number></mars2020:sl_v28vs_l_digital_number>
+            <mars2020:sl_v28vs_t></mars2020:sl_v28vs_t>
+            <mars2020:sl_vb_h_calibrated></mars2020:sl_vb_h_calibrated>
+            <mars2020:sl_vb_h_digital_number></mars2020:sl_vb_h_digital_number>
+            <mars2020:sl_vb_t></mars2020:sl_vb_t>
+            <mars2020:sl_vt_h_calibrated></mars2020:sl_vt_h_calibrated>
+            <mars2020:sl_vt_h_digital_number></mars2020:sl_vt_h_digital_number>
+            <mars2020:sl_vt_t></mars2020:sl_vt_t>
+            <mars2020:step_duration></mars2020:step_duration>
+            <mars2020:step_number></mars2020:step_number>
+            <mars2020:tl_ics1234_h_calibrated></mars2020:tl_ics1234_h_calibrated>
+            <mars2020:tl_ics1234_h_digital_number></mars2020:tl_ics1234_h_digital_number>
+            <mars2020:tl_ics1234_t></mars2020:tl_ics1234_t>
+            <mars2020:vb_en></mars2020:vb_en>
+            <mars2020:vt_en></mars2020:vt_en>
+            <mars2020:zib_h_calibrated></mars2020:zib_h_calibrated>
+            <mars2020:zib_h_digital_number></mars2020:zib_h_digital_number>
+            <mars2020:zib_i_calibrated></mars2020:zib_i_calibrated>
+            <mars2020:zib_i_digital_number></mars2020:zib_i_digital_number>
+            <mars2020:zib_l_calibrated></mars2020:zib_l_calibrated>
+            <mars2020:zib_l_digital_number></mars2020:zib_l_digital_number>
+            <mars2020:zib_os_calibrated></mars2020:zib_os_calibrated>
+            <mars2020:zib_os_digital_number></mars2020:zib_os_digital_number>
+            <mars2020:zib_p_calibrated></mars2020:zib_p_calibrated>
+            <mars2020:zib_p_digital_number></mars2020:zib_p_digital_number>
+            <mars2020:zib_sp_calibrated></mars2020:zib_sp_calibrated>
+            <mars2020:zib_sp_digital_number></mars2020:zib_sp_digital_number>
+            <mars2020:zit_h_calibrated></mars2020:zit_h_calibrated>
+            <mars2020:zit_h_digital_number></mars2020:zit_h_digital_number>
+            <mars2020:zit_i_calibrated></mars2020:zit_i_calibrated>
+            <mars2020:zit_i_digital_number></mars2020:zit_i_digital_number>
+            <mars2020:zit_l_calibrated></mars2020:zit_l_calibrated>
+            <mars2020:zit_l_digital_number></mars2020:zit_l_digital_number>
+            <mars2020:zit_os_calibrated></mars2020:zit_os_calibrated>
+            <mars2020:zit_os_digital_number></mars2020:zit_os_digital_number>
+            <mars2020:zit_p_calibrated></mars2020:zit_p_calibrated>
+            <mars2020:zit_p_digital_number></mars2020:zit_p_digital_number>
+            <mars2020:zit_sp_calibrated></mars2020:zit_sp_calibrated>
+            <mars2020:zit_sp_digital_number></mars2020:zit_sp_digital_number>
+            <mars2020:zp4_h_calibrated></mars2020:zp4_h_calibrated>
+            <mars2020:zp4_h_digital_number></mars2020:zp4_h_digital_number>
+            <mars2020:zp4_i_calibrated></mars2020:zp4_i_calibrated>
+            <mars2020:zp4_i_digital_number></mars2020:zp4_i_digital_number>
+            <mars2020:zp4_l_calibrated></mars2020:zp4_l_calibrated>
+            <mars2020:zp4_l_digital_number></mars2020:zp4_l_digital_number>
+            <mars2020:zp4_os_calibrated></mars2020:zp4_os_calibrated>
+            <mars2020:zp4_os_digital_number></mars2020:zp4_os_digital_number>
+            <mars2020:zp4_p_calibrated></mars2020:zp4_p_calibrated>
+            <mars2020:zp4_p_digital_number></mars2020:zp4_p_digital_number>
+            <mars2020:zp4_sp_calibrated></mars2020:zp4_sp_calibrated>
+            <mars2020:zp4_sp_digital_number></mars2020:zp4_sp_digital_number>
+            <mars2020:ztb_i_calibrated></mars2020:ztb_i_calibrated>
+            <mars2020:ztb_i_digital_number></mars2020:ztb_i_digital_number>
+            <mars2020:ztb_p_calibrated></mars2020:ztb_p_calibrated>
+            <mars2020:ztb_p_digital_number></mars2020:ztb_p_digital_number>
+            <mars2020:ztb_sp_calibrated></mars2020:ztb_sp_calibrated>
+            <mars2020:ztb_sp_digital_number></mars2020:ztb_sp_digital_number>
+            <mars2020:ztt_i_calibrated></mars2020:ztt_i_calibrated>
+            <mars2020:ztt_i_digital_number></mars2020:ztt_i_digital_number>
+            <mars2020:ztt_p_calibrated></mars2020:ztt_p_calibrated>
+            <mars2020:ztt_p_digital_number></mars2020:ztt_p_digital_number>
+            <mars2020:ztt_sp_calibrated></mars2020:ztt_sp_calibrated>
+            <mars2020:ztt_sp_digital_number></mars2020:ztt_sp_digital_number>
+        </mars2020:MOXIE_Parameters>
+
+      #end ##IfMoxie
+
+
+      ##---------------------------------------
+      ## PIXL 
+
+      #if ( $label.PIXL_MOTION_COUNTER || $label.LED_ILLUMINATION_PARMS || 
+            $label.SLI_ILLUMINATION_PARMS )
+
+        <mars2020:PIXL_Parameters>  
+
+          #if ( $label.LED_ILLUMINATION_PARMS )
+            #m20_generateM20PIXLIllumination( $label.LED_ILLUMINATION_PARMS 'LED_ILLUMINATION_PARMS' )
+          #end
+
+          #if ( $label.SLI_ILLUMINATION_PARMS )
+            #m20_generateM20PIXLIllumination( $label.SLI_ILLUMINATION_PARMS 'SLI_ILLUMINATION_PARMS' )
+          #end
+
+
+          #if ( $label.PIXL_MOTION_COUNTER )
+            ## Special case where -1 should be treated as N/A
+            #if ( $!label.PIXL_MOTION_COUNTER == '-1' )
+              <mars2020:pixl_motion_counter xsi:nil="true" nilReason="inapplicable"></mars2020:pixl_motion_counter>
+            #else
+              #getNodeWithValueOrAsNil( $label 'PIXL_MOTION_COUNTER'   'mars2020:pixl_motion_counter'  $NO_UNIT   $CONST_FALSE )
+            #end
+          #end
+
+          <mars2020:pixl_rtt>$!label.PIXL_RTT</mars2020:pixl_rtt>
+
+          <mars2020:pdp_category>$!label.PDP_CATEGORY</mars2020:pdp_category>
+          <mars2020:pdp_category_name>$!label.PDP_CATEGORY_NAME</mars2020:pdp_category_name>
+          <mars2020:pdp_size>$!label.PDP_SIZE</mars2020:pdp_size>
+
+          #getNodeWithValueOrAsNil( $label  'PDP_NVM_USN'     'mars2020:pdp_nvm_usn'     $NO_UNIT   $CONST_FALSE  )
+          #getNodeWithValueOrAsNil( $label  'PDP_NVM_CHUNKS'  'mars2020:pdp_nvm_chunks'  $NO_UNIT   $CONST_FALSE  )
+          #getNodeWithValueOrAsNil( $label  'PDP_NVM_BLOCK'   'mars2020:pdp_nvm_block'   $NO_UNIT   $CONST_FALSE  )
+          #getNodeWithValueOrAsNil( $label  'PDP_NVM_PAGE'    'mars2020:pdp_nvm_page'    $NO_UNIT   $CONST_FALSE  )
+          
+          ##We need to check for something in the label to ensure this is a PIXL
+          ##product, otherwise this entry will always appear even for other M20 instruments
+          #if ( $label.PIXL_MOTION_COUNTER && $label.COMPRESSION_PARMS )
+            <mars2020:PIXL_Compression>
+              <mars2020:inst_compression_mode>$!label.COMPRESSION_PARMS.INST_CMPRS_MODE</mars2020:inst_compression_mode>
+              <mars2020:inst_compression_name>$!label.COMPRESSION_PARMS.INST_CMPRS_NAME</mars2020:inst_compression_name>
+            </mars2020:PIXL_Compression>
+          #end
+
+
+
+
+        </mars2020:PIXL_Parameters>
+
+      #end ##If_PixlNodeFound
+
+
+
+      ##---------------------------------------
+      ## RIMFAX 
+
+      ## There's no group to check, so look for basic entries to make
+      ## decision if RIMFAX should be include....
+      #if ( $label.RFAX_CONFIG_ID || $label.RFAX_SETUP_FILE ) 
+      
+        <mars2020:RIMFAX_Parameters>
+
+            ##Hack-Alert, July '21: RIMFAX has a bunch of UNK values.
+            ##Bob says edrgen should remove those labels, but that wont happen in time
+            ##for the first M20 PDS release, so templates are handling it (grossly)
+            
+            ##<mars2020:config_id>$!label.RFAX_CONFIG_ID</mars2020:config_id>
+            #getNodeValueNotNil( $label 'RFAX_CONFIG_ID'  'mars2020:config_id'       '' )
+
+            ##<mars2020:decimation>$!label.RFAX_DECIMATION</mars2020:decimation>
+            #getNodeValueNotNil( $label 'RFAX_DECIMATION'  'mars2020:decimation'       '' )
+
+            ##<mars2020:setup_file>$!label.RFAX_SETUP_FILE</mars2020:setup_file>
+            #getNodeValueNotNil( $label 'RFAX_SETUP_FILE'  'mars2020:setup_file'       '' )
+
+            #if ( $label.RFAX_CALIBRATION && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_CALIBRATION')"))
+              <mars2020:calibration>$!label.RFAX_CALIBRATION.toLowerCase()</mars2020:calibration>
+            #end
+
+            ## #if ( $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_GATE_FREQUENCY')") )
+            #if ( $label.RFAX_GATE_FREQUENCY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_GATE_FREQUENCY')"))
+              <mars2020:gate_frequency #getUnitAttrOrDefault($!label "RFAX_GATE_FREQUENCY"  ''  'MHz') >$!label.RFAX_GATE_FREQUENCY</mars2020:gate_frequency>          
+            #end
+
+            ##<mars2020:number_of_samples>$!label.RFAX_NUMBER_OF_SAMPLES</mars2020:number_of_samples> 
+            #getNodeValueNotNil( $label 'RFAX_NUMBER_OF_SAMPLES'  'mars2020:number_of_samples'       '' )
+
+            ##<mars2020:number_of_sweeps>$!label.RFAX_NUMBER_OF_SWEEPS</mars2020:number_of_sweeps>     
+            #getNodeValueNotNil( $label 'RFAX_NUMBER_OF_SWEEPS'  'mars2020:number_of_sweeps'       '' )
+
+            #if ( $label.RFAX_RECEIVE_ONLY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_RECEIVE_ONLY')"))
+              <mars2020:receive_only>$!label.RFAX_RECEIVE_ONLY.toLowerCase()</mars2020:receive_only>
+            #end
+            
+            
+            #if ( $label.RFAX_RX_DELAY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_RX_DELAY')"))
+              <mars2020:rx_delay #getUnitAttrOrDefault($!label "RFAX_RX_DELAY"  ''  'ns') >$!label.RFAX_RX_DELAY</mars2020:rx_delay>             
+            #end
+
+            ##<mars2020:rx_attenuation>$!label.RFAX_RX_ATTENUATION</mars2020:rx_attenuation>              
+            #getNodeValueNotNil( $label 'RFAX_RX_ATTENUATION'  'mars2020:rx_attenuation'       '' )
+
+            #if ( $label.RFAX_START_FREQUENCY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_START_FREQUENCY')"))
+              <mars2020:start_frequency #getUnitAttrOrDefault($!label "RFAX_START_FREQUENCY"  ''  'MHz') >$!label.RFAX_START_FREQUENCY</mars2020:start_frequency>      
+            #end
+            #if ( $label.RFAX_STOP_FREQUENCY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_STOP_FREQUENCY')"))
+              <mars2020:stop_frequency #getUnitAttrOrDefault($!label "RFAX_STOP_FREQUENCY"  ''  'MHz') >$!label.RFAX_STOP_FREQUENCY</mars2020:stop_frequency>       
+            #end
+            #if ( $label.RFAX_SWEEP_TIME && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_SWEEP_TIME')") )
+              <mars2020:sweep_time #getUnitAttrOrDefault($!label "RFAX_SWEEP_TIME"  ''  'ms') >$!label.RFAX_SWEEP_TIME</mars2020:sweep_time>           
+            #end
+            #if ( $label.RFAX_TX_DELAY && $CONST_FALSE.equals("#nodeHasNilValue($label 'RFAX_TX_DELAY')") )
+              <mars2020:tx_delay #getUnitAttrOrDefault($!label "RFAX_TX_DELAY"  ''  'ns') >$!label.RFAX_TX_DELAY</mars2020:tx_delay>             
+            #end
+
+            ##<mars2020:tx_attenuation>$!label.RFAX_TX_ATTUNUATION</mars2020:tx_attenuation>
+            #getNodeValueNotNil( $label 'RFAX_TX_ATTUNUATION'  'mars2020:tx_attenuation'       '' )
+
+
+            ## The following 3 labels had nil-elements in the example PDS4 file, so will
+            ## add those types of checks for them only.  I am wondering if they should
+            ## just be empty elements tho, so that Velocity removes them as is the normal case.
+
+            #getNodeWithValueOrAsNil( $label 'RFAX_GROUP_SPACING'        'mars2020:group_spacing'        $NO_UNIT   $CONST_FALSE  )
+            #getNodeWithValueOrAsNil( $label 'RFAX_SINETABLE'            'mars2020:sinetable'            $NO_UNIT   $CONST_FALSE  )
+            #getNodeWithValueOrAsNil( $label 'RFAX_LIS_SOUNDINGS'        'mars2020:lis_soundings'        $NO_UNIT   $CONST_FALSE  )
+
+            ## It seems mars2020:number_of_soundings can come from one of two places...and both may exist...
+            #if ( $label.RFAX_NUMBER_OF_SOUNDINGS )
+                <mars2020:number_of_soundings>$!label.RFAX_NUMBER_OF_SOUNDINGS</mars2020:number_of_soundings>
+            #elseif ( $label.RIMFAX_SCIENCE_TABLE && $label.RIMFAX_SCIENCE_TABLE.ROWS )
+                <mars2020:number_of_soundings>$!label.RIMFAX_SCIENCE_TABLE.ROWS</mars2020:number_of_soundings>
+            #end
+
+
+
+            ## replaced old way with the new macro above
+            ## #if( $!label.RFAX_GROUP_SPACING.toString() == "UNK" )
+            ##   <mars2020:group_spacing xsi:nil="true" nilReason="unknown"></mars2020:group_spacing>
+            ## #elseif( $!label.RFAX_GROUP_SPACING.toString() == "N/A" )
+            ##   <mars2020:group_spacing xsi:nil="true" nilReason="inapplicable"></mars2020:group_spacing>
+            ## #else
+            ##   <mars2020:group_spacing>$!label.RFAX_GROUP_SPACING</mars2020:group_spacing>     
+            ## #end
+                      
+            ##Value is no where in the ODL label, but found in PDS4, so will leave it hardcoded for now
+            <mars2020:note>Values for rx_attenuation and tx_attenuation are in dB</mars2020:note>     
+
+            ##Mising: time_cut_samples ('does not appear to be used')
+
+        </mars2020:RIMFAX_Parameters>
+
+      #end
+
+
+      ##---------------------------------------
+      ## SHERLOC
+
+      ## There's no group to check, so look for basic entries to make
+      ## decision if SHERLOC should be include....
+      #if ( $label.SHERLOC_CAL_TARGET_NAME  ) 
+
+       <mars2020:SHERLOC_Parameters>
+          <mars2020:sherloc_config_file>$!label.M2020EDRGEN_HISTORY_PARMS.SHERLOC_CONFIG_FILE</mars2020:sherloc_config_file>
+          <mars2020:Calibration_Target>
+            <mars2020:calibration_target_number>$!label.SHERLOC_CAL_TARGET_NUMBER</mars2020:calibration_target_number>
+            <mars2020:calibration_target_name>$!label.SHERLOC_CAL_TARGET_NAME</mars2020:calibration_target_name>
+          </mars2020:Calibration_Target>
+        </mars2020:SHERLOC_Parameters>
+
+      #end
+
+      ##---------------------------------------
+      ## SUPERCAM
+
+      #if ( $label.SCAM_ANCILLARY_HEADER_DATA_ELEMENTS || 
+            $label.GENERIC_PACKET_HEADER_DATA_ELEMENTS ||
+            $label.SCAM_MINI_HEADER )
+            
+        <mars2020:SuperCam_Parameters>
+
+          #if ( $label.SCAM_ANCILLARY_HEADER_DATA_ELEMENTS )
+            #set ( $sahde = $label.get('SCAM_ANCILLARY_HEADER_DATA_ELEMENTS') )
+            <mars2020:SuperCam_Ancillary_Header>
+                <mars2020:scam_point_number>$!sahde.POINT_NUMBER</mars2020:scam_point_number>
+                <mars2020:scam_type>$!sahde.TYPE</mars2020:scam_type>
+
+                ## Looks like label is using 0 for false...hmph.
+                ## Ok, I will assume false by default, then check the label value.
+                ## If label value is neither 0 nor false (since they might change it)
+                ## then assume true.
+
+                #set ( $sahde_2d = "false")
+                #if ( $sahde.TWO_D && ! $!sahde.TWO_D.toString().equals("0")  &&
+                      ! $!sahde.TWO_D.toString().equalsIgnoreCase("false"))
+                  #set ( $sahde_2d = "true")
+                #end
+                <mars2020:scam_two_d_flag>$sahde_2d</mars2020:scam_two_d_flag>
+                
+                <mars2020:scam_ldark>$!sahde.LDARK</mars2020:scam_ldark>
+                <mars2020:scam_rdark>$!sahde.RDARK</mars2020:scam_rdark>
+
+                #set ( $sahde_rdstats = "false")
+                #set ( $sahde_rastats = "false")
+                #set ( $sahde_ldstats = "false")
+                #set ( $sahde_lastats = "false")
+                #if ( $sahde.RDSTATS &&  ! $!sahde.RDSTATS.toString().equals("0")  &&
+                      ! $!sahde.RDSTATS.toString().equalsIgnoreCase("false") )
+                  #set ( $sahde_rdstats = "true")
+                #end
+                #if ( $sahde.RASTATS && ! $!sahde.RASTATS.toString().equals("0")  &&
+                      ! $!sahde.RASTATS.toString().equalsIgnoreCase("false"))
+                  #set ( $sahde_rastats = "true")
+                #end
+                #if ( $sahde.LDSTATS && ! $!sahde.LDSTATS.toString().equals("0")  &&
+                      ! $!sahde.LDSTATS.toString().equalsIgnoreCase("false"))
+                  #set ( $sahde_ldstats = "true")
+                #end
+                #if ( $sahde.LASTATS && ! $!sahde.LASTATS.toString().equals("0")  &&
+                      ! $!sahde.LASTATS.toString().equalsIgnoreCase("false"))
+                  #set ( $sahde_lastats = "true")
+                #end
+                <mars2020:scam_rdstats_flag>$sahde_rdstats</mars2020:scam_rdstats_flag>
+                <mars2020:scam_rastats_flag>$sahde_rastats</mars2020:scam_rastats_flag>
+                <mars2020:scam_ldstats_flag>$sahde_ldstats</mars2020:scam_ldstats_flag>
+                <mars2020:scam_lastats_flag>$sahde_lastats</mars2020:scam_lastats_flag>
+
+            </mars2020:SuperCam_Ancillary_Header>
+          #end ##SCAM_ANCILLARY_HEADER_DATA_ELEMENTS
+
+
+          #if ( $label.GENERIC_PACKET_HEADER_DATA_ELEMENTS )
+            #set ( $gphde = $label.get('GENERIC_PACKET_HEADER_DATA_ELEMENTS') )
+            <mars2020:SuperCam_Generic_Packet_Header>
+                <mars2020:rce_time_sync>$!gphde.RCE_TIME_SYNC</mars2020:rce_time_sync>
+                <mars2020:data_definition_version>$!gphde.DATA_DEFINITION_VERSION</mars2020:data_definition_version>
+                <mars2020:nv_xmit_buffer_count>$!gphde.NV_XMIT_BUFFER_COUNT</mars2020:nv_xmit_buffer_count>
+                <mars2020:bu_software_version>$!gphde.BU_SOFTWARE_VERSION</mars2020:bu_software_version>
+                <mars2020:cndh_firmware_version>$!gphde.CNDH_FIRMWARE_VERSION</mars2020:cndh_firmware_version>
+                <mars2020:bu_hardware_identifier>$!gphde.BU_HARDWARE_IDENTIFIER</mars2020:bu_hardware_identifier>
+                <mars2020:se_firmware_version>$!gphde.SE_FIRMWARE_VERSION</mars2020:se_firmware_version>
+                <mars2020:se_hardware_identifier>$!gphde.SE_HARDWARE_IDENTIFIER</mars2020:se_hardware_identifier>
+                <mars2020:mu_version_identifier>$!gphde.MU_VERSION_IDENTIFIER</mars2020:mu_version_identifier>
+                <mars2020:mu_hardware_identifier>$!gphde.MU_HARDWARE_IDENTIFIER</mars2020:mu_hardware_identifier>
+                <mars2020:xmit_data_id>$!gphde.XMIT_DATA_ID</mars2020:xmit_data_id>
+                <mars2020:reserved_1>$!gphde.RESERVED</mars2020:reserved_1>
+                <mars2020:number_of_sections>$!gphde.NUMBER_OF_SECTIONS</mars2020:number_of_sections>
+                <mars2020:generic_data_buffer_size>$!gphde.GENERIC_DATA_BUFFER_SIZE</mars2020:generic_data_buffer_size>
+            </mars2020:SuperCam_Generic_Packet_Header>
+          #end ##If_GENERIC_PACKET_HEADER_DATA_ELEMENTS
+
+
+          #if ( $label.SCAM_MINI_HEADER )
+            #set ( $scam_mh_name = 'SCAM_MINI_HEADER' )
+            #set ( $scam_mh = $label.get($scam_mh_name) )
+            <mars2020:SuperCam_RMI_Mini_Header>
+                <mars2020:rmi_header_size>$!scam_mh.RMI_HEADER_SIZE</mars2020:rmi_header_size>
+                <mars2020:memory_bank>$!scam_mh.MEMORY_BANK</mars2020:memory_bank>
+                ##HACK ALERT (July '21): Vicario bug (maybe) is combining the FPGA register keyword and value
+                ##into the value for CMOS registers, and we dont have time to fix for the initial M20 PDS delivery
+                ##so this will check for that and handle it - again, very hackfully....
+                #if ( $scam_mh.RMI_CMOS_REGISTERS && $!scam_mh.RMI_CMOS_REGISTERS.toString().contains("RMI_FPGA_REGISTERS"))
+                  #set ( $hack_values = "#hackSeparateLabelValues( $scam_mh.RMI_CMOS_REGISTERS 'RMI_FPGA_REGISTERS')")
+                  #if ( ! $CONST_FALSE.equals($hack_values) )
+                    #set ( $hack_values_list = $hack_values.split(";"))
+                    #if ( $CONST_FALSE.equals("#isSplitListFromJoinStrListEmpty($hack_values_list)") )
+                      #set ( $scam_mh_registers_cmos = $hack_values_list.get(0) )
+                      #set ( $scam_mh_registers_fpga = $hack_values_list.get(1) )
+                      <mars2020:rmi_cmos_registers>$!scam_mh_registers_cmos</mars2020:rmi_cmos_registers>
+                      <mars2020:rmi_fpga_registers>$!scam_mh_registers_fpga</mars2020:rmi_fpga_registers>
+                    #end
+                  #end
+                #else
+                  <mars2020:rmi_cmos_registers>$!scam_mh.RMI_CMOS_REGISTERS</mars2020:rmi_cmos_registers>
+                  <mars2020:rmi_fpga_registers>$!scam_mh.RMI_FPGA_REGISTERS</mars2020:rmi_fpga_registers>
+                #end
+                <mars2020:marker_pad>$!scam_mh.MARKER_PAD</mars2020:marker_pad>
+                <mars2020:rce_time_sync>$!scam_mh.RCE_TIME_SYNC</mars2020:rce_time_sync>
+                <mars2020:milliseconds_count>$!scam_mh.MILLISECONDS_COUNT</mars2020:milliseconds_count>
+                <mars2020:num_images_transmitted>$!scam_mh.NUM_IMAGES_TRANSMITTED</mars2020:num_images_transmitted>
+                <mars2020:reserved_1>$!scam_mh.RESERVED_1</mars2020:reserved_1>
+                <mars2020:reserved_2>$!scam_mh.RESERVED_2</mars2020:reserved_2>
+                <mars2020:data_length>$!scam_mh.DATA_LENGTH</mars2020:data_length>
+
+                #generateExposureParameters( $scam_mh $scam_mh_name 'img' )
+                
+                <img:Subframe>
+                    #generateSubframeLineSampParameters( $scam_mh $scam_mh_name '' )
+                </img:Subframe>
+                
+                #generateHighDynamicRange( $scam_mh $scam_mh_name )
+
+            </mars2020:SuperCam_RMI_Mini_Header>
+          #end  ##If_SCAM_MINIHEADER
+
+          </mars2020:SuperCam_Parameters>
+
+        #end  ##If_Any_Scam_Group
+
+        ##---------------------------------------
+
+    </mars2020:Mars2020_Parameters>
+    
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## msn_getDeviceForCommandedGeometry
+## Returns the device id that an Commanded arm geometry labels
+## would apply to.  Context: labels exist in the OBS_REQ_PARMS,
+## but those labels apply to at most one device with an associated
+## *_ARTICULATION_STATE
+#macro(msn_getDeviceForCommandedGeometry)
+RSM##
+#end
+
+##################################
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+## #set ( $M20_EDR_CLASS_PROD_TYPES = ['EDR', 'ECM', 'ECV', 'EDM', 'ECR' ] )
+#set ( $M20_ECM_CLASS_PROD_TYPES = ['ECM', 'ECV', 'ECZ', 'ECR' ] )
+
+#macro ( m20_isProductTypeEcmClass $prod_type )
+#set ( $prod_type = $prod_type.toString().toUpperCase() )
+#set ( $m20iptec_rval = $CONST_FALSE )
+#foreach ( $edr_class_prod_type in $M20_ECM_CLASS_PROD_TYPES )
+#if ( $edr_class_prod_type.equals($prod_type) )
+#set ( $m20iptec_rval = $CONST_TRUE )
+#end
+#end
+${m20iptec_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getModificationHistory)
+<Modification_History>
+  <Modification_Detail>
+    <modification_date>$generate.current_date_utc</modification_date>
+    <version_id>1.0</version_id>    
+    <description>
+       This version_id represents the Mars 2020 internal
+       processing version number. It may not follow the PDS4
+       standard for versioning. Lower-numbered versions of this
+       product may not be present in this collection. The
+       collection inventory lists all the versions of this
+       product in the collection.
+    </description>
+  </Modification_Detail>
+</Modification_History>
+#end
+
+
+## ------------------------------------------------------------------------
+
+## M20 MastcamZ introduced a problem that requires their own special
+## way of crafting the lid collection for browser, depending on the
+## producer code.  
+## MEDA is doing the same thing - how dare they.
+##All other instruments do what every other mission
+## uses...namely 'browse' !
+## October 2021: Seems bundles were reorged, so we dont neeed browse_{asu,ids}
+
+
+
+#macro (msn_getBrowseLidCollection $pid)
+#set ( $m20_brow_lid_coll = $CONST_BROWSE )
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()")  )
+#set ( $fileup = $pid.toUpperCase() )
+#if ( $CONST_TRUE.equals("#m20_isEdlCamSol0Collection($pid)") )
+#set ( $m20_brow_lid_coll = "#m20_getEdlCamSol0Collection( $CONST_BROWSE  $pid)")
+#elseif ( $fileup.startsWith("W") )##MEDA
+#if ( $fileup.startsWith("WS") )##MEDA-Skycam
+#set ( $m20_brow_lid_coll = "browse_skycam")
+#else
+#set ( $m20_brow_lid_coll = "browse_env")
+#end
+#end
+#end##IFStdMsnFilename
+${m20_brow_lid_coll}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+#*
+Mapped used for the INSTRUMENT_ID/NAME below....
+WE = MEDA_ENVIRONMENT = MEDA Environment
+OX = MOXIE = MOXIE
+PE = PIXL_ENGINEERING = PIXL Engineering
+PS = PIXL_SPECTROMETER = PIXL Spectrometer
+LS = SUPERCAM_NONIMAGE = SuperCam Non-Imaging Data
+SS = SHERLOC_SPECTROMETER = SHERLOC Spectrometer
+XM = RIMFAX_MOBILE = RIMFAX Mobile
+XS = RIMFAX_STATIONARY = RIMFAX Stationary
+*#
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getInstrumentName $pid )
+#set ($mgin_val = '')
+#if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue($IDENT 'INSTRUMENT_NAME')") )
+#set ($mgin_val = $IDENT.INSTRUMENT_NAME.toString() )
+#set ($mgin_val = $text.capitalize( $mgin_val ))
+#elseif ( $CONST_FALSE.equals("#msn_isMosaic($pid)") && $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#set ($pidUpper = $pid.toString().toUpperCase() )
+#if ( $pidUpper.startsWith("WE"))
+#set ($mgin_val = 'Meda Environment')
+#elseif ( $pidUpper.startsWith("OX"))
+#set ($mgin_val = 'Moxie')
+#elseif ( $pidUpper.startsWith("PE"))
+#set ($mgin_val = 'Pixl Engineering')
+#elseif ( $pidUpper.startsWith("PS"))
+#set ($mgin_val = 'Pixl Spectrometer')
+#elseif ( $pidUpper.startsWith("LS"))
+#set ($mgin_val = 'SuperCam Non-Imaging Data')
+#elseif ( $pidUpper.startsWith("SS"))
+#set ($mgin_val = 'Sherloc Spectrometer')
+#elseif ( $pidUpper.startsWith("XM"))
+#set ($mgin_val = 'Rimfax Mobile')
+#elseif ( $pidUpper.startsWith("XS"))
+#set ($mgin_val = 'Rimfax Stationary')
+#else
+#set ($mgin_val = $CONST_UNKNOWN )
+#end
+#else
+#set ($mgin_val = $CONST_UNKNOWN )
+#end
+${mgin_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+#macro (msn_getInstrumentId $pid )
+#set ($mgiid_val = '')
+#if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue($IDENT 'INSTRUMENT_ID')") )
+#set ($mgiid_val = $IDENT.INSTRUMENT_ID.toString() )
+#elseif ( $CONST_FALSE.equals("#msn_isMosaic($pid)") && $CONST_TRUE.equals("#isStandardMissionFilename()")  )
+#set ($pidUpper = $pid.toString().toUpperCase() )
+#if ( $pidUpper.startsWith("WE"))
+#set ($mgiid_val = 'MEDA_ENVIRONMENT')
+#elseif ( $pidUpper.startsWith("OX"))
+#set ($mgiid_val = 'MOXIE')
+#elseif ( $pidUpper.startsWith("PE"))
+#set ($mgiid_val = 'PIXL_ENGINEERING')
+#elseif ( $pidUpper.startsWith("PS"))
+#set ($mgiid_val = 'PIXL_SPECTROMETER')
+#elseif ( $pidUpper.startsWith("LS"))
+#set ($mgiid_val = 'SUPERCAM_NONIMAGE')
+#elseif ( $pidUpper.startsWith("SS"))
+#set ($mgiid_val = 'SHERLOC_SPECTROMETER')
+#elseif ( $pidUpper.startsWith("XM"))
+#set ($mgiid_val = 'RIMFAX_MOBILE')
+#elseif ( $pidUpper.startsWith("XS"))
+#set ($mgiid_val = 'RIMFAX_STATIONARY')
+#else
+#set ($mgiid_val = $CONST_UNKNOWN )
+#end
+#else
+#set ($mgin_val = $CONST_UNKNOWN )
+#end
+#set ($mgiid_val = $mgiid_val.toLowerCase())
+${mgiid_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Returns CONST_TRUE if mission wants to include GIT version in
+## output label, CONST_FALSE otherwise
+
+#macro(msn_includeGitVersion)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target type based on mission mapping if mission
+## contains a specific map.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetType()
+## If no mappings are found in either, then $orig_type is returned
+
+#macro(msn_getTargetType $orig_name $orig_type )
+#set ($m_gttrval = "#getTargetType($orig_name $orig_type)" )
+${m_gttrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Attempts to select target name based on mission mapping if mission
+## contains a specific map.
+## If no mapping exists, then a generic mapped is checked
+## via call to #getTargetName()
+## If no mappings are found in either, then $orig_name is returned
+
+#macro(msn_getTargetName $orig_name $orig_type )
+#set ($m_gtnrval = "#getTargetName($orig_name $orig_type)" )
+${m_gtnrval}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Most missions want Target_Identification to include Internal_Reference
+
+#macro(msn_doesTargetIdentIncludeInternalRef)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Most missions want include Investigation_Area to include Internal_Reference
+
+#macro(msn_doesInvestigationAreaIncludeInternalRef)
+${CONST_TRUE}##
+#end
+
+## ------------------------------------------------------------------------
+
+#macro (msn_getMissionPhaseName )
+#set ( $msn_gmpn_val = '' )
+#if ( $label.MISSION_PHASE_NAME )
+#set ( $mpn_raw = $!label.MISSION_PHASE_NAME.toString() )
+#set ( $msn_gmpn_val = "#getMissionPhaseName($mpn_raw)" )
+#end
+${msn_gmpn_val}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------

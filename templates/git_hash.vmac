@@ -1,0 +1,37 @@
+## This template contains the git hash associated with this version
+## of the template repository.
+## Entry-point templates can include the version as an XML comment
+## to document the version of templates used in it's generation.
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##		#parse ( "git_hash.vmac" )
+##
+
+## Contains the git repo hash value upon clean checkout.
+## Note: Local edits to repo will not update this value.
+#set ($REPO_GIT_HASH_PLACEHOLDER = "$Id: 8b7fe906a081fcabe0699b376cac54e77617b9a2 $" )
+
+
+##Strips off the "Id: " and " $" non-hash-bits
+#macro(getRepoGitHashId)
+#set ( $lcl_hash = $REPO_GIT_HASH_PLACEHOLDER )
+#set ( $lcl_hash_len = $lcl_hash.length() )
+#if ( $lcl_hash_len < 6 )##In case ID wasnt populated
+#set ( $lcl_hash = "<unknown>" )
+#else
+#set ( $lcl_hash_len_sub_2 = $math.sub($lcl_hash_len, 2))##remove ending
+#set ( $lcl_hash = $lcl_hash.substring(0, $lcl_hash_len_sub_2))
+#set ( $lcl_hash = $lcl_hash.substring(5) )##remove beginning
+#end
+${lcl_hash}##
+#end
+
+#set ($GIT_HASH_ID = "#getRepoGitHashId()" )
+
+#macro(generateGitHashComment)
+<!-- MIPL PDS4 Velocity templates version: $GIT_HASH_ID -->##
+#end

@@ -1,0 +1,812 @@
+## This template is made up of utility macros for PDS4 Velocity Templates.
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##		#parse ( "utils.vmac" )
+##
+## this test code. 
+
+## ------------------------------------------------------------------------
+
+## Setup some common classes so we can perform 'instanceof' logic
+
+#set ( $class_dummy  = '' ) ## dummy object
+#set ( $string_class = $class_dummy.class.forName('java.lang.String') )
+#set ( $map_class    = $class_dummy.class.forName('java.util.Map') )
+#set ( $list_class   = $class_dummy.class.forName('java.util.List') )
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## asArray macro
+##
+## return a single value as an array
+## some values may be either a single value or an array of values
+## array values are In () parens, values separated by commas
+## make a single value look like an array so it can be looped over
+##
+#macro(asArray $var)
+## check if this value starts, ends with parens
+#set ($isAnArray = "#isArray($var)")
+#if  ($isAnArray eq $CONST_TRUE)
+$var##
+#else
+## add parens to it
+#set ($p1 = "(")
+#set ($pvar = ($p1.concat($var).concat(")") ))
+$pvar##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## isArray macro
+##
+## return a single value as an array
+## some values may be either a single value or an array of values
+## array values are In () parens, values separated by commas
+## make a single value look like an array so it can be looped over
+## how do I return true or false? 1 == true, 0 == false
+##
+#macro(isArray $var )
+## check if this value starts, ends with parens
+#if ($var.startsWith("(") && $var.endsWith(")"))
+$CONST_TRUE##
+#else
+$CONST_FALSE##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## asScalar macro
+##
+## Examines the node to see if child node is found.
+## If so, we look to see if there is a value at the 0
+## index.  If so, that is returned, else we return the 
+## value of the child node.  If no child node, then
+## nothing is returned.
+##
+#macro(asScalar $node $child )
+## check if this node has a value array index of 0
+#set ( $as_temp = "" )
+#set ( $as_temp_idx = 0 )
+#if ( $node.get($child) )
+#if ( $node.get($child).get($as_temp_idx) )
+#set ( $as_temp = $node.get($child).get($as_temp_idx))
+#else
+#set ( $as_temp = $node.get($child))
+#end
+$as_temp##
+#end
+#end 
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## removeWhitespace macro
+##
+## Removes all whitespace from an input string.
+## Yes, there is a Java call we could make, BUT Velocity
+## handles replaceAll regex's slightly differently from
+## Java, and it tripped me up, so now its a macro.
+##
+#macro(removeWhitespace $str)
+$str.replaceAll("\s","")##
+#end 
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+#macro ( print_string_if_exist $field $default )
+	#if($field && "$field" != "")
+		"$field"
+	#else
+		"$default"
+	#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## debug macro
+##
+## Using DEBUG variable set at top of this files,
+## determine whether or not to output the input
+## string as an XML comment
+##
+##
+#macro(debug $var )
+    #if ( $DEBUG && $DEBUG == 1 && $var && $label.get($var) )
+        <!-- $var -->
+    #end
+#end
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+##################################
+## getInputFilename
+##
+## Returns the input filename (Which is $generate.file_name)
+#macro(getInputFilename)
+${generate.file_name}##
+#end
+
+## ------------------------------------------------------------------------
+##################################
+## getBasename
+##
+## Given a filepath, returns the basename (filename) 
+#macro(getBasename $filepath)
+#set ($basename = $filepath)
+#set ($pathSeps = ["/", "\"] )
+#set ($pathSetMatch = "")
+#set ($filepathLen = $filepath.length())
+#foreach( $pathSep in $pathSeps )
+#if ( $filepath.contains($pathSep))
+#set ($sepIdx = $filepath.lastIndexOf($pathSep))
+#if ( $sepIdx < ($filepathLen - 1))
+#set ($sepIdx = $sepIdx + 1)
+#set ($basename = $filepath.substring($sepIdx))
+#end
+#end
+#end
+${basename}##
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## getBasenameNoExten
+##
+## Given a filepath, returns the basename sans extension
+
+#macro(getBasenameNoExten $filepath)
+#set ($basename ="#getBasename($filepath)")
+#set ($rVal = $basename)
+#if  ($basename.contains("."))
+#set ($extIdx = $basename.lastIndexOf("."))
+#set ($rVal = $basename.substring(0, $extIdx))
+#end
+$rVal##
+#end
+
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getFileExtension
+##
+## Given a filepath, returns the extension of the filename
+## The period will not be included.
+
+#macro(getFileExtension $filepath)
+#set ($extIdx = $filepath.lastIndexOf("."))
+#set ($filepathLen = $filepath.length())
+#if ($extIdx != -1 && $extIdx < ($filepathLen - 1) )
+#set ($extIdx = $extIdx + 1)
+#set ($extStr = $filepath.substring($extIdx))
+$extStr##
+#else
+${CONST_UNKNOWN}##
+#end
+#end
+
+
+##################################
+
+
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## extractNumberFromStr
+##
+## Returns all the digits found in an input string,
+## also removes leading zeros
+##
+#macro(extractNumberFromStr $inputStr)
+#set ($numVal = $inputStr.replaceAll("[^0-9]",""))##Remove all non digits
+#set ($numVal = $numVal.replaceFirst("^0+(?!$)", ""))##Remove leading zeros unless value is '0'
+$numVal##
+#end
+
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## TODO: Although it should be made smarter; if the M isn't there then just return the time time or nothing for the sol.
+
+##################################
+## splitSolarTimeSol
+##
+## Takes input solar_time value of the format
+## 00005M14:46:54.510 and splits it into the sol (5)
+## and time (14:46:54.510) components.
+## $timeOrSol should be one of $CONST_TIME,$CONST_SOL
+##
+#macro(splitSolarTimeSol $inputTime $timeOrSol)
+#if( $inputTime && !($inputTime.equals("N/A") ) ) 
+#set ( $substrings = ["", $inputTime ])
+#if ($inputTime.contains("M"))
+#set ( $substrings = $inputTime.split("M") )
+#end
+#if ( $timeOrSol.equalsIgnoreCase( $CONST_SOL ) )
+#set ($sol = $substrings[0])
+#set ($sol = "#extractNumberFromStr($sol)" )
+$sol##
+#else
+#set ($time = $substrings[1])##
+$time##    
+#end
+#end
+#end
+
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## Check NA
+##
+## Simple macro that checks if value is equal to "NULL" string
+## or "N/A" and if so, returns default value given as second argument
+##
+#macro(checkNA $value $default)
+#if (! $default)
+#set ($default = "")
+#end
+#if ( $value )
+#set ($val = $value.toString().toLowerCase())
+#if ( ! $val or $val.equalsIgnoreCase($CONST_NULL) or $val.equalsIgnoreCase($CONST_NA) or $val.equalsIgnoreCase($CONST_UNKNOWN) )
+$default##
+#else
+$value##
+#end
+#else
+$default##
+#end
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+##################################
+## joinStrList macro
+##
+## return a delimited string representation of a node value:
+## if node value is type String, that value is returned,
+## if node value is type List, then the values are joined with delimiter,
+## with a delimiter as the last character (will work fine for split())
+##
+#macro(joinStrList $node $delimiter )
+#if ( $node )
+#set ($util_jst_rval = "")
+#if ( $node.class.name == 'java.lang.String' )
+#set ($util_jst_rval = $node.toString() )
+#else
+#foreach ( $util_jst_curval in $node ) 
+#set ( $util_jst_rval = $util_jst_rval.concat($util_jst_curval).concat($delimiter))##
+#end
+##set ($util_jst_rval_len     = $util_jst_rval.length())
+##set ($util_jst_rval_subidx  = $math.toInteger($util_jst_rval_len) - 1 )
+##set ($util_jst_rval    = $util_jst_rval.substring(0, $util_jst_rval_subidx) )
+#end##if_class_type
+$util_jst_rval##
+#end##if_Node_Exists
+#end##EndMacro
+
+
+##################################
+
+#macro(isSplitListFromJoinStrListEmpty $list_to_test )
+#set($list_to_test_len = $list_to_test.size())
+#if ( $list_to_test_len == 0 || ($list_to_test_len == 1 && $list_to_test.get(0).isEmpty()))
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## Utility method that accepts a string and a list of strings
+## If str contains any entry from the list of strings (case-insensitive).
+## then macro returns CONST_TRUE, else returns CONST_FALSE
+
+#macro(stringContainsSubstringList $str $substr_list )
+#set($uscssl_rval = ${CONST_FALSE})
+#foreach ( $substr_list_entry in $substr_list )
+#if ( $str.toLowerCase().contains( $substr_list_entry.toLowerCase() ))
+#set($uscssl_rval = ${CONST_TRUE})
+#end
+#end
+${uscssl_rval}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+##################################
+## Utility method that accepts a node (presumably with list value) and
+## index that will return value associated with the index if available,
+## otherwise nothing is returned.
+
+#macro(conditionalListIndexValue $node $index )
+#if ( $node )
+#set( $ut_cliv_node_len = $node.size() )
+#if ( $index <  $ut_cliv_node_len )
+$node.get($index)##
+#end
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Utility method that accepts a node (presumably with list value) and
+## returns a string representation, with without whitespace and without
+## any of the following chars: ( ) [ ]
+
+#macro(convertListToCommaSepString $node_or_list )
+#set ( $util_cltcss_str = "" )
+#if ( $node_or_list )
+#set ( $util_cltcss_str = $node_or_list.toString() )
+#set ( $util_cltcss_str = $util_cltcss_str.replace(' ', '') )
+#set ( $util_cltcss_str = $util_cltcss_str.replace('(', '') )
+#set ( $util_cltcss_str = $util_cltcss_str.replace(')', '') )
+#set ( $util_cltcss_str = $util_cltcss_str.replace('[', '') )
+#set ( $util_cltcss_str = $util_cltcss_str.replace(']', '') )
+#end
+${util_cltcss_str}##
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+##
+## A utility macro that will return $CONST_TRUE if the value is non-empty
+## and has a nil-value (UNK, N/A, NULL).  Otherwise $CONST_FALSE is returned
+##
+## Arguments:
+##    $vivn_value  - The value to test 
+##
+
+#macro (valueIsNilValue $vivn_value )
+#set ( $vivn_value = $vivn_value.toString().trim().toUpperCase() )
+#if ( $vivn_value != '' && ($vivn_value.equals($CONST_UNKNOWN) || $vivn_value.equals($CONST_NA) || $vivn_value.equals($CONST_NULL)) )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+##
+## A utility macro that will return $CONST_TRUE if the node exist
+## and has a nil-value (UNK, N/A, NULL).  If node does not exist
+## or has another value, then $CONST_FALSE is returned.
+##
+## Arguments:
+##    $parent    - the parent Node that contains the node 
+##    $nodename  - name of the node of interest
+##
+
+#macro (nodeHasNilValue $parent $nodename )
+#if ( $parent.get($nodename) )
+#set ($nhnv_node = $parent.get($nodename))
+#set ($node_val = $nhnv_node.toString().trim().toUpperCase())
+#if ( $CONST_TRUE.equals("#valueIsNilValue($node_val)") )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+##
+## A utility macro that will return $CONST_TRUE if the node exist
+## and has a NON-nil-value (UNK, N/A, NULL).  If node does not exist
+## or has a NIL value, then $CONST_FALSE is returned.
+##
+## This turns out to be useful in some of the templates to ensure
+## 1) node exists and 2) node value is non NIL
+##
+## Arguments:
+##    $parent    - the parent Node that contains the node 
+##    $nodename  - name of the node of interest
+##
+
+#macro (nodeExistsWithNonNilValue $parent $nodename )
+#if ( $parent.get($nodename) )
+#if ( $CONST_FALSE.equals("#nodeHasNilValue($parent $nodename)") )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#else
+${CONST_FALSE}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+##
+## A utility macro that will check for node values of UNK, N/A, NULL
+## and will supply a nil-entry element with nilReason for that node.
+##
+## If node has an actual value, then the value will be printed.
+## If node has no value or does not exist, then nothing will be printed.
+## Special case: If node does not exist AND printMissing is $CONST_TRUE,
+##               then treat as nil-missing
+##
+## Arguments:
+##    $parent       - the parent Node that contains the node 
+##    $node_name    - name of the node of interest
+##    $elmt_name    - the XML element tag name
+##    $elmt_unit    - unit to use. If CONST_FALSE or empty, ignore 
+##                    If CONST_TRUE, query for available unit.
+##                    Otherwise, query for unit and use value as default.
+##    $printMissing - If node does not exist, then treat is as NULL ('missing' case)
+##
+##
+
+#macro (getNodeWithValueOrAsNil $parent  $node_name  $elmt_name  $elmt_unit  $printMissing )
+  #if ( $parent.get($node_name) )
+    #set ($node_val = '' )
+    #set ($node = $parent.get($node_name))    
+    #set ($node_val = $!node.toString() )
+    #if ( $CONST_TRUE.equals("#valueIsNilValue($node_val)") )
+        #printNilElement( $elmt_name $node_val )
+    #else
+      #getNodeValueNotNil($parent $node_name $elmt_name $elmt_unit )
+    #end
+  #elseif ( $CONST_TRUE.equals( $printMissing ) )
+    <${elmt_name} xsi:nil="true" nilReason="missing"></${elmt_name}>
+  #end
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+#macro (printNilElement $elmt_name  $node_value )
+    #set ( $node_value_up = $node_value.toUpperCase() )
+    #if ( $CONST_UNKNOWN.equals($node_value_up) )
+      <${elmt_name} xsi:nil="true" nilReason="unknown"></${elmt_name}>
+    #elseif ( $CONST_NA.equals($node_value_up) )
+      <${elmt_name} xsi:nil="true" nilReason="inapplicable"></${elmt_name}>
+    #elseif ( $CONST_NULL.equals($node_value_up) )
+      <${elmt_name} xsi:nil="true" nilReason="missing"></${elmt_name}>
+    #end
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+##
+## A utility macro that will check:
+## 1) if node does not exist; or
+## 2) it exists but has a nil-value.
+## In either case, nothing will be printed.
+##
+## Otherwise, the node element and value will be printed.
+##
+## Arguments:
+##    $parent    - the parent Node that contains the node 
+##    $node_name - name of the node of interest
+##    $elmt_name - the XML element tag name
+##    $elmt_unit - unit to use. If CONST_FALSE or empty, ignore 
+##                 If CONST_TRUE, query for available unit.
+##                 Otherwise, query for unit and use value as default.
+##
+##
+
+#macro (getNodeValueNotNil $parent $node_name $elmt_name  $elmt_unit )
+  #if ( $parent.get($node_name) )
+    #if ( $CONST_FALSE.equals("#nodeHasNilValue($parent $node_name)"))
+		  #set ($gnvnn_node = $parent.get($node_name))      
+      #set ($elmt_unit = $elmt_unit.toString())      
+      #if ( $elmt_unit.isEmpty() || $elmt_unit.equals($CONST_FALSE))
+          <${elmt_name}>$!gnvnn_node.toString()</${elmt_name}>
+      #else
+          #if ( $elmt_unit == $CONST_TRUE)
+             #set ( $tisfu_units = "#getUnitAttr( $gnvnn_node  $label_name  '')" )
+          #else
+             #set ( $tisfu_units = "#getUnitAttrOrDefault( $gnvnn_node  $label_name '' $elmt_unit )" )
+          #end		    
+          <${elmt_name} $tisfu_units>$!gnvnn_node.toString()</${elmt_name}>
+      #end 
+    #end
+  #end
+#end
+
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+#macro (isNanValue $value)
+#set ( $inv_res = $CONST_FALSE )
+#if ( $value.toUpperCase().contains("NAN"))
+#set ( $inv_res = $CONST_TRUE )
+#end
+${inv_res}##
+#end
+
+
+#macro (translateNanMaybe $value)
+#if ( $CONST_TRUE.equals("#isNanValue($value)") )
+NaN##
+#else
+${value}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Utility macro that enforces (min,max) bounds for a double value.
+## It tries to retain the syntax of the passed-in string args
+
+#macro (enforceBoundsDouble $val  $min  $max )
+#set ($rval = $val.toString() )
+#set ($dval = $math.toDouble($val.toString()) )
+#set ($dmin = $math.toDouble($min.toString()) )
+#set ($dmax = $math.toDouble($max.toString()) )
+#if ( $dval > $dmax )
+#set ( $rval = $max )
+#elseif ( $dval < $dmin )
+#set ( $rval = $min )
+#end
+${rval}##
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+#macro (isNodeListType $maybe_list_node)
+#set ( $inlt_rval = $CONST_FALSE )
+#if ( $list_class.isAssignableFrom( $maybe_list_node.class ) )
+#set ( $inlt_rval = $CONST_TRUE )
+#end
+${inlt_rval}##
+#end
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+#macro (nodeExistsAndHasValueInRange $parent $nodename $min $max )
+#set ( $neahvir_rval = $CONST_FALSE )
+#if ( $parent && $parent.get($nodename) && $CONST_FALSE.equals("#nodeHasNilValue($parent $nodename)"))
+#set ( $neahvir_val = $parent.get($nodename).toString() )
+#set ( $neahvir_val = $math.toDouble($neahvir_val) )
+#set ( $neahvir_min = $math.toDouble($min) )
+#set ( $neahvir_max = $math.toDouble($max) )
+#if ( $neahvir_val >= $neahvir_min  &&  $neahvir_val <= $neahvir_max )
+#set ( $neahvir_rval = $CONST_TRUE )
+#end
+#end
+${neahvir_rval}##
+#end
+
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## Utility that tests is a string appears to be a number, returns
+## $CONST_TRUE if so, and $CONST_FALSE otherwise
+
+#macro (looksLikeANumber $test_str )
+#set ( $u_llan_rval = $CONST_FALSE )
+#if ( ! $test_str.toString().isEmpty() )
+#set ( $test_str_as_double_maybe = "" )
+#set ( $test_str_as_double_maybe = $math.toDouble( $test_str ) )
+#if ( $test_str_as_double_maybe.class.name.equals("java.lang.Double"))
+#set ( $u_llan_rval = $CONST_TRUE )
+#end
+#end
+${u_llan_rval}##
+#end
+##
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Utility macro that checks if $str ends with $ending,
+## and if so, removes the ending and returns the result.
+## If no ending found, original value is returned.
+##
+## $caseless argument is $CONST_TRUE or $CONST_FALSE and 
+## allows for caseless comparison
+
+#macro(removeEndingStrIfFound $str $ending $caseless )
+#set ($u_resif_rval = $str )
+#set ($strUp = $str )
+#set ($endingUp = $ending )
+#if ( $CONST_TRUE.equals($caseless) )
+#set ($strUp = $str.toUpperCase() )
+#set ($endingUp = $ending.toUpperCase() )
+#end
+#if ( $strUp.endsWith($endingUp))
+#set ($strLen = $str.length())
+#set ($endLen = $ending.length())
+#set ($substringLen = $math.toInteger($strLen) - $math.toInteger($endLen) )
+#if ( $substringLen > 0)
+#set ($u_resif_rval = $str.substring(0, $substringLen) )
+#end
+#end
+${u_resif_rval}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Utility macro that checks if $str starts with $starting,
+## and if so, removes the starting and returns the result.
+## If no starting found, original value is returned.
+##
+## $caseless argument is $CONST_TRUE or $CONST_FALSE and 
+## allows for caseless comparison
+
+#macro(removeStartingStrIfFound $str $starting $caseless )
+#set ( $u_rssif_rval = $str )
+#set ($strUp = $str )
+#set ($startingUp = $starting )
+#if ( $CONST_TRUE.equals($caseless) )
+#set ($strUp = $str.toUpperCase() )
+#set ($startingUp = $starting.toUpperCase() )
+#end
+#if ( $strUp.endsWith($startingUp))
+#set ($strLen = $str.length())
+#set ($startingLen = $starting.length())
+#set ($substringIdx = $math.toInteger($strLen) - $math.toInteger($startingLen) )
+#if ( $substringIdx < $strLen )
+#set ( $u_rssif_rval = $str.substring($substringIdx) )
+#end
+#end
+${u_rssif_rval}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Given a date-time stamp, attempts to extract the beginning
+## simple-date formatted section (YYYY-MM-dd).
+## If format is not expected, then original input is
+## returned.
+
+#macro(extractSimpleDate $ed_input )
+#set ( $u_ed_rval = $ed_input )
+#if ( $ed_input.length() > 10 )
+#set ( $ed_input = $ed_input.substring(0,10) )
+#end
+#if ( $ed_input.matches($SIMPLE_DATE_REGEX) )
+#set ( $u_ed_rval = $ed_input )
+#end
+${u_ed_rval}##
+#end
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Macro that compares two date strings, formatted as YYYY-MM-DD.
+## If the $compDate appears to came after the $refcDate, then 
+## 1 is returned; if before then -1 is returned; if equal
+## then 0 is returned.
+##
+## An attempt is made to extact the simple-date from each of the 
+## arguments, thus allow date-time stamps to be supported.
+## If either simple-date is not extractable, then $CONST_UNKNOWN 
+## is returned
+
+#macro(compareSimpleDate  $compDate  $refcDate )
+#set ( $u_idard_rval = $CONST_UNKNOWN )
+#set ( $datestr1 = "#extractSimpleDate($compDate)" )
+#set ( $datestr2 = "#extractSimpleDate($refcDate)" )
+#if ( $datestr1.matches($SIMPLE_DATE_REGEX) && $datestr2.matches($SIMPLE_DATE_REGEX) )
+#set ( $date1 = $date.toDate( $SIMPLE_DATE_PATTERN, $datestr1) )
+#set ( $date2 = $date.toDate( $SIMPLE_DATE_PATTERN, $datestr2) )
+#set ( $u_idard_rval = $date1.compareTo($date2) )
+#end
+${u_idard_rval}##
+#end
+
+## This is a dumber version that uses string splitting
+## and comparing numerical chunks.
+## Until I fully trust what Velocity's $date is doing, will keep it
+## around....
+
+#macro(isDateAfterReferenceDateOrig  $compDate  $refcDate )
+#set ( $u_idard_rval = $CONST_UNKNOWN )
+#if ( $compDate.contains("-") && $refcDate.contains("-") )
+#set ( $date_list_1 = $compDate.split('-') )
+#set ( $date_list_2 = $refcDate.split('-') )
+#if ( $date_list_1.size() == 3 && $date_list_2.size() == 3)
+#set ( $u_idard_rval = $CONST_FALSE )
+#set ( $year1 = $math.toInteger($date_list_1.get(0)) )
+#set ( $year2 = $math.toInteger($date_list_2.get(0)) )
+#if ( $year1 > $year2 )
+#set ( $u_idard_rval = $CONST_TRUE )
+#elseif ( $year1 == $year2  )
+#set ( $month1 = $math.toInteger($date_list_1.get(1)) )
+#set ( $month2 = $math.toInteger($date_list_2.get(1)) )
+#if ( $month1 > $month2  )
+#set ( $u_idard_rval = $CONST_TRUE )
+#elseif ( $month1 == $month2 )
+#set ( $day1 = $math.toInteger($date_list_1.get(2)) )
+#set ( $day2 = $math.toInteger($date_list_2.get(2)) )
+#if ( $day1 > $day2 )
+#set ( $u_idard_rval = $CONST_TRUE )
+#end##EndCompareDay
+#end##EndCompareMonth
+#end##EndCompareYear
+#end##EndCompareListLen
+#end##EndCheckDelimiter
+${u_idard_rval}##
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+

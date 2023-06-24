@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+#parse( "vcore.vmac" )
+#parse( "utils.vmac" )
+#parse( "general.vmac" )
+#parse( "image.vmac" )
+#parse( "surface.vmac" )
+#parse( "mission_factory.vmac" )
+
+## Set some needed variables
+
+## Needed to create the appropriate LID
+#set ($FORCE_MESH      = $CONST_TRUE )
+
+#set ($PID_FULL        = "$extra.OBJ.toString().toLowerCase()" )
+#set ($PID             = "#createPidFromVersionedName($PID_FULL)" )
+#set ($VERSION_ID      = "#getPIDVersion($PID_FULL)" )
+#set ($INSTRUMENT_NAME = "#getInstrumentName($PID)" )
+#set ($INSTRUMENT_ID   = "#getInstrumentId($PID)" )
+
+#set ($LID_COLLECTION  = "#getProductLidCollectionCheckLabel($PID)" )
+#set ($LID_PREFIX      = "#getProductLidPrefixCheckLabel($PID)" )
+
+#generateProlog($MSN_PROLOG_VERSION_DICT)
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    <title>$MSN_IDENTIFICATION_AREA_TITLE_PREFIX Terrain Mesh in OBJ format</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Observational</product_class>
+  </Identification_Area>
+  <Observation_Area>
+    <Time_Coordinates>
+      #if ( $IDENT.START_TIME )
+        <start_date_time>#getZuluTime( $IDENT.START_TIME )</start_date_time>
+      #elseif ( $extra.START_TIME )
+        <start_date_time>#getZuluTime( $extra.START_TIME )</start_date_time>
+      #else
+        #getNodeWithValueOrAsNil( $IDENT 'START_TIME'  'start_date_time'  ''  $CONST_TRUE )
+      #end
+      #if ( $IDENT.STOP_TIME )
+        <stop_date_time>#getZuluTime( $IDENT.STOP_TIME )</stop_date_time>
+      #elseif ( $extra.STOP_TIME )
+        <stop_date_time>#getZuluTime( $extra.STOP_TIME )</stop_date_time>
+      #else
+        #getNodeWithValueOrAsNil( $IDENT 'STOP_TIME'  'stop_date_time'  ''  $CONST_TRUE )
+      #end
+    </Time_Coordinates>
+    <Investigation_Area>
+      <name>$MSN_INVESTIGATION_NAME</name>
+      <type>$MSN_INVESTIGATION_TYPE</type>
+      <Internal_Reference>
+        <lid_reference>urn:nasa:pds:context:investigation:$MSN_INVESTIGATION_SUBTYPE.$MSN_INVESTIGATION_MISSION.toLowerCase()</lid_reference>
+        <reference_type>data_to_investigation</reference_type>
+      </Internal_Reference>
+    </Investigation_Area>
+
+    #getObservingSystem()
+
+    #getTargetIdentification()
+
+    <Mission_Area>
+    </Mission_Area>
+    <Discipline_Area>
+      <geom:Geometry>
+        <geom:Geometry_Lander>
+
+          ## RMC might come from image label or extras object
+          ## Check for the label firs, then the extras.
+          ## If no node found, skip RMC elements
+          #set ( $rmcParentNode = "" )  ##empty string as null
+          #set ( $rmcValueNode = "" )  ##empty string as null
+          #set ( $rmcNameNode  = "" )  ##empty string as null
+
+          ##Determine the appropriate parent node
+          #if ( $IDENT.ROVER_MOTION_COUNTER_NAME && $IDENT.ROVER_MOTION_COUNTER )
+            #set ( $rmcParentNode = $IDENT )
+          #elseif ( $extra.ROVER_MOTION_COUNTER_NAME  && $extra.ROVER_MOTION_COUNTER )
+            #set ( $rmcParentNode = $extra )
+          #end
+
+          #if ( ! $rmcParentNode.toString().isEmpty() )
+            #generateGeomMotionCounter( $rmcParentNode )
+          #end
+
+        </geom:Geometry_Lander>
+      </geom:Geometry>
+      <img_surface:Surface_Imaging>
+        <img_surface:Derived_Product_Parameters>
+          #set ( $coordSystemName = "" )
+          #set ( $coordSystemIndex = "" )
+          #set ( $coordSystemName  = $extra.REFERENCE_COORD_SYSTEM_NAME )
+          #set ( $coordSystemIndex = $extra.REFERENCE_COORD_SYSTEM_INDEX )
+          #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "geom" "DERIVED_IMAGE_PARMS" )
+
+        </img_surface:Derived_Product_Parameters>
+      </img_surface:Surface_Imaging>
+    </Discipline_Area>
+</Observation_Area>
+## new chunk
+<Reference_List>
+## loop thru the PNGS
+  #if ($extra.PNGS)
+  #set ($pngs_size = $extra.PNGS.size() )##
+  #foreach ( $i in [1..$pngs_size] )
+  <Source_Product_Internal>
+  #set ($png_name = $extra.PNGS.get($foreach.index).replace('.png', '').toLowerCase())##
+  <lidvid_reference>#generateLIDVID( $LID_PREFIX $LID_COLLECTION $png_name)</lidvid_reference>
+  <reference_type>data_to_calibrated_source_product</reference_type>
+    <comment>Pointer to the mesh skin (texture).</comment>
+  </Source_Product_Internal>
+  #end
+  #end
+  
+ <Source_Product_Internal>
+   <lidvid_reference>#generateLIDVID( $LID_PREFIX $LID_COLLECTION $extra.XYZ.replace('.VIC', '').toLowerCase() )</lidvid_reference>
+  <reference_type>data_to_calibrated_source_product</reference_type>
+   <comment>Pointer to the XYZ product from which the geometry is derived.</comment>
+  </Source_Product_Internal>
+  </Reference_List>
+
+  <File_Area_Observational>
+    <File>
+      ## <file_name>$obj_file_name</file_name>
+      <file_name>$extra.OBJ</file_name>
+    </File>
+#include( $extra.lbl)
+  </File_Area_Observational>
+  <File_Area_Observational_Supplemental>
+    <File>
+      ## <file_name>$mtl_file_name</file_name>
+      <file_name>$extra.MTL</file_name>
+    </File>
+    <Stream_Text>
+      <offset unit="byte">0</offset>
+      <parsing_standard_id>7-Bit ASCII Text</parsing_standard_id>
+      <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+    </Stream_Text>
+  </File_Area_Observational_Supplemental>
+#if ($extra.PNGS)
+  #set ($pngs_size = $extra.PNGS.size() )##
+  #foreach ( $i in [1..$pngs_size] )
+  <File_Area_Observational_Supplemental>
+    <File>
+      <file_name>$extra.PNGS.get($foreach.index)</file_name>
+    </File>
+    <Encoded_Image>
+      <offset unit="byte">0</offset>
+      <encoding_standard_id>PNG</encoding_standard_id>
+    </Encoded_Image>
+ </File_Area_Observational_Supplemental>
+    #end
+#else
+  <File_Area_Observational_Supplemental>
+    <File>
+     <file_name>$png_file_name</file_name>
+     </File>
+    <Encoded_Image>
+      <offset unit="byte">0</offset>
+      <encoding_standard_id>PNG</encoding_standard_id>
+    </Encoded_Image>
+  </File_Area_Observational_Supplemental>
+#end
+</Product_Observational>

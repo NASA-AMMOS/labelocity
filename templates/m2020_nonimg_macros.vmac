@@ -1,0 +1,2818 @@
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following line
+## near the top of your Velocity template, after the xml and xml-model tags.
+##
+##		#parse ( "m2020_nonimg_macros.vmac" )
+##
+
+
+##Constants for defaults used in the table/column/header sections
+
+#set ( $CONST_M20_HEADER_PARSING_STANDARD = 'FITS 4.0' )
+#set ( $CONST_M20_HEADER_DESCRIPTION      = '' )
+
+#set ( $CONST_M20_STREAMTEXT_PARSING_STANDARD = '7-Bit ASCII Text' )
+#set ( $CONST_M20_STREAMTEXT_DESCRIPTION      = 'Metadata in Object Description Language (ODL) used as input to this PDS label' )
+#set ( $CONST_M20_STREAMTEXT_RECORD_DELIMITER = 'Carriage-Return Line-Feed' )
+
+#set ( $CONST_M20_TABLEBINARY_DESCRIPTION      = '' )
+#set ( $CONST_M20_TABLEBINARY_COL_DESCRIPTION  = '' )
+
+#set ( $CONST_M20_IMAGE_ARRAY_DESCRIPTION      = '' )
+#set ( $CONST_M20_IMAGE_ARRAY_AXIS_INDEX_ORDER = 'Last Index Fastest' )
+
+
+#set ( $CONST_M20_TABLEDELIMITER_HEADER_PARSE_STANDARD = '7-Bit ASCII Text' )
+#set ( $CONST_M20_TABLEDELIMITER_PARSE_STANDARD = 'PDS DSV 1' )
+#set ( $CONST_M20_TABLEDELIMITER_FIELD_DELIMITER  = 'Comma' )
+#set ( $CONST_M20_TABLEDELIMITER_RECORD_DELIMITER  = 'Carriage-Return Line-Feed' )
+
+
+#set ( $CONST_FIELD_BINARY      = 'Field_Binary' )
+#set ( $CONST_IMAGE             = 'Image' )
+
+## List of extensions associated exclusively for Delimited tables
+#set ( $DEL_TABLE_FILE_EXTENS = ['.CSV', '.MSA'] )
+#set ( $BIN_TABLE_FILE_EXTENS = ['.DAT'] )
+
+#set ( $M20_INSTR_CLASS_MEDA     = 'meda' )
+#set ( $M20_INSTR_CLASS_MOXIE    = 'moxie' )
+#set ( $M20_INSTR_CLASS_PIXL     = 'pixl' )
+#set ( $M20_INSTR_CLASS_RIMFAX   = 'rimfax' )
+#set ( $M20_INSTR_CLASS_SHERLOC  = 'sherloc' )
+#set ( $M20_INSTR_CLASS_SUPERCAM = 'supercam' )
+#set ( $M20_INSTR_CLASS_UNK      = 'unknown' )
+
+## List of Reference SIS documents per instrument
+#set ( $M20_DOC_LIST_PIXL     = ["pixl_bundle_sis", "pixl_edr_sis", "pixl_rdr_sis"] )
+#set ( $M20_DOC_LIST_RIMFAX   = ["rimfax_bundle_sis", "rimfax_edr_sis", "rimfax_rdr_sis"] )
+#set ( $M20_DOC_LIST_SHERLOC  = ["sherloc_bundle_sis", "sherloc_edr_sis", "sherloc_rdr_sis"])
+#set ( $M20_DOC_LIST_SUPERCAM = ["supercam_bundle_sis", "m2020_supercam_edr_rdr_sis"] )
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Creates list used to iterate over Process Software Programs
+#macro (populateSoftwarePrograms)
+    #set ( $HISTORICAL_SOFTWARE_NAMES = ['M2020EDRGEN_HISTORY_PARMS',
+                                         'M2020RDRGEN_HISTORY_PARMS'])
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Creates a mission-wide set of lists containing prefixes of
+## label PTR entries.  This includes lists for binary tables,
+## delimited tables, and images (Image2D/3D).
+## All possible PTR entries across all mission instruments are 
+## currently included, tho once we get better documentation
+## we could populate based on instrument.
+## Templates that use these lists do query the label for
+## existence of entry before processing, so a superset shouldnt hurt
+##
+## Update: Nice of them to change their mind between DARKSAFTER
+## and DARKS_AFTER (etc) during the delivery.... hmph.
+##
+
+#macro (populateMsnPtrPrefixes)
+
+    ## Used to iterate over header/table entries for binary-tables
+    #set ( $BIN_TABLE_PREFIXES = ['TIMELINE','MU_SOH','BU_SOH','IR_HK',
+                                'EMPTYHDU_0','DARKS',
+                                'LASERDATA', 'LASER_DATA',
+                                'SOUND',
+                                'DARKSBEFORE', 'DARKS_BEFORE',
+                                'ACTIVES', 'IR_SPEC_SOH',
+                                'DARKSAFTER', 'DARKS_AFTER', 
+                                'RIMFAX_SCIENCE', 'PIXL_SCIENCE'])
+
+    ## Used to iterate over header/image entries,
+    ## also used for the Display settings section
+    #set ( $IMAGE_PREFIXES = ['UV_DARK', 'VIO_DARK', 'GOR_DARK',
+                            'UV_ACTIVE','VIO_ACTIVE','GOR_ACTIVE'])
+
+    ## Used to iterate over header/table entries for delimited-tables.
+    ## List built from witnessed data and a set of list files from Susie.
+    ## Since I can't add comments inside the list declaration, I will
+    ## group such that each instrument is separated by 3 empty lines and
+    ## within each instrument clump, there are groups separated by 1 empty line.   
+    ## 1) Pixl grouped as: ancillary, raw-spectroscopy, derived, unaccounted-for 
+    ## 2) RIMFAX grouped as: solo
+    ## 3) Sherloc grouped as:  EDR, RDR  [and yes, they include those colons, sigh]
+    ## 4) Orphaned (entries that existed in template once but not sure from where)
+    ## Hmmm...there are other instruments we need to support....no?
+    ## RIMFAX_SCIENCE_TABLE was removed recently as it appear to be binary (2021.07.15)
+
+    #set ( $DEL_TABLE_PREFIXES = [  
+                                    'PIXL_MCC_SLI_ESTIMATES_METADATA',    
+                                    'PIXL_MCC_SLI_ESTIMATES',
+                                    'PIXL_MCC_OLM_TRN_ESTIMATES_SPREADSHEET',
+                                    'PIXL_HOUSEKEEPING',
+                                    'PIXL_SCAN_LOG_POSITION_METADATA',
+                                    'PIXL_SCAN_LOG_METADATA',
+
+                                    'PIXL_HISTOGRAM_NORMAL_A',
+                                    'PIXL_HISTOGRAM_NORMAL_B',
+                                    'PIXL_PSEUDOINTENSITY_NORMAL',
+                                    'PIXL_HISTOGRAM_DWELL_A',
+                                    'PIXL_HISTOGRAM_DWELL_B',
+                                    'PIXL_PSEUDOINTENSITY_DWELL',
+                                    'PIXL_SUMMARY_HISTOGRAM_METADATA_SPREADSHEET',
+                                    'PIXL_SUMMARY_HISTOGRAM_SPREADSHEET',
+
+                                    'PIXL_HOUSEKEEPING_SPREADSHEET',
+                                    'PIXL_BEAM_LOC_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_HOUSEKEEPING_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_POSITION_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_QUANTIFICATION_SUMMARY_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_WT_PERCENT_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_INTENSITY_SPREADSHEET',
+                                    'PIXL_ROCK_COMPONENT_ERROR_PERCENT_SPREADSHEET',
+                                    'PIXL_POSITION_SPREADSHEET',
+                                    'PIXL_HISTOGRAM_A_SPREADSHEET',
+                                    'PIXL_HISTOGRAM_B_SPREADSHEET',
+                                    'PIXL_DWELL_HOUSEKEEPING_SPREADSHEET',
+                                    'PIXL_DWELL_POSITION_SPREADSHEET',
+                                    'PIXL_DWELL_HISTOGRAM_A_SPREADSHEET',
+                                    'PIXL_DWELL_HISTOGRAM_B_SPREADSHEET',
+                                    'PIXL_PSEUDOINTENSITY_MAP_METADATA_SPREADSHEET',
+                                    'PIXL_PSEUDOINTENSITY_MAP_SPREADSHEET',
+                                    'PIXL_SPACECRAFT_SPREADSHEET',
+                                    'PIXL_TIMING_SPREADSHEET',
+                                    'PIXL_FIT_SUMMARY_SPREADSHEET',
+                                    'PIXL_FIT_RESULTS_SPREADSHEET',
+
+                                    'PIXL_BULK_SUM_SPREADSHEET',
+                                    'PIXL_REMARKS_SPREADSHEET',
+                                    'PIXL_EVR_BUNDLE_HIPRI_SPREADSHEET',
+                                    'PIXL_MAX_VALUE_SPREADSHEET',
+
+
+                                    'RIMFAX_HOUSEKEEPING_SPREADSHEET',
+                                    'RIMFAX_METADATA_SPREADSHEET', 
+                                    
+
+
+
+                                    'ACTIVE_SPECTRA_REGION_1_SPREADSHEET',
+                                    'ACTIVE_SPECTRA_REGION_2_SPREADSHEET',
+                                    'ACTIVE_SPECTRA_REGION_3_SPREADSHEET',
+                                    'ACTIVE_SPECTRA_REGION_1',
+                                    'ACTIVE_SPECTRA_REGION_2',
+                                    'ACTIVE_SPECTRA_REGION_3',
+                                    'COLLECT_SOH_SPREADSHEET',
+                                    'COMMANDED_SCANNER_POSITION_TABLE_SPREADSHEET',
+                                    'DARK_SPECTRA_REGION_1_SPREADSHEET',
+                                    'DARK_SPECTRA_REGION_2_SPREADSHEET',
+                                    'DARK_SPECTRA_REGION_3_SPREADSHEET',
+                                    'LASER_PHOTODIODE_DATA_SPREADSHEET',
+                                    'PROCESS_DATA_SPREADSHEET',
+                                    'RETRIEVED_SCANNER_POSITION_TABLE_SPREADSHEET',
+                                    'SCANNER_CURRENT_TABLE_SPREADSHEET',
+                                    'SCANNER_POSITION_ERROR_TABLE_SPREADSHEET',
+                                    'SDF_REPLY_SPREADSHEET',
+                                    'SDF_REPLY',
+                                    'SEGMENT_COMMAND_SPREADSHEET',
+                                    'SEGMENT_COMMAND',
+                                    'SE_COLLECT_SOH_SPREADSHEET',
+                                    'SPATIAL_BINNING_INDEX_TABLE_SPREADSHEET',
+                                    'SRLCSPECARGS1_SPREADSHEET',
+                                    'SRLCSPECDEFAULT_SPREADSHEET',
+                                    'SRLCSPECGENERALSOH_CONFIG_CCD_HORZ_TIMING_SPREADSHEET',
+                                    'SRLCSPECGENERALSOH_CONFIG_CCD_REGIONS_SPREADSHEET',
+                                    'SRLCSPECGENERALSOH_CONFIG_CCD_VERT_TIMING_SPREADSHEET',
+                                    'SRLCSPECGENERALSOH_CONFIG_LASER_TIMING_SPREADSHEET',
+                                    'SRLCSPECPARAM3_SPREADSHEET',
+                                    'SRLCSPECPARAM4_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_ALGORITHM_ID_LIST_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_RANKED_LIST_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_SPECTRA_DATA_REGION_1_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_SPECTRA_DATA_REGION_2_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_SPECTRA_DATA_REGION_3_SPREADSHEET',
+                                    'SRLCSPECPROCESSDATA_ZONE_SPECIFICATION_SPREADSHEET',                                    
+                                    'XMIT_DATA_HEADER_AND_TRAILER_SPREADSHEET',
+                                    'XMIT_DATA_HEADER_AND_TRAILER',
+
+                                    'CALIBRATION_FIT',
+                                    'COMMANDED_LASER_SHOT_POSITIONS',
+                                    'COSMIC_RAY-CORRECTED_SPECTRA:_REGION_1',
+                                    'COSMIC_RAY-CORRECTED_SPECTRA:_REGION_2',
+                                    'COSMIC_RAY-CORRECTED_SPECTRA:_REGION_3',
+                                    'COSMIC_RAY_CONFIGURATION_PARAMETERS:',
+                                    'COSMIC_RAY_LIST:_REGION_1',
+                                    'COSMIC_RAY_LIST:_REGION_2',
+                                    'COSMIC_RAY_LIST:_REGION_3',
+                                    'DARK-SUBTRACTED_SPECTRA:_REGION_1',
+                                    'DARK-SUBTRACTED_SPECTRA:_REGION_2',
+                                    'DARK-SUBTRACTED_SPECTRA:_REGION_3',
+                                    'GAIN-CORRECTED_SPECTRA:_REGION_1',
+                                    'GAIN-CORRECTED_SPECTRA:_REGION_2',
+                                    'GAIN-CORRECTED_SPECTRA:_REGION_3',
+                                    'IMAGE_TRANSFORMATION',
+                                    'LASER-NORMALIZED_SPECTRA:_REGION_1',
+                                    'LASER-NORMALIZED_SPECTRA:_REGION_2',
+                                    'LASER-NORMALIZED_SPECTRA:_REGION_3',
+                                    'LASER_PHOTODIODE_INTENSITY_MAP',
+                                    'LASER_SHOT_POSITION',
+                                    'LASER_SHOT_POSITIONS',
+                                    'PROCESS_DATA_SPECTRA:_REGION_1',
+                                    'PROCESS_DATA_SPECTRA:_REGION_2',
+                                    'PROCESS_DATA_SPECTRA:_REGION_3',
+                                    'RM1_INTEGRATED_INTENSITY',
+                                    'RM2_INTEGRATED_INTENSITY',
+                                    'RM3_INTEGRATED_INTENSITY',
+                                    'RM4_INTEGRATED_INTENSITY',
+                                    'RM5_INTEGRATED_INTENSITY',
+                                    'RM6_INTEGRATED_INTENSITY',
+                                    'SPECTRAL_INTENSITY',
+                                    'WAVELENGTH-CORRECTED_SPECTRA:_REGION_1',
+                                    'WAVELENGTH-CORRECTED_SPECTRA:_REGION_2',
+                                    'WAVELENGTH-CORRECTED_SPECTRA:_REGION_3',
+                                    'WAVELENGTH_NM',
+                                    'WAVELENGTH_REGIONS',                                    
+
+
+
+                                    'CORRECTED_SPECTRA',
+                                    'COSMIC_RAY_LIST',                                    
+                                    'SCIENCE_TABLE'])
+
+    #scanForUndeclaredPtrEntries()
+
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+
+
+#macro(getTransportProtocol $tp)
+  #if ($tp.equals("DATA PRODUCT") || $tp.equals("Data Product") )
+    <msn_surface:transport_protocol>Data Product</msn_surface:transport_protocol>
+  #elseif ($tp.equals("SFDU") )
+    <msn_surface:transport_protocol>SFDU</msn_surface:transport_protocol>
+  #elseif ($tp.equals("TEAM-GENERATED IMAGE") )
+    <msn_surface:transport_protocol>Team-generated Image</msn_surface:transport_protocol>
+  #else
+    <msn_surface:transport_protocol>$tp</msn_surface:transport_protocol>
+  #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro(m20_getTransportProtocol $tp_raw)
+#set ( $m20_gtp_val = $tp_raw )
+#set ( $tp_raw = $tp_raw.toUpperCase() )
+#if ($tp_raw.equals("DATA PRODUCT") )
+#set ( $m20_gtp_val = "Data Product" )
+#elseif ($tp_raw.equals("SFDU") )
+#set ( $m20_gtp_val = "SFDU" )
+#elseif ($tp_raw.equalsIgnoreCase("Team-generated Image") )
+#set ( $m20_gtp_val = "Team-generated Image" )
+#end
+${m20_gtp_val}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Macro: getPds4DataTypeFieldBinary
+## Args:  $inDataType Data type name from the label
+##        $bytes Number of bytes for the datatype in the label
+##
+## Uses both arguments to determine and print out the 
+## PDS4 datatype for Filed-Binary products.
+
+#macro( getPds4DataTypeFieldBinary $inDataType $bytes)
+    #if ( $inDataType == "MSB_INTEGER" || $inDataType == "INTEGER" || $inDataType == "SUN_INTEGER" || $inDataType == "MAC_INTEGER" || $inDataType == "MSB_SIGNED_INTEGER" )
+      #if ( $bytes == "1" )
+      <data_type>SignedByte</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>SignedMSB2</data_type>
+      #elseif ( $bytes == "4" )
+      <data_type>SignedMSB4</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>SignedMSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "MSB_UNSIGNED_INTEGER" || $inDataType == "SUN_UNSIGNED_INTEGER" || $inDataType == "MAC_UNSIGNED_INTEGER" || $inDataType == "UNSIGNED_INTEGER" )
+      #if ( $bytes == "1" )
+      <data_type>UnsignedByte</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>UnsignedMSB2</data_type>
+      #elseif ( $bytes == "4" )
+      <data_type>UnsignedMSB4</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>UnsignedMSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "LSB_INTEGER" || $inDataType == "PC_INTEGER" || $inDataType == "VAX_INTEGER" || $inDataType == "LSB_SIGNED_INTEGER")
+      #if ( $bytes == "1" )
+      <data_type>SignedByte</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>SignedLSB2</data_type>
+      #elseif ( $bytes == "4" )
+      <data_type>SignedLSB4</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>SignedLSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "LSB_UNSIGNED_INTEGER" || $inDataType == "PC_UNSIGNED_INTEGER" || $inDataType == "VAX_UNSIGNED_INTEGER" )
+      #if ( $bytes == "1" )
+      <data_type>UnsignedByte</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>UnsignedLSB2</data_type>
+      #elseif ( $bytes == "4" )
+      <data_type>UnsignedLSB4</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>UnsignedLSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "IEEE_REAL" || $inDataType == "FLOAT" || $inDataType == "REAL" || $inDataType == "MAC_REAL" || $inDataType == "SUN_REAL" || $inDataType == "VAX_REAL" || $inDataType == "VAXG_REAL" || $inDataType == "VAX_DOUBLE")
+      #if ( $bytes == "4" )
+      <data_type>IEEE754MSBSingle</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>IEEE754MSBDouble</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "PC_REAL" )
+      #if ( $bytes == "4" )
+      <data_type>IEEE754LSBSingle</data_type>
+      #elseif ( $bytes == "8" )
+      <data_type>IEEE754LSBDouble</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "PC_COMPLEX" )
+      #if ( $bytes == "1" )
+      <data_type>ComplexLSB8</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>ComplexLSB16</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "COMPLEX" || $inDataType == "MAC_COMPLEX" || $inDataType == "SUN_COMPLEX" || $inDataType == "VAX_COMPLEX" || $inDataType == "VAXG_COMPLEX" )
+      #if ( $bytes == "1" )
+      <data_type>ComplexMSB8</data_type>
+      #elseif ( $bytes == "2" )
+      <data_type>ComplexMSB16</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "MSB_BIT_STRING" || $inDataType == "LSB_BIT_STRING" || $inDataType == "VAX_BIT_STRING" || $inDataType == "BCD" || $inDataType == "BINARY_CODED_DECIMAL" || $inDataType == "BINARY CODED DECIMAL")
+      <data_type>SignedBitString</data_type>
+    #elseif ( $inDataType == "CHARACTER" || $inDataType == "ASCII_COMPLEX" )
+      <data_type>ASCII_String</data_type>
+    #elseif ($inDataType == "TIME" )
+      <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ($inDataType == "DATE" )
+      <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ( $inDataType == "BOOLEAN" )
+      <data_type>UnsignedByte</data_type>
+    #else
+      <!-- Could not map binary data type $inDataType, $bytes bytes to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+    #end
+#end
+
+## -------------------------------------------------------------
+
+## Adds a check of the node's label for PDS4_DATA_TYPE.
+## If found, that value is used.  Otherwise continue calling the original
+## getPds4DataTypeFieldBinary() macro.
+
+#macro( getPds4DataTypeFieldBinaryCheckLabel $node $inDataType $bytes)
+#if ( $node && $node.PDS4_DATA_TYPE )
+<data_type>$!node.PDS4_DATA_TYPE</data_type>
+#else
+#getPds4DataTypeFieldBinary($inDataType $bytes)
+#end
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Macro: getPds4DataTypeImage
+## Args:  $inDataType Data type name from the label
+##        $bits Number of bits for the datatype in the label
+##
+## Uses both arguments to determine and print out the 
+## PDS4 datatype for Image products.
+
+#macro( getPds4DataTypeImage $inDataType $bits )
+    #if ( $inDataType == "MSB_INTEGER" || $inDataType == "INTEGER" || $inDataType == "SUN_INTEGER" || $inDataType == "MAC_INTEGER" )  
+      #if ( $bits == "8" )
+      <data_type>SignedByte</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>SignedMSB2</data_type>
+      #elseif ( $bits == "32" )
+      <data_type>SignedMSB4</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>SignedMSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "MSB_UNSIGNED_INTEGER" || $inDataType == "SUN_UNSIGNED_INTEGER" || $inDataType == "MAC_UNSIGNED_INTEGER" || $inDataType == "UNSIGNED_INTEGER" )
+      #if ( $bits == "8" )
+      <data_type>UnsignedByte</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>UnsignedMSB2</data_type>
+      #elseif ( $bits == "32" )
+      <data_type>UnsignedMSB4</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>UnsignedMSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "LSB_INTEGER" || $inDataType == "PC_INTEGER" || $inDataType == "VAX_INTEGER" )
+      #if ( $bits == "8" )
+      <data_type>SignedByte</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>SignedLSB2</data_type>
+      #elseif ( $bits == "32" )
+      <data_type>SignedLSB4</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>SignedLSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "LSB_UNSIGNED_INTEGER" || $inDataType == "PC_UNSIGNED_INTEGER" || $inDataType == "VAX_UNSIGNED_INTEGER" )
+      #if ( $bits == "8" )
+      <data_type>UnsignedByte</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>UnsignedLSB2</data_type>
+      #elseif ( $bits == "32" )
+      <data_type>UnsignedLSB4</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>UnsignedLSB8</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "IEEE_REAL" || $inDataType == "FLOAT" || $inDataType == "REAL" || $inDataType == "MAC_REAL" || $inDataType == "SUN_REAL" || $inDataType == "VAX_REAL" || $inDataType == "VAXG_REAL" || $inDataType == "VAX_DOUBLE")
+      #if ( $bits == "32" )
+      <data_type>IEEE754MSBSingle</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>IEEE754MSBDouble</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "PC_REAL" )
+      #if ( $bits == "32" )
+      <data_type>IEEE754LSBSingle</data_type>
+      #elseif ( $bits == "64" )
+      <data_type>IEEE754LSBDouble</data_type>
+      #else      
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>
+      #end
+    #elseif ( $inDataType == "PC_COMPLEX" )
+      #if ( $bits == "8" )
+      <data_type>ComplexLSB8</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>ComplexLSB16</data_type>
+      #else
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>      
+      #end
+    #elseif ( $inDataType == "COMPLEX" || $inDataType == "MAC_COMPLEX" || $inDataType == "SUN_COMPLEX" || $inDataType == "VAX_COMPLEX" || $inDataType == "VAXG_COMPLEX" )
+      #if ( $bits == "8" )
+      <data_type>ComplexMSB8</data_type>
+      #elseif ( $bits == "16" )
+      <data_type>ComplexMSB16</data_type>
+      #else      
+      <!-- Could not map binary data type $inDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>
+      #end
+    #elseif ( $inDataType == "MSB_BIT_STRING" || $inDataType == "LSB_BIT_STRING" || $inDataType == "VAX_BIT_STRING" || $inDataType == "BCD" || $inDataType == "BINARY_CODED_DECIMAL" || $inDataType == "BINARY CODED DECIMAL")
+      <data_type>SignedBitString</data_type>
+    #elseif ( $inDataType == "CHARACTER" || $inDataType == "ASCII_COMPLEX" )
+      <data_type>ASCII_String</data_type>
+    #elseif ($inDataType == "TIME" )
+      <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ($inDataType == "DATE" )
+      <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ( $inDataType == "BOOLEAN" )
+      <data_type>UnsignedByte</data_type>
+    #else      
+      <!-- Could not map binary data type $columnDataType, $bits bits to an equivalent PDS4 type. -->
+      <data_type>Unknown</data_type>
+    #end
+#end
+
+## -------------------------------------------------------------
+
+## Adds a check of the node's label for PDS4_DATA_TYPE.
+## If found, that value is used.  Otherwise continue calling the original
+## getPds4DataTypeImage() macro.
+
+#macro( getPds4DataTypeImageCheckLabel $node $inDataType $bits )
+#if ( $node && $node.PDS4_DATA_TYPE )
+<data_type>$!node.PDS4_DATA_TYPE</data_type>
+#else
+#getPds4DataTypeImage($inDataType $bits)
+#end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Macro: getPds4DataTypeSimple
+## Args:  $inDataType Data type name from the label
+##
+## Looks-up argument to see if it should be translated to another value.
+## Likely needs updating as the PDS4 legal types are (as of April 2021...):
+## 'ASCII_AnyURI', 'ASCII_BibCode', 'ASCII_Boolean', 'ASCII_DOI', 
+## 'ASCII_Date_DOY', 'ASCII_Date_Time_DOY', 'ASCII_Date_Time_DOY_UTC', 
+## 'ASCII_Date_Time_YMD', 'ASCII_Date_Time_YMD_UTC', 'ASCII_Date_YMD', 
+## 'ASCII_Directory_Path_Name', 'ASCII_File_Name', 'ASCII_File_Specification_Name', 
+## 'ASCII_Integer', 'ASCII_LID', 'ASCII_LIDVID', 'ASCII_LIDVID_LID', 
+## 'ASCII_MD5_Checksum', 'ASCII_NonNegative_Integer', 'ASCII_Numeric_Base16', 
+## 'ASCII_Numeric_Base2', 'ASCII_Numeric_Base8', 'ASCII_Real', 'ASCII_String', 
+## 'ASCII_Time', 'ASCII_VID', 'UTF8_String'
+
+#macro( getPds4DataTypeSimple $inDataType)
+    #if ( $inDataType == "MSB_BIT_STRING" || $inDataType == "LSB_BIT_STRING" || $inDataType == "VAX_BIT_STRING" )
+    <data_type>SignedBitString</data_type>
+    #elseif ( $inDataType == "CHARACTER" || $inDataType == "ASCII_COMPLEX" )
+    <data_type>ASCII_String</data_type>
+    #elseif ($inDataType == "TIME" )
+    <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ($inDataType == "DATE" )
+    <data_type>ASCII_Date_Time_YMD_UTC</data_type>
+    #elseif ( $inDataType == "BOOLEAN" )
+    <data_type>UnsignedByte</data_type>
+    #elseif ( $inDataType == "ASCII_REAL" || $inDataType == "ASCII REAL" || $inDataType == "REAL")
+    <data_type>ASCII_Real</data_type>
+    #elseif ( $inDataType == "ASCII_INTEGER"|| $inDataType == "ASCII INTEGER" || $inDataType == "INTEGER")
+    <data_type>ASCII_Integer</data_type>
+    #else
+    <!-- Could not map character data type $inDataType to an equivalent PDS4 type. -->
+    <data_type>Unknown</data_type>
+    #end  
+#end
+
+## -------------------------------------------------------------
+
+## Adds a check of the node's label for PDS4_DATA_TYPE.
+## If found, that value is used.  Otherwise continue calling the original
+## getPds4DataTypeSimple() macro.
+
+#macro( getPds4DataTypeSimpleCheckLabel $node $inDataType)
+#if ( $node && $node.PDS4_DATA_TYPE )
+<data_type>$!node.PDS4_DATA_TYPE</data_type>
+#else
+#getPds4DataTypeSimple($inDataType)
+#end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+##NOTE: The original source appeared to have the logic reversed,
+##      where 1 was added if col1start == 0, which didnt make sense.
+##      So I assume I fixed their bug.  That said, their logic
+##      may have been intended, so keep an eye on it.  (2021-01-19 ntt)
+## Update: This macro was to fix an issue with labels that used the 
+##      wrong offset, but it should not be used with correct labels.
+
+## #macro( getFieldLocation $startbyte $col1start )
+##  #set ( $gfl_val = $math.add($startbyte, $col1start) )
+##   <field_location unit="byte">$!gfl_val</field_location>
+## #end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Capitalize first char and lower-case the rest
+
+#macro( firstCap $textval )
+${textval.toString().substring(0,1).toUpperCase()}${textval.toString().substring(1).toLowerCase()}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Utils methods for taking a prefix name and converting to table
+## name and local_id
+
+#macro (convertToTableName $cttn_in )
+#set ($cttn_out = $cttn_in.toUpperCase() )
+#set ($cttn_out = $cttn_out.replaceAll("_", " ") )
+#set ($cttn_out = $cttn_out.replaceAll(":", "") )##Sherloc RDRs can contain ':'
+${cttn_out}##
+#end
+
+#macro (convertToTableId $ctti_in )
+#set ($ctti_out = $ctti_in.toLowerCase() )
+#set ($ctti_out = $ctti_out.replaceAll("_", "-") )
+#set ($ctti_out = $ctti_out.replaceAll(":", "") )##Sherloc RDRs can contain ':'
+${ctti_out}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Macro: getPtrOffsetValue 
+## Utility macro that looks for a PTR label value and returns offset
+## if its included in the value label. 
+## ODL PTR offsets are 1-based, so this macro will subtract 1 from 
+## the original value.
+## Arguments: $ptrname Name of the PTR label
+
+#macro (getPtrOffsetValue $ptr_name )
+#set ( $goffval_result = '')
+#if ( $label.get($ptr_name) )
+#set  ( $ptr_node = $label.get($ptr_name) )
+#if ( $list_class.isAssignableFrom( $ptr_node.class ) && $ptr_node.get(1) )
+#set ( $goffval_result = $ptr_node.get(1).toString() )
+#set ( $goffval_result = $math.sub($goffval_result, 1) )
+#end
+#end
+${goffval_result}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createHeaderEntrySmart
+## Args:
+##  $name    : primary node name (used to created name value, local id, PTR node)
+##  $parseStd: parsing standard ('' is replaced with default)
+##  $descr   : description ('' is replaced with default)
+##
+## Calls createHeaderEntry() after extracting values for needed
+## arguments.
+##
+## If no node is found, then nothing is printed.
+
+#macro (createHeaderEntrySmart $name $parseStd  $descr ) 
+
+    #if ( $label.get($name) )
+
+      #set ($ches_name     = "#convertToTableName($name)" )
+      #set ($ches_lcl_id   = "#convertToTableId($name)" )
+      #set ($ches_ptr_name = "PTR_${name}" )
+
+      #if ( $parseStd.toString() == "" )
+          #set ( $parseStd = $CONST_M20_HEADER_PARSING_STANDARD )
+      #end
+      #if ( $label.get($name).get('HEADER_TYPE') )
+          #set ( $parseStd = $label.get($name).get('HEADER_TYPE') )
+      #end
+
+      #if ( $descr.toString() == "" )
+          #set ( $descr = $CONST_M20_HEADER_DESCRIPTION )
+      #end
+
+      #set ( $ches_offset = '' )
+      #set ( $ches_offset = "#getPtrOffsetValue($ches_ptr_name)" )
+
+      #set ( $ches_length = '' )
+      #if ( $label.get($name).get('BYTES') )
+          #set ( $ches_length = $label.get($name).get('BYTES') )
+      #end
+
+      ## Now call the dumb version since we did all the smart work
+      #createHeaderEntry( $ches_name $ches_lcl_id $ches_offset $ches_length $parseStd $descr )
+      
+    #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createHeaderEntry
+## Args:  $name    : name value
+##        $lcl_id  : local identifier 
+##        $offset  : offset value
+##        $length  : object length value
+##        $parseStd: parsing standard
+##        $descr   : description 
+##
+
+#macro (createHeaderEntry $name $lcl_id $offset $length $parseStd  $descr )
+        <Header> 
+            <name>$!name</name>
+            <local_identifier>$!lcl_id</local_identifier>
+            #if ($offset.toString() != "")
+                <offset unit="byte">$!offset</offset>
+            #end
+            #if ($length.toString() != "")
+                <object_length unit="byte">$!length</object_length>
+            #end            
+            <parsing_standard_id>$!parseStd</parsing_standard_id>
+            <description>$!descr</description>
+        </Header>
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createStreamTextEntrySmart
+## Args:
+##  $name    : primary node name (used to created name value, local id, PTR node)
+##  $parseStd: parsing standard ('' is replaced with default)
+##  $descr   : description ('' is replaced with default)
+##
+## Calls createStreamTextEntry() after extracting values for needed
+## arguments.
+##
+## If no node is found, then nothing is printed.
+
+
+#macro (createStreamTextEntrySmart $name  $parseStd  $descr )
+    #if ( $label.get($name) )
+
+        #set ($cstes_name     = "#convertToTableName($name)" )
+        #set ($cstes_lcl_id   = "#convertToTableId($name)" )
+        #set ($cstes_ptr_name = "PTR_${name}" )
+      
+        #set ( $cstes_offset = '' )
+        #set ( $cstes_offset = "#getPtrOffsetValue($cstes_ptr_name)" )
+        
+        #if ( $parseStd.toString() == "" )
+            #set ( $parseStd = $CONST_M20_STREAMTEXT_PARSING_STANDARD )
+        #end
+
+        #if ( $descr.toString() == "" )
+            #set ( $descr = $CONST_M20_STREAMTEXT_DESCRIPTION )
+        #end
+
+        ## Now call the dumb version since we did all the smart work
+        #createStreamTextEntry( $cstes_name  $cstes_lcl_id  $cstes_offset  $parseStd  $descr )
+
+    #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createStreamTextEntry
+## Args:
+##  $name    : name value
+##  $lcl_id  : local identifier 
+##  $offset  : offset value
+##  $parseStd: parsing standard
+##  $descr   : description 
+##
+
+#macro (createStreamTextEntry $name $lcl_id $offset  $parseStd  $descr )
+        <Stream_Text> 
+            <name>$!name</name>
+            <local_identifier>$!lcl_id</local_identifier>
+            <offset unit="byte">$!offset</offset>
+            <parsing_standard_id>$parseStd</parsing_standard_id>
+            <description>$!descr</description>
+            <record_delimiter>$CONST_M20_STREAMTEXT_RECORD_DELIMITER</record_delimiter>
+        </Stream_Text>
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createTableBinaryEntrySmart
+## Args:
+##  $name       : node name (under $label)
+##  $descr      : description text  ('' is replaced with default)
+##
+## Extracts other arguments needed for createTableBinaryEntry()       
+## and assume CONST_FALSE for $forceMsbInt argument
+##
+## If no node is found, then nothing is printed.
+
+#macro (createTableBinaryEntrySmart $name $descr )
+
+    #if ( $label.get($name) )
+
+        #set ($ctbes_node = $label.get($name) )
+
+
+        #set ($ctbes_name     = "#convertToTableName($name)" )
+        #set ($ctbes_lcl_id   = "#convertToTableId($name)" )
+        #set ($ctbes_ptr_name = "PTR_${name}" )
+
+        #set ($ctbes_offset = ''  )
+        #set ($ctbes_offset = "#getPtrOffsetValue($ctbes_ptr_name)" )
+
+        #if ( $descr.toString() == '')
+            #set ( $descr = $CONST_M20_TABLEBINARY_DESCRIPTION )
+        #end
+
+
+        #if ( $CONST_TRUE.equals("#isTableBinaryColumnAGroupEntry($ctbes_node)") )
+
+            ## If there is a CONTAINER child node, then proceed with assumption that we handle repetitions...
+            #createRepeatedTableBinaryEntry( $ctbes_node $ctbes_name $ctbes_lcl_id $ctbes_offset $descr $CONST_FALSE )
+
+        #else
+
+            ## Otherwise call the standard macro that iterates over COLUMN's
+            #createTableBinaryEntry( $ctbes_node $ctbes_name $ctbes_lcl_id $ctbes_offset $descr $CONST_FALSE )
+
+        #end
+
+
+
+    #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createTableBinaryEntry
+## Args:
+##  $node       : node contain a set of COLUMN nodes
+##  $name       : name value
+##  $lcl_id     : local identifier 
+##  $offset     : offset value
+##  $descr      : description text (used if node does not have DESCRIPTION field)
+##  $forceMsbInt: Flag indicating that datatype MSB_UNSIGNED_INTEGER 
+##                should be treated as MSB_INTEGER. 
+##                Expected values: $CONST_TRUE; $CONST_FALSE
+
+#macro (createTableBinaryEntry $node $name $lcl_id $offset $descr $forceMsbInt )
+
+    <Table_Binary> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <records>$!node.ROWS</records>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #else
+        <description>$!descr</description>
+      #end
+
+      
+      <Record_Binary>
+
+        <fields>$node.COLUMNS</fields>
+        <groups>0</groups>
+        #if ( $node.ROW_BYTES )
+          <record_length unit="byte">$node.ROW_BYTES</record_length>
+        #elseif ( $node.BYTES )
+          <record_length unit="byte">$node.BYTES</record_length>
+        #end
+        
+        ##Collect columns in a known list (handles single and multiple Column cases)
+        #set ($ctbe_cols_include_field_number = $CONST_TRUE )
+        #set ($ctbe_col_list = [])
+        #if ( $node.COLUMNS == 1 )
+          #set($ctbe_col_list_silencer = $ctbe_col_list.add( $node.COLUMN ) )
+          #set($ctbe_cols_include_field_number = $CONST_FALSE )
+        #else
+          #foreach( $col in $node.COLUMN )
+            #set($ctbe_col_list_silencer = $ctbe_col_list.add( $col ) )
+          #end
+        #end
+        
+        ## PDS rules say first legal field_location is 1, not 0.
+        ## But some instruments are starting at 0 still!
+        ## So this hack checks first column entry and if 0, knows to add 1 to all field_location's
+        ## Ugh...
+        ## Argh, also have to handle if COLUMN is a single node or list of nodes....
+        #set ( $lcl_hack_start_byte_adjustment = 0 )
+        #set ($firstColumnStartByte = '' )
+        #set ($firstColumnStartByte = "#getFirstValueFromStringOrListNode( $node 'COLUMN'  'START_BYTE' )" )
+        #if ( $firstColumnStartByte.equals("0") )
+            #set ( $lcl_hack_start_byte_adjustment = 1 )
+        #end        
+        #set ( $lcl_idx = 1 )
+
+        #foreach( $col in $ctbe_col_list )
+          <Field_Binary>
+            <name>$!col.NAME</name> 
+
+            ##If multiple columns exist, then include the field_number
+            #if ( $CONST_TRUE.equals($ctbe_cols_include_field_number) )
+              <field_number>$lcl_idx</field_number>
+              #set ( $lcl_idx = $math.add($lcl_idx, 1) )
+            #end
+
+            #if ( $col.START_BYTE )
+              #set ($lcl_start_byte = $!col.START_BYTE )
+              #set ($lcl_start_byte = $math.add( $lcl_start_byte, $lcl_hack_start_byte_adjustment ))
+              <field_location unit="byte">${lcl_start_byte}</field_location>
+            #end
+            ## Delete above and Uncomment below when EdrGen works! 
+            ##<field_location unit="byte">$!col.START_BYTE</field_location>
+
+            #if ( $col.BYTES )
+              ## Special case where MSB_UNSIGNED_INTEGER should be treated as MSB_INTEGER
+              ## 'Why?', you ask?  Cuz that's what I found in the M20 nonimage example
+              ## so now its here
+              
+              #if ( $CONST_TRUE.equals($forceMsbInt) && $col.DATA_TYPE.toString().equals("MSB_UNSIGNED_INTEGER") )
+
+                <!-- Note: We are explicitly treating datatype MSB_UNSIGNED_INTEGER as MSB_INTEGER -->
+                ## #getPds4DataTypeFieldBinary( 'MSB_INTEGER'    $col.BYTES )
+                #getPds4DataTypeFieldBinaryCheckLabel( $col   'MSB_INTEGER'   $col.BYTES )
+                <field_length unit="byte">$col.BYTES</field_length>
+                #if ( $col.OFFSET )
+                  <value_offset>$!col.OFFSET</value_offset>
+                #else  ##This special logic was found in the M20 source template
+                  #if ($col.BYTES == 2 )
+                    <value_offset>32768</value_offset>
+                  #elseif ($col.BYTES == 4 )
+                    <value_offset>2147483648</value_offset>
+                  #end
+                #end                
+
+              #else                
+
+                ## #getPds4DataTypeFieldBinary( $col.DATA_TYPE    $col.BYTES )
+                #getPds4DataTypeFieldBinaryCheckLabel( $col   $col.DATA_TYPE   $col.BYTES )
+                
+                <field_length unit="byte">$col.BYTES</field_length>
+                <value_offset>$!col.OFFSET</value_offset>
+
+              #end        
+
+
+            #end ## If_col.BYTES  
+
+            ##Todo: consider getting rid of the else-case (no 'TBD' default)
+                 
+            #if ( $col.DESCRIPTION )
+                <description>$esc.xml($col.DESCRIPTION)</description>
+            #else
+               <description>$CONST_M20_TABLEBINARY_COL_DESCRIPTION</description>
+            #end
+
+          </Field_Binary>
+        #end ##foreach-col
+
+      </Record_Binary>
+    </Table_Binary>
+#end
+
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createRepeatedTableBinaryEntry
+## Args:
+##  $node       : node contains a CONTAINER node with one child COLUMN node
+##  $name       : name value
+##  $lcl_id     : local identifier 
+##  $offset     : offset value
+##  $descr      : description text (used if node does not have DESCRIPTION field)
+##  $forceMsbInt: Flag indicating that datatype MSB_UNSIGNED_INTEGER 
+##                should be treated as MSB_INTEGER. 
+##                Expected values: $CONST_TRUE; $CONST_FALSE
+
+#macro (createRepeatedTableBinaryEntry $node $name $lcl_id $offset $descr $forceMsbInt )
+
+    
+    <Table_Binary> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <records>$!node.ROWS</records>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #end
+      
+      ##Collect CONTAINER's in a known list 
+      #set ($crtbe_ctnr_include_group_number = $CONST_TRUE )
+      #set ($crtbe_ctnr_list = [])
+      #if ( ! $list_class.isAssignableFrom( $node.CONTAINER.class ) )
+          #set($ctbe_col_list_silencer = $crtbe_ctnr_list.add( $node.CONTAINER ) )
+          #set ($crtbe_ctnr_include_group_number = $CONST_FALSE )
+      #else
+        #foreach( $containerNode in $node.CONTAINER )
+          #set($crtbe_ctnr_list_silencer = $crtbe_ctnr_list.add( $containerNode ) )
+        #end
+      #end
+      
+      #set ( $lcl_cntr_grp_idx = 1 )
+      #set($ctbe_cntr_list_size = $crtbe_ctnr_list.size() )
+
+      <Record_Binary>
+
+        <fields>0</fields>
+        <groups>$ctbe_cntr_list_size</groups>
+
+        #if ( $node.ROW_BYTES )
+          <record_length unit="byte">$node.ROW_BYTES</record_length>
+        #elseif ( $node.BYTES )
+          <record_length unit="byte">$node.BYTES</record_length>
+        #elseif ( $ctbe_cntr_list_size == 1 )
+          #set ($containerNode = $node.CONTAINER )
+          #if ( $containerNode.ROW_BYTES )
+            <record_length unit="byte">$containerNode.ROW_BYTES</record_length>
+          #elseif ( $containerNode.BYTES )
+            <record_length unit="byte">$containerNode.BYTES</record_length>
+          #end
+        #end
+        
+        #foreach ( $containerNode in $crtbe_ctnr_list )
+
+          #set ($containerColumnNode    = $containerNode.COLUMN )
+
+          ##Collect CONTAINER COLUMN's in a known list 
+          #set ($crtbe_colm_list = [])
+          #if ( ! $list_class.isAssignableFrom( $containerColumnNode.class ) )
+            #set($ctbe_col_list_silencer = $crtbe_colm_list.add( $containerColumnNode ) )
+          #else
+            #foreach( $containerColNode in $containerColumnNode )
+              #set($ccrtbe_colm_list_silencer = $crtbe_colm_list.add( $containerColNode ) )
+            #end
+          #end
+
+          #foreach ( $columnNode in $crtbe_colm_list )
+
+           <Group_Field_Binary>
+
+            <name>$!containerNode.NAME</name>
+
+            ##If multiple CONTAINERs exist, then include the group_number
+            #if ( $CONST_TRUE.equals($crtbe_ctnr_include_group_number))
+              <group_number>$lcl_cntr_grp_idx</group_number>
+              #set ( $lcl_cntr_grp_idx = $math.add($lcl_cntr_grp_idx, 1) )
+            #end
+
+
+
+            #if ( $containerNode.REPETITIONS )
+                <repetitions>$!containerNode.REPETITIONS</repetitions>
+            #else
+                <repetitions>1</repetitions>
+            #end
+
+            <fields>1</fields>
+            <groups>0</groups>
+
+            ###G***m label is missing a quote in the description field!
+            ###Im not wasting a bunch of time with this, so 
+            #if ( $containerNode.DESCRIPTION && 
+                 (! ( $!containerNode.DESCRIPTION.toString().contains("OBJECT") &&
+                      $!containerNode.DESCRIPTION.toString().contains("=") )))
+                <description>$esc.xml($containerNode.DESCRIPTION)</description>                
+            #end
+        
+            #if ( $containerNode.START_BYTE ) 
+                #set ($lcl_rep_grp_loc = $!containerNode.START_BYTE )
+                #if ( $lcl_rep_grp_loc == 0 ) ##Hack to handle incorrect 0-based values
+                    #set ($lcl_rep_grp_loc = $math.add($lcl_rep_grp_loc, '1') )
+                #end
+                <group_location unit="byte">$!lcl_rep_grp_loc</group_location>
+            #else
+                <group_location unit="byte">1</group_location>
+            #end
+
+            #if ( $containerNode.BYTES )
+                <group_length unit="byte">$!containerNode.BYTES</group_length>
+            #end
+
+            <Field_Binary>                
+                <name>$!columnNode.NAME</name>
+                <field_number>1</field_number>
+
+                #if ( $columnNode.START_BYTE ) 
+                  #set ($lcl_rep_fld_loc = $!columnNode.START_BYTE )
+                  #if ( $lcl_rep_fld_loc == 0 ) ##Hack to handle incorrect 0-based values
+                    #set ($lcl_rep_fld_loc = $math.add($lcl_rep_fld_loc, '1') )
+                  #end
+                  <field_location unit="byte">$!lcl_rep_fld_loc</field_location>
+                #else
+                  <field_location unit="byte">1</field_location>
+                #end           
+
+                #if ( $CONST_TRUE.equals($forceMsbInt) && $columnNode.DATA_TYPE.toString().equals("MSB_UNSIGNED_INTEGER") )
+                    <!-- Note: We are explicitly treating datatype MSB_UNSIGNED_INTEGER as MSB_INTEGER -->
+                    ## #getPds4DataTypeFieldBinary( 'MSB_INTEGER'    $columnNode.BYTES )
+                    #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   'MSB_INTEGER'   $columnNode.BYTES )
+                #else
+                    ## #getPds4DataTypeFieldBinary( $columnNode.DATA_TYPE    $columnNode.BYTES )
+                    #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   $columnNode.DATA_TYPE   $columnNode.BYTES )
+                #end
+                
+                #if ( $columnNode.BYTES )
+                    <field_length unit="byte">$!columnNode.BYTES</field_length>
+                #end
+
+                <unit>$!columnNode.UNIT</unit>
+
+                #if ( $columnNode.DESCRIPTION )                
+                   <description>$esc.xml($columnNode.DESCRIPTION)</description>
+                #end
+
+            </Field_Binary>
+
+          </Group_Field_Binary>
+
+         #end ##End-for-each-column-in-container
+        #end ##End-for-each-container
+
+      </Record_Binary>
+
+      
+
+    </Table_Binary>
+#end
+
+
+
+
+
+
+#macro (createRepeatedTableBinaryEntryORIGINAL $node $name $lcl_id $offset $descr $forceMsbInt )
+
+    #set ($containerNode = $node.CONTAINER )
+    #set ($columnNode    = $containerNode.COLUMN )
+
+
+    <Table_Binary> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <records>$!node.ROWS</records>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #end
+      
+      <Record_Binary>
+
+        <fields>0</fields>
+        <groups>1</groups>
+        #if ( $node.ROW_BYTES )
+          <record_length unit="byte">$node.ROW_BYTES</record_length>
+        #elseif ( $node.BYTES )
+          <record_length unit="byte">$node.BYTES</record_length>
+        #elseif ( $containerNode.ROW_BYTES )
+          <record_length unit="byte">$containerNode.ROW_BYTES</record_length>
+        #elseif ( $containerNode.BYTES )
+          <record_length unit="byte">$containerNode.BYTES</record_length>
+        #end
+        
+
+        <Group_Field_Binary>
+
+            #if ( $containerNode.REPETITIONS )
+                <repetitions>$!containerNode.REPETITIONS</repetitions>
+            #else
+                <repetitions>1</repetitions>
+            #end
+
+            <fields>1</fields>
+            <groups>0</groups>
+
+            ###G***m label is missing a quote in the description field!
+            ###Im not wasting a bunch of time with this, so 
+            #if ( $containerNode.DESCRIPTION && 
+                 (! ( $!containerNode.DESCRIPTION.toString().contains("OBJECT") &&
+                      $!containerNode.DESCRIPTION.toString().contains("=") )))
+                <description>$esc.xml($containerNode.DESCRIPTION)</description>
+            #end
+
+            #if ( $containerNode.START_BYTE ) 
+                #set ($lcl_rep_grp_loc = $!containerNode.START_BYTE )
+                #if ( $lcl_rep_grp_loc == 0 ) ##Hack to handle incorrect 0-based values
+                    #set ($lcl_rep_grp_loc = $math.add($lcl_rep_grp_loc, '1') )
+                #end
+                <group_location unit="byte">$!lcl_rep_grp_loc</group_location>
+            #else
+                <group_location unit="byte">1</group_location>
+            #end
+
+            #if ( $containerNode.BYTES )
+                <group_length unit="byte">$!containerNode.BYTES</group_length>
+            #end
+
+            <Field_Binary>                
+                <name>$!columnNode.NAME</name>
+                <field_number>1</field_number>
+
+                #if ( $columnNode.START_BYTE ) 
+                  #set ($lcl_rep_fld_loc = $!containerNode.START_BYTE )
+                  #if ( $lcl_rep_fld_loc == 0 ) ##Hack to handle incorrect 0-based values
+                    #set ($lcl_rep_fld_loc = $math.add($lcl_rep_fld_loc, '1') )
+                  #end
+                  <field_location unit="byte">$!lcl_rep_fld_loc</field_location>
+                #else
+                  <field_location unit="byte">1</field_location>
+                #end           
+
+                #if ( $CONST_TRUE.equals($forceMsbInt) && $columnNode.DATA_TYPE.toString().equals("MSB_UNSIGNED_INTEGER") )
+                    <!-- Note: We are explicitly treating datatype MSB_UNSIGNED_INTEGER as MSB_INTEGER -->
+                    ## #getPds4DataTypeFieldBinary( 'MSB_INTEGER'    $columnNode.BYTES )
+                    #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   'MSB_INTEGER'   $columnNode.BYTES )
+                #else
+                    ## #getPds4DataTypeFieldBinary( $columnNode.DATA_TYPE    $columnNode.BYTES )
+                    #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   $columnNode.DATA_TYPE   $columnNode.BYTES )
+                #end
+                
+                #if ( $columnNode.BYTES )
+                    <field_length unit="byte">$!columnNode.BYTES</field_length>
+                #end
+
+                <unit>$!columnNode.UNIT</unit>
+
+                #if ($columnNode.DESCRIPTION)
+                    <description>$esc.xml($columnNode.DESCRIPTION)</description>
+                #end
+
+            </Field_Binary>
+        </Group_Field_Binary>
+
+      </Record_Binary>
+    </Table_Binary>
+#end
+
+
+
+
+
+## Some work on being able to support Tables with mixed COLUMN
+## and CONTAINER 
+
+
+
+#macro (createTableBinaryEntryExperimental $node $name $lcl_id $offset $descr $forceMsbInt )
+
+    
+    <Table_Binary> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <records>$!node.ROWS</records>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #end
+      
+      ##Collect COLUMN's in a known list 
+      #set ($crtbe_clmn_include_field_number = $CONST_TRUE )
+      #set ($crtbe_clmn_list = [])
+      #if ( ! $list_class.isAssignableFrom( $node.COLUMN.class ) )
+          #set ($crtbe_clmn_list_silencer = $crtbe_clmn_list.add( $node.COLUMN ) )
+          #set ($crtbe_ctnr_include_group_number = $CONST_FALSE )
+      #else
+        #foreach( $columnNode in $node.COLUMN )
+          #set($crtbe_clmn_list_silencer = $crtbe_clmn_list.add( $columnNode ) )
+        #end
+      #end
+
+      ##Collect CONTAINER's in a known list 
+      #set ($crtbe_ctnr_include_group_number = $CONST_TRUE )
+      #set ($crtbe_ctnr_list = [])
+      #if ( ! $list_class.isAssignableFrom( $node.CONTAINER.class ) )
+          #set($ctbe_col_list_silencer = $crtbe_ctnr_list.add( $node.CONTAINER ) )
+          #set ($crtbe_ctnr_include_group_number = $CONST_FALSE )
+      #else
+        #foreach( $containerNode in $node.CONTAINER )
+          #set($crtbe_ctnr_list_silencer = $crtbe_ctnr_list.add( $containerNode ) )
+        #end
+      #end
+
+      
+      #set ( $lcl_cntr_grp_idx = 1 )
+      #set ( $lcl_clmn_fld_idx = 1 )
+      #set($ctbe_cntr_list_size = $crtbe_ctnr_list.size() )
+      #set($ctbe_clmn_list_size = $crtbe_clmn_list.size() )
+
+      <Record_Binary>
+
+        <fields>$ctbe_clmn_list_size</fields>
+        <groups>$ctbe_cntr_list_size</groups>
+
+        ## TODO: How to handle this between cases?
+        #if ( $node.ROW_BYTES )
+          <record_length unit="byte">$node.ROW_BYTES</record_length>
+        #elseif ( $node.BYTES )
+          <record_length unit="byte">$node.BYTES</record_length>
+        #elseif ( $ctbe_cntr_list_size == 1 )
+          #set ($containerNode = $node.CONTAINER )
+          #if ( $containerNode.ROW_BYTES )
+            <record_length unit="byte">$containerNode.ROW_BYTES</record_length>
+          #elseif ( $containerNode.BYTES )
+            <record_length unit="byte">$containerNode.BYTES</record_length>
+          #end
+        #end
+        
+
+        #foreach ( $childNode in $node.getChildObjects() )
+
+         #set ( $containerNode = '')
+         #set ( $columnNode    = '')
+
+
+         #if ( $childNode.getName().equals("COLUMN") )
+
+
+         #elseif ( $childNode.getName().equals("CONTAINER") )
+        
+            #set ( $containerNode = $childNode )
+            #set ( $columnNode    = $containerNode.COLUMN )
+
+            <Group_Field_Binary>
+
+                <name>$!containerNode.NAME</name>
+
+                ##If multiple CONTAINERs exist, then include the group_number
+                #if ( $CONST_TRUE.equals($crtbe_ctnr_include_group_number))
+                    <group_number>$lcl_cntr_grp_idx</group_number>
+                    #set ( $lcl_cntr_grp_idx = $math.add($lcl_cntr_grp_idx, 1) )
+                #end
+
+                #if ( $containerNode.REPETITIONS )
+                    <repetitions>$!containerNode.REPETITIONS</repetitions>
+                #else
+                    <repetitions>1</repetitions>
+                #end
+
+                <fields>1</fields>
+                <groups>0</groups>
+
+                ###G***m label is missing a quote in the description field!
+                ###Im not wasting a bunch of time with this, so 
+                #if ( $containerNode.DESCRIPTION && 
+                    (! ( $!containerNode.DESCRIPTION.toString().contains("OBJECT") &&
+                        $!containerNode.DESCRIPTION.toString().contains("=") )))
+                    <description>$esc.xml($containerNode.DESCRIPTION)</description>
+                #end
+            
+                #if ( $containerNode.START_BYTE ) 
+                    #set ($lcl_rep_grp_loc = $!containerNode.START_BYTE )
+                    #if ( $lcl_rep_grp_loc == 0 ) ##Hack to handle incorrect 0-based values
+                        #set ($lcl_rep_grp_loc = $math.add($lcl_rep_grp_loc, '1') )
+                    #end
+                    <group_location unit="byte">$!lcl_rep_grp_loc</group_location>
+                #else
+                    <group_location unit="byte">1</group_location>
+                #end
+
+                #if ( $containerNode.BYTES )
+                    <group_length unit="byte">$!containerNode.BYTES</group_length>
+                #end
+
+                <Field_Binary>                
+                    <name>$!columnNode.NAME</name>
+                    <field_number>1</field_number>
+
+                    #if ( $columnNode.START_BYTE ) 
+                    #set ($lcl_rep_fld_loc = $!containerNode.START_BYTE )
+                    #if ( $lcl_rep_fld_loc == 0 ) ##Hack to handle incorrect 0-based values
+                        #set ($lcl_rep_fld_loc = $math.add($lcl_rep_fld_loc, '1') )
+                    #end
+                    <field_location unit="byte">$!lcl_rep_fld_loc</field_location>
+                    #else
+                    <field_location unit="byte">1</field_location>
+                    #end           
+
+                    #if ( $CONST_TRUE.equals($forceMsbInt) && $columnNode.DATA_TYPE.toString().equals("MSB_UNSIGNED_INTEGER") )
+                        <!-- Note: We are explicitly treating datatype MSB_UNSIGNED_INTEGER as MSB_INTEGER -->
+                        ## #getPds4DataTypeFieldBinary( 'MSB_INTEGER'    $columnNode.BYTES )
+                        #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   'MSB_INTEGER'   $columnNode.BYTES )
+                    #else
+                        ## #getPds4DataTypeFieldBinary( $columnNode.DATA_TYPE    $columnNode.BYTES )
+                        #getPds4DataTypeFieldBinaryCheckLabel( $columnNode   $columnNode.DATA_TYPE   $columnNode.BYTES )
+                    #end
+                    
+                    #if ( $columnNode.BYTES )
+                        <field_length unit="byte">$!columnNode.BYTES</field_length>
+                    #end
+
+                    <unit>$!columnNode.UNIT</unit>
+
+                    #if ( $columnNode.DESCRIPTION )
+                        <description>$esc.xml($columnNode.DESCRIPTION)</description>
+                    #end
+                </Field_Binary>
+
+            </Group_Field_Binary>
+         #end
+        #end
+
+
+
+        #foreach ( $containerNode in $crtbe_ctnr_list )
+
+          #set ($columnNode    = $containerNode.COLUMN )
+
+          
+
+        #end ##End-for-each
+
+      </Record_Binary>
+    </Table_Binary>
+#end
+
+
+
+
+
+
+
+
+
+
+
+
+
+## -------------------------------------------------------------
+## 
+## Macro: createImageEntrySmart
+## Args:
+##  $name       : node name (under $label)
+##  $descr      : description text  ('' is replaced with default)
+##
+## Extracts other arguments needed for createImageEntry() 
+##
+## If no node is found, then nothing is printed.
+
+#macro (createImageEntrySmart $name $descr )
+    #if ( $label.get($name) )
+
+        #set ($cies_node = $label.get($name) )
+
+        #set ($cies_name     = "#convertToTableName($name)" )
+        #set ($cies_lcl_id   = "#convertToTableId($name)" )
+        #set ($cies_ptr_name = "PTR_${name}" )
+
+        #set ($cies_offset = ''  )
+        #set ($cies_offset = "#getPtrOffsetValue($cies_ptr_name)" )
+
+        ## if not set, set the descr to a default value
+        #if ( $descr.toString() == '')
+            #set ( $descr = $CONST_M20_IMAGE_ARRAY_DESCRIPTION )
+        #end
+
+        ## set the index order to a default value
+        #set ($cies_idx_order = $CONST_M20_IMAGE_ARRAY_AXIS_INDEX_ORDER  )
+
+        ## Now call the dumb version since we did all the smart work
+        #createImageArrayEntry( $cies_node $cies_name $cies_lcl_id $cies_offset $cies_idx_order $descr $CONST_FALSE )
+
+    #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createImageArrayEntry
+## Args:
+##  $node           : node containing LINES,LINE_SAMPLES nodes
+##  $name           : name value
+##  $lcl_id         : local identifier 
+##  $offset         : offset value
+##  $idx_order      : Index order string
+##  $descr          : description text (used if node does not have DESCRIPTION field)
+##  $forceMsbInt    : Flag indicating that datatype UNSIGNED_INTEGER 
+##                    should be treated as MSB_INTEGER. 
+##                    Expected values: $CONST_TRUE; $CONST_FALSE
+
+#macro (createImageArrayEntry $node $name $lcl_id $offset $idx_order $descr $forceMsbInt  )
+
+    ##So far I have only seen 2D, but lets be prepared for 3D
+    #set ( $ciae_axes_size = '2' )
+    #if ( $node.BANDS )
+      #set ( $ciae_axes_size = '3' )
+    #end
+
+    <Array_${ciae_axes_size}D> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $!offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <axes>$!ciae_axes_size</axes>
+      <axis_index_order>$!idx_order</axis_index_order>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #else
+        <description>$!descr</description>
+      #end
+
+
+      #if ( $node.SAMPLE_TYPE && $node.SAMPLE_BITS )
+        <Element_Array>
+          #if ( $CONST_TRUE.equals($forceMsbInt) && $node.SAMPLE_TYPE == "UNSIGNED_INTEGER" )
+              ## #getPds4DataTypeImage( 'MSB_INTEGER'      $node.SAMPLE_BITS )
+              #getPds4DataTypeImageCheckLabel( $node  'MSB_INTEGER'      $node.SAMPLE_BITS )
+          #else
+              ## #getPds4DataTypeImage( $node.SAMPLE_TYPE  $node.SAMPLE_BITS )
+              #getPds4DataTypeImageCheckLabel( $node  $node.SAMPLE_TYPE  $node.SAMPLE_BITS )
+          #end
+          <unit>DN</unit>
+        </Element_Array>
+      #end
+      #if ( $node.LINES )
+        <Axis_Array>
+          <axis_name>Line</axis_name>
+          <elements>$!node.LINES</elements>
+          <sequence_number>1</sequence_number>
+        </Axis_Array>
+      #end
+      #if ( $node.LINE_SAMPLES )
+        <Axis_Array>
+          <axis_name>Sample</axis_name>
+          <elements>$!node.LINE_SAMPLES</elements>
+          <sequence_number>2</sequence_number>
+        </Axis_Array>
+      #end
+      ## Will there EVER be a band entry for this data?  Prolly not...but maybe...?
+      #if ( $node.BANDS )
+        <Axis_Array>
+          <axis_name>Band</axis_name>
+          <elements>$!node.BANDS</elements>
+          <sequence_number>3</sequence_number>
+        </Axis_Array>
+      #end
+    </Array_${ciae_axes_size}D> 
+#end
+
+
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createTableDelimitedEntrySmart
+## Args:
+##  $name       : node name (under $label)
+##  $descr      : description text  ('' is replaced with default)
+##
+## Extracts other arguments needed for createTableDelimitedEntry()       
+## Also adds the File and Header groups before the table element
+##
+## If no node is found, then nothing is printed.
+
+#macro (createTableDelimitedEntrySmart $name $descr )
+
+    ## Special check to support Sherloc which is *still* deciding if
+    ## it has PTR labels with ':' in them....
+    ## If name is not in label but contains a ':', then remove
+    ## colon for the main check that follows
+    #if ( ! $label.get($name) && $name.contains(":") )
+        #set ($name = $name.replaceAll(":", "") )
+    #end
+
+    #if ( $label.get($name) )
+
+        #set ($ctdes_node = $label.get($name) )
+
+        #set ($ctdes_name     = "#convertToTableName($name)" )
+        #set ($ctdes_lcl_id   = "#convertToTableId($name)" )
+        #set ($ctdes_ptr_name = "PTR_${name}" )
+
+        #set ($ctdes_object_len = ''  )
+        #set ($ctdes_offset = ''  )
+
+        #set ($ctdes_offset = "#getPtrOffsetValue($ctdes_ptr_name)" )
+
+        #if ( $descr.toString() == '')
+            #set ( $descr = $CONST_M20_TABLEBINARY_DESCRIPTION )
+        #end
+
+        #set ( $ctdes_parse_std = $CONST_M20_TABLEDELIMITER_PARSE_STANDARD )
+        #set ( $ctdes_recdel    = $CONST_M20_TABLEDELIMITER_RECORD_DELIMITER )
+        #set ( $ctdes_flddel    = $CONST_M20_TABLEDELIMITER_FIELD_DELIMITER )
+        
+
+        ## Now call the dumb version since we did all the smart work
+        #createTableDelimitedEntry( $ctdes_node $ctdes_name $ctdes_lcl_id $ctdes_offset $ctdes_object_len $ctdes_parse_std $ctdes_recdel $ctdes_flddel $descr )
+
+    #end
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Quick helper macro that returns CONST_TRUE if the node
+## contains an 'ITEMS' child, CONST_FALSE otherwise.
+## NOTE: Test only works for TableDelimited Columns
+#macro (isTableDelimitedColumnAGroupEntry $colNode )
+#if ( $colNode.ITEMS )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## -------------------------------------------------------------
+
+## Quick helper macro that returns CONST_TRUE if the node
+## contains an 'CONTAINER' child, CONST_FALSE otherwise.
+## NOTE: Test only works for TableBinary Columns
+#macro (isTableBinaryColumnAGroupEntry $colNode )
+#if ( $colNode.CONTAINER )
+${CONST_TRUE}##
+#else
+${CONST_FALSE}##
+#end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## Macro: createTableDelimitedEntry
+## Args:
+##  $node           : node contain a set of COLUMN nodes
+##  $name           : name value
+##  $lcl_id         : local identifier 
+##  $offset         : offset value
+##  $objlen         : object length
+##  $parseStd       : parse standard
+##  $rec_delimiter  : record delimiter
+##  field_delimiter : field delimiter
+##  $descr          : description text (used if node does not have DESCRIPTION field)
+
+#macro (createTableDelimitedEntry $node $name $lcl_id $offset $objlen $parseStd $rec_delimiter $field_delimiter $descr  )
+
+
+    ## Note: This tracking is NOW a prestep to help us avoid adding Tables
+    ## that have no fields nor groups (02/10/22)
+
+    ## Track FIELD and GROUP count AND number/index values across the list of columns.
+    ## $node.FIELDS is the sum of both counts of fields and groups (how annoying!!)
+    #set ( $lcl_fld_count = 0 )
+    #set ( $lcl_grp_count = 0 )
+    #set ( $lcl_fld_idx = 1 )
+    #set ( $lcl_grp_idx = 1 )
+
+    ##Collect columns in a known list (handles single and multiple Column cases)
+    #set ($ctde_cols_include_fld_grp_number = $CONST_TRUE )
+    #set ($ctde_col_list = [])
+    #if ( $node.COLUMN )
+      ##Conditional: if node.COLUMNS == 1 OR (if node.COLUMN is not a list)
+      #if ( $node.COLUMNS == 1 || 
+            ( ! $list_class.isAssignableFrom( $node.COLUMN.class ) ) )        
+        #set($ctde_col_list_silencer = $ctde_col_list.add( $node.COLUMN ) )
+        #set($ctde_cols_include_fld_grp_number = $CONST_FALSE )
+
+        ##IF column has ITEMS, its a group, else its a field
+        #if ( $CONST_TRUE.equals("#isTableDelimitedColumnAGroupEntry($node.COLUMN)") )
+            #set ( $lcl_grp_count = '1' )
+        #else
+            #set ( $lcl_fld_count = '1' )
+        #end
+
+      #else        
+        #foreach( $col in $node.COLUMN )
+            
+          #set($ctde_col_list_silencer = $ctde_col_list.add( $col ) )
+
+          ##IF column has ITEMS, its a group, else its a field
+          #if ( $CONST_TRUE.equals("#isTableDelimitedColumnAGroupEntry($col)") )
+              #set ( $lcl_grp_count = $math.add($lcl_grp_count, 1) )
+          #else
+              #set ( $lcl_fld_count = $math.add($lcl_fld_count, 1) )
+          #end
+        #end
+      #end
+    #end
+
+    ## Some ODL labels might include an EMPTY table (no fields or groups)
+    ## and PDS4 disallows this (currently), so we added count-checks, 
+    ## and if they are both 0, then abort adding the Table_Delimited (02/10/22).
+    ## Also can check if ROWS is 0 first
+    #if ( $node.ROWS && $node.ROWS == 0 )
+
+      <!-- Note: The table '${name}' contained zero ROWS; 
+           so it was not included in this label -->
+
+    #elseif ( $lcl_grp_count == 0 && $lcl_fld_count == 0)    
+
+      <!-- Note: The Table_Delimited '${name}' contained zero fields and groups; 
+           so it was not included in this label -->
+
+    #else 
+
+     <Table_Delimited> 
+      <name>$!name</name> 
+      <local_identifier>$!lcl_id</local_identifier>
+
+      #if ( $offset != '' )
+        <offset unit="byte">$offset</offset>
+      #end
+
+      <object_length>$!objlen</object_length>
+
+      <parsing_standard_id>$!parseStd</parsing_standard_id>
+
+      #if ( $node.DESCRIPTION )
+        <description>$esc.xml($node.DESCRIPTION)</description>
+      #else
+        <description>$!descr</description>
+      #end
+
+      <records>$!node.ROWS</records>
+      <record_delimiter>$!rec_delimiter</record_delimiter>
+      <field_delimiter>$!field_delimiter</field_delimiter>
+
+      <Record_Delimited>
+
+        ## FIELDS value is actually sum of field and group entrys: <fields>$!node.FIELDS</fields>
+        <fields>$lcl_fld_count</fields>
+        <groups>$lcl_grp_count</groups>
+                
+
+        #foreach( $col in $ctde_col_list )
+
+          #if ( $CONST_TRUE.equals("#isTableDelimitedColumnAGroupEntry($col)") )
+
+            ##If ITEMS is in col node, then we need to represent it as a Group_Field_Delimited
+            <Group_Field_Delimited>
+
+                ## So, we have a name element under 'Group_Field_Delimited' AND its child 'Field_Delimited'
+                ## but the ODL field/group only contains one NAME label.  So we will append
+                ## _group to the name for the Group_Field_Delimited, and then use the original value
+                ## for the inner Field_Delimited.
+                ## And in the odd case of no NAME label, we will synthesize one...
+
+                #set ( $lcl_name_value = "groupfield_${lcl_grp_idx}" )
+                #if ( $col.NAME )
+                    #set ( $lcl_name_value = $col.NAME.toString() )
+                #end
+                #set ( $lcl_group_name_value = "${lcl_name_value}_group" )
+
+                <name>$lcl_group_name_value</name> 
+
+                ##If multiple columns exist, then include the field_number
+                #if ( $CONST_TRUE.equals($ctde_cols_include_fld_grp_number))
+                  <group_number>$lcl_grp_idx</group_number>
+                  #set ( $lcl_grp_idx = $math.add($lcl_grp_idx, 1) )
+                #end
+
+                <repetitions>$!col.ITEMS</repetitions>
+                <fields>1</fields>
+                <groups>0</groups>
+                #if ( $col.DESCRIPTION )
+                    <description>$esc.xml($col.DESCRIPTION)</description>
+                #end
+
+
+                <Field_Delimited>
+
+                  <name>$lcl_name_value</name>
+                  <field_number>1</field_number>
+                  ## #getPds4DataTypeSimple( $!col.DATA_TYPE )
+                  #getPds4DataTypeSimpleCheckLabel( $col  $!col.DATA_TYPE )
+                  <unit>$!col.UNIT</unit>
+                  #getFieldDelimitedSpecialConstants($col)
+
+                </Field_Delimited>
+
+            </Group_Field_Delimited>
+
+          #else
+
+            ##If no ITEMS child, then treat as standard <Field_Delimited>
+
+            <Field_Delimited>
+                <name>$!col.NAME</name> 
+
+                ##If multiple columns exist, then include the field_number
+                #if ( $CONST_TRUE.equals($ctde_cols_include_fld_grp_number))
+                  <field_number>$lcl_fld_idx</field_number>
+                  #set ( $lcl_fld_idx = $math.add($lcl_fld_idx, 1) )
+                #end
+
+                ## #getPds4DataTypeSimple( $!col.DATA_TYPE )
+                #getPds4DataTypeSimpleCheckLabel( $col  $!col.DATA_TYPE )
+
+                <unit>$!col.UNIT</unit>
+
+                #if ( $col.DESCRIPTION ) 
+                  <description>$esc.xml($col.DESCRIPTION)</description>
+                #end
+
+                #getFieldDelimitedSpecialConstants($col)
+
+            </Field_Delimited>
+
+          #end 
+
+        #end ##foreach-col
+
+      </Record_Delimited>
+
+     </Table_Delimited>
+
+    #end ##EndIfRowsAndFieldsOrGroupCountsNonZero
+#end
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+##Grabbed from Daniel Politte's velocity macros
+##To make it work tho, you will need to add a macro that inspects
+##all of the fields/columns to see if they are the same.
+##If so, then you can use the '<Group_Field_Delimited>'
+#macro( pds4table_DelimitedTableOneBigGroup $name $columnname)
+#* To construct a Table_Delimited that is just one kind of field repeated over and over.
+    This macro uses the first column's details to define what's in that repeated field. *# 
+#set( $spreadsheet_obj = $label.get($name) )
+#set( $pointer_obj = $label.get("PTR_$name") )
+<Table_Delimited>
+    <name>$name</name>
+    <offset unit="byte">$pointer_obj.get(1)</offset> ##If you enable this, then subtract ONE from the offset value!
+    <parsing_standard_id>PDS DSV 1</parsing_standard_id>
+    <records>$spreadsheet_obj.ROWS</records>
+    <record_delimiter>Carriage-Return Line-Feed</record_delimiter>
+    <field_delimiter>Comma</field_delimiter>
+    <Record_Delimited>
+        <fields>0</fields>
+        <groups>1</groups>
+        #* Omit this attribute; it's not required, and I think the values in the ODL labels are wrong. --shs
+        <maximum_record_length unit="byte">$spreadsheet_obj.ROW_BYTES</maximum_record_length>
+        *#
+        <Group_Field_Delimited>
+            <repetitions>$spreadsheet_obj.FIELDS</repetitions>
+            <fields>1</fields>
+            <groups>0</groups>
+            <Field_Delimited>
+                #set ( $col = $spreadsheet_obj.COLUMN.get(0) ) #* Use the first column as our model *#
+                <name>$columnname</name>
+                #getDataType($col.DATA_TYPE "ascii stuff this arg is ignored wheeee" $col.BYTES)
+                #* Omit this attribute; it's not required, and I think the values in the ODL labels are wrong. --shs
+                <maximum_field_length unit="byte">$col.BYTES</maximum_field_length>
+                *#
+                #if ( $col.DESCRIPTION )
+                  <description>$esc.xml($col.DESCRIPTION)</description>                
+                #end
+                #getFieldDelimitedSpecialConstants($col)
+            </Field_Delimited>
+        </Group_Field_Delimited>
+    </Record_Delimited>
+</Table_Delimited>
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Daniel Politte's macro was being called based on foreknowledge
+## of label groups that had repeated COLUMNS.  To make it work
+## generally, we would have to perform some basic checks, and then
+## check if all of the COLUMN's fields had the same values.
+## This macro would do that, but right now it seems premature
+## to implement without an explicit request
+##
+
+#macro( canGroupTabDelFields $node $name )
+${CONST_FALSE}##
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro( getCommonStartingSubstringDelim $str1 $str2 $delim )
+#set ($gcsss_rval = "")
+#if ( $str1.contains($delim) && $str2.contains($delim) && $str1.indexOf($delim) == $str2.indexOf($delim) && $str1.indexOf($delim) > 0 )     
+#set ($gcsss_delim_idx = $str1.indexOf($delim) )
+#set ($substr1 = $str1.substring(0, $gcsss_delim_idx))
+#set ($substr2 = $str2.substring(0, $gcsss_delim_idx))
+#if ($substr1.equals($substr2))
+#set ($gcsss_rval = $substr1)
+#end
+#end
+${gcsss_rval}##
+#end
+
+
+
+
+## =============================================================
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## OVERRIDING M2020 imaging velocity macros:
+## -------------------------------------------------------------
+
+## Overriding the M20 versions of isMosaic to always return false
+#macro (msn_isThumbnail $pid)
+${CONST_FALSE}##
+#end
+
+
+## -------------------------------------------------------------
+
+## Overriding the M20 versions of isMosaic to always return false
+#macro (isMosaic $pid)
+${CONST_FALSE}##
+#end
+
+## -------------------------------------------------------------
+
+##################################
+## msn_getProductType
+##
+## Overrides M20's implementation, thanks to RIMFAX
+## 
+
+#macro(msn_getProductType $pid)
+#set ($prodtype = "UNK" )##default product if we cannot determine
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+#if ( $INSTRUMENT_ID.toUpperCase().startsWith("RIMFAX") && $pid.length() > 23)
+#set ($prodtype = $pid.substring(19,22)) 
+#elseif ($pid.length() > 25)
+#set ($prodtype = $pid.substring(23,26))
+#end
+#end
+#set ($prodtype = $prodtype.toUpperCase()) 
+${prodtype}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Overriding the M20 versions of the ProductLid macros as it was getting too
+## annoying capturing the imaging and non-imaging cases (I am 
+## looking at YOU, Supercam).  
+## Maybe once dust settles they can be reunited.  Until then....
+
+
+##################################
+## msn_getProductLidPrefix
+## Returns the product LID prefix, that can be based on the filename
+#macro(msn_getProductLidPrefix $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_lid_pre_suf = "")
+#if ( $fileup.startsWith("ME") || $fileup.startsWith("WE") )
+#set ( $m20_lid_pre_suf = "mars2020_meda")
+#elseif ( $fileup.startsWith("X") )
+#set ( $m20_lid_pre_suf = "mars2020_rimfax")
+#elseif ( $fileup.startsWith("L") )
+#set ( $m20_lid_pre_suf = "mars2020_supercam")
+#elseif ( $fileup.startsWith("P") )
+#set ( $m20_lid_pre_suf = "mars2020_pixl")
+#elseif ( $fileup.startsWith("OX") )
+#set ( $m20_lid_pre_suf = "mars2020_moxie")
+#elseif ( $fileup.startsWith("SS") )
+#set ( $m20_lid_pre_suf = "mars2020_sherloc")
+#else
+#set ( $m20_lid_pre_suf = "m2020")##some default
+#end
+${PDS_LID_PREFIX}${m20_lid_pre_suf}##
+#end
+##################################
+
+## -------------------------------------------------------------
+
+##################################
+## msn_getProductLidCollection
+## Returns the product lid collection value, that can be based on the filename
+## For M20, this will be replaced with mission-specific logic
+#macro(msn_getProductLidCollection $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_lid_coll = "")
+#if ( $fileup.startsWith("X") )##RIMFAX
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionRimfax($fileup)" )
+#elseif ( $fileup.startsWith("P") )##PIXL
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionPixl($fileup)" )
+#elseif ( $fileup.startsWith("L") )##SUPERCAM
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionScam($fileup)" )
+#elseif ( $fileup.startsWith("S") )##SHERLOC  
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionSherloc($fileup)" )
+#elseif ( $fileup.startsWith("O") )##MOXIE
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionMoxie($fileup)" )
+#elseif ( $fileup.startsWith("W") )##MEDA
+#set ( $m20_lid_coll = "#msn_getProductLidCollectionMeda($fileup)" )
+#else
+#set ( $m20_lid_coll = $CONST_DATA )
+#end
+${m20_lid_coll}##
+#end
+##################################
+
+
+## msn_getProductStage
+## Returns the product stage value, that can be based on the filename
+## For M20, this will be replaced with mission-specific logic
+#macro(msn_getProductStage $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $m20_nonimg_prod_stage = "raw")
+#if ( $fileup.startsWith("X") )##RIMFAX
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStageRimfax($fileup)" )
+#elseif ( $fileup.startsWith("P") )##PIXL
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStagePixl($fileup)" )
+#elseif ( $fileup.startsWith("L") )##SUPERCAM
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStageScam($fileup)" )
+#elseif ( $fileup.startsWith("S") )##SHERLOC  
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStageSherloc($fileup)" )
+#elseif ( $fileup.startsWith("O") )##MOXIE
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStageMoxie($fileup)" )
+#elseif ( $fileup.startsWith("W") )##MEDA
+#set ( $m20_nonimg_prod_stage = "#msn_getProductStageMeda($fileup)" )
+#else
+#set ( $m20_nonimg_prod_stage = "raw" )
+#end
+${m20_nonimg_prod_stage}##
+#end
+
+
+## msn_getProductStageForSrcProdIntl
+## Source_Product_Internal was using the value from msn_getProductStage(),
+## bbbuttttttt it turns out that instead of 'processed' it wants 
+## 'partially_processed', hence this macro.  
+## Also, same applies for 'intermediate'
+## Also, for RIMFAX, hk -> raw
+#macro(msn_getProductStageForSrcProdIntl $filename )
+#set ( $lcl_mgpsfspi_val = "raw")
+#set ( $lcl_mgpsfspi_val = "#msn_getProductStage($filename)")
+#if ( $lcl_mgpsfspi_val.equals('processed') || $lcl_mgpsfspi_val.equals('intermediate') )
+#set ( $lcl_mgpsfspi_val = 'partially processed')
+#elseif ( $lcl_mgpsfspi_val.equals('hk') )
+#set ( $lcl_mgpsfspi_val = 'raw')
+#end
+${lcl_mgpsfspi_val}##
+#end
+
+
+## -------------------------------------------------------------
+## END of OVERRIDING M2020 imaging velocity macros:
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro (msn_getProductStageRimfax $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgsm_stage = "raw")
+#set ( $fileChar19 = $fileup.charAt(19) )
+#set ( $fileChar20 = $fileup.charAt(20) )
+#if ( $fileChar19 == 'E')##EDR-type
+#if ( $fileChar20 == 'H')
+#set ( $mgsm_stage = "hk")
+#else
+#set ( $mgsm_stage = "raw")
+#end##End-EDR-type
+#else##assume-RDR-type
+#set ( $mgsm_stage = "calibrated")
+#end##End-if-char19
+${mgsm_stage}##
+#end
+
+#macro (msn_getProductLidCollectionRimfax $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgplcr_type = "")
+#set ( $mgplcr_type = "#msn_getProductStageRimfax($filename)")
+${CONST_DATA}_${mgplcr_type}##
+#end
+
+## -------------------------------------------------------------
+
+#macro (msn_getProductStagePixl $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgsp_stage = "raw")
+#set ( $char23 = $fileup.charAt(23) )
+#if ( $char23 == 'E' )
+#set ( $mgsp_stage  = 'raw' )
+#else
+#set ( $mgsp_stage  = 'processed' )
+#end
+${mgsp_stage}##
+#end
+
+#macro (msn_getProductLidCollectionPixl $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgplcs_stage = 'processed' )##Reasonable guess default
+#set ( $mgplcs_stage = "#msn_getProductStagePixl($filename)" )
+#if ( $mgplcs_stage.equalsIgnoreCase("raw") )
+#set ( $mgplcs_type  = 'spectroscopy' )##Reasonable guess default
+#set ( $char24 = $fileup.charAt(24) )
+#if ( $char24 == 'B' || $char24 == 'D' || $char24 == 'M'|| $char24 == 'N'|| $char24 == 'P')
+#set ( $mgplcs_type  = 'spectroscopy' )
+#elseif ( $char24 == '0' || $char24 == '3' || $char24 == 'S'|| $char24 == 'N'|| $char24 == 'P')
+#set ( $mgplcs_type = "ancillary")
+#end##End-Inner-If
+#set ( $mgplcs_suffix = "${mgplcs_stage}_${mgplcs_type}" )
+#else
+#set ( $mgplcs_suffix  = $mgplcs_stage )
+#end
+${CONST_DATA}_${mgplcs_suffix}##
+#end
+
+## -------------------------------------------------------------
+
+## Per email from Susie (March 4, 2021)
+## For product types "Exy":
+## x = L/R/T/P = spectra data = collection data_raw_spectra 
+## x = S = SOH data = collection data_raw_soh (update 21.05.25: this will no longer be delivered?)
+## x = A = audio data = collection data_raw_audio
+##
+## By process state, do you mean raw, calibrated, or derived processing level? 
+## All raw data products have type Exy in the file name, for example EL1 for LIBS raw data. 
+## Calibrated data products have type Cxx. 
+## I have yet to see any derived products.
+
+#macro (msn_getProductStageScam $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgpss_stage = 'raw' )##Reasonable guess default
+#set ( $char23 = $fileup.charAt(23) )
+#if ( $char23 == 'E' )
+#set ( $mgpss_stage  = 'raw' )
+#elseif ( $char23 == 'C')
+#set ( $mgpss_stage  = 'calibrated' )
+#elseif ( $char23 == 'D')##Just a guess for now...
+#set ( $mgpss_stage  = 'derived' )
+#end
+${mgpss_stage}##
+#end
+
+
+#macro (msn_getProductLidCollectionScam $filename )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $mgplcs_type  = 'spectra' )##Reasonable guess default
+#set ( $mgplcs_stage = 'raw' )##Reasonable guess default
+#set ( $mgplcs_stage = "#msn_getProductStageScam($filename)" )
+#set ( $char24 = $fileup.charAt(24) )
+#if ( $char24 == 'L' || $char24 == 'R' || $char24 == 'T'|| $char24 == 'P')
+#set ( $mgplcs_type  = 'spectra' )
+#elseif ( $char24 == 'S')
+#set ( $mgplcs_type = "soh")
+#elseif ( $char24 == 'A')
+#set ( $mgplcs_type = "audio")
+#end
+${CONST_DATA}_${mgplcs_stage}_${mgplcs_type}##
+#end
+
+## -------------------------------------------------------------
+#*
+Info provided mid-May 2021:
+
+Details from Amy Chen's comment in the peer review liens:
+"data_intermediate will contain all partially processed data:
+-          any RRA, RRB, RCA, RCB, RRS, RCS files with a _ character in the 51st character of the filename (the laser normalization flag in the instrument-specific field)
+-          any RAR, RBR, RAC, RBC file
+data_processed:
+-          any RRA, RRB, RCA, RCB, RRS, RCS files with a N or Z character in the 51st character of the filename (the laser normalization flag in the instrument-specific field)
+-          any RRA or RRS file with a P character in the 50th character of the filename (the process data flag)
+-          any RLI, RLS, RLP, RMx file
+Susie: What about SS*RCC*CGNJ01 ? I'm guessing data_processed."
+
+*#
+
+
+#macro (msn_getProductStageSherloc $filename )
+#set ( $mgpss_stage = 'raw' )##Reasonable guess default
+#set ( $mgpss_prodtype = "#getProductType($filename)" )
+#set ( $prud = $mgpss_prodtype.toUpperCase() )
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $char50 = "" )
+#set ( $char51 = "" )
+#if ( $fileup.length() > 51 )
+#set ( $char50 = $fileup.substring(49,50) )
+#set ( $char51 = $fileup.substring(50,51) )
+#end
+#if ( $char50.equals("P") && ( $prud.equals("RRA") || $prud.equals("RRS") ) )
+#set ( $mgpss_stage = 'processed' )
+#elseif ( $char51.equals("_") && ( $prud.equals("RRA") || $prud.equals("RRB") || $prud.equals("RCA") || $prud.equals("RCB") || $prud.equals("RRS") || $prud.equals("RCS") ) )
+#set ( $mgpss_stage = 'intermediate' )
+#elseif ( $prud.equals("RAR") || $prud.equals("RBR") || $prud.equals("RAC") || $prud.equals("RBC") )
+#set ( $mgpss_stage = 'intermediate' )
+#elseif ( $prud.equals("RLI") || $prud.equals("RLS") || $prud.equals("RLP") || $prud.startsWith("RM") || $prud.equals("RCC")  )
+#set ( $mgpss_stage = 'processed' )
+#elseif ( ( $char51.equals("N") || $char51.equals("Z") ) && ( $prud.equals("RRA") || $prud.equals("RRB") || $prud.equals("RCA") || $prud.equals("RCB") || $prud.equals("RRS") || $prud.equals("RCS") ) )
+#set ( $mgpss_stage = 'processed' )
+#end
+${mgpss_stage}##
+#end
+
+
+#macro (msn_getProductLidCollectionSherloc $filename )
+#set ( $mgplcs_stage = 'raw' )##Reasonable guess default
+#set ( $mgplcs_stage = "#msn_getProductStageSherloc($filename)" )
+${CONST_DATA}_${mgplcs_stage}##
+#end
+
+## -------------------------------------------------------------
+
+##MOXIE SIS: filename: prodid
+## Product type identifier (three characters). For MOXIE data products, 
+## this metadata field is “EDR”; for calibrated data products, 
+## “RDR”; and for derived data products, “DDR”.
+
+#macro (msn_getProductStageMoxie $filename )
+#set ( $mgpsm_stage = 'raw' )##Reasonable guess default
+#set ( $fileup = $filename.toUpperCase() )
+#set ( $prodid = $fileup.substring(19, 22))
+#if ( $prodid.equals("EDR") )
+#set ( $mgpsm_stage = "raw" )
+#elseif ( $prodid.equals("RDR") )
+#set ( $mgpsm_stage = "calibrated" )
+#elseif ( $prodid.equals("DDR") )
+#set ( $mgpsm_stage = "derived" )
+#end
+${mgpsm_stage}##
+#end
+
+#macro (msn_getProductLidCollectionMoxie $filename )
+#set ( $moxlidcoll = $CONST_DATA )
+#set ( $mgplcm_stage = 'raw' )##Reasonable guess default
+#set ( $mgplcm_stage = "#msn_getProductStageMoxie($filename)" )
+${CONST_DATA}_${mgplcm_stage}##
+#end
+
+## -------------------------------------------------------------
+
+## MEDA: EDRs only for now, so 'data_raw_env'
+##
+## As of July 14, 2021, per Stirling, we are not handling MEDA nonimg
+## So the below is incorret implementation, but we dont care (for now)
+
+#macro (msn_getProductStageMeda $filename )
+#set ( $mgpsmeda_stage = 'raw' )##Reasonable guess default
+${mgpsmeda_stage}##
+#end
+
+#macro (msn_getProductLidCollectionMeda $filename )
+#set ( $mgplcmeda_stage  = "raw")
+#set ( $mgplcmeda_suffix = "env")
+#set ( $mgplcmeda_stage = "#msn_getProductStageMeda($filename)")
+${CONST_DATA}_${mgplcmeda_stage}_${mgplcmeda_suffix}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro (getIdentTitlePrefix $pid)
+#set ( $gitp_title = $MSN_IDENTIFICATION_AREA_TITLE_PREFIX )
+#if ( $INSTRUMENT_ID != '' && $CONST_FALSE.equals("#valueIsNilValue($INSTRUMENT_ID)") )
+#set ( $gitp_title = $gitp_title + " " + $INSTRUMENT_ID.toUpperCase() )
+#end
+#if ( $PRODUCT_TYPE != '' && $CONST_FALSE.equals("#valueIsNilValue($PRODUCT_TYPE)") )
+#set ( $gitp_title = $gitp_title + " " + $PRODUCT_TYPE )
+#end
+${gitp_title}##
+#end
+
+## -------------------------------------------------------------
+
+## -------------------------------------------------------------
+
+## Adds some label checks to determine if we need the DISP data dict
+## Rules: Do not include DISP data dict unless either:
+##        1) label contains an *_IMAGE entry with any prefix
+##           from the defined list $IMAGE_PREFIXES
+##
+
+#macro (shouldIncludeSectionForDisplay)
+#set ( $sidd_disp = $CONST_FALSE)
+#foreach ( $img_pref in $IMAGE_PREFIXES )          
+#set ( $img_node_name = "${img_pref}_IMAGE" )
+#if ( $label.get($img_node_name) )
+#set ( $sidd_disp = $CONST_TRUE)
+#end
+#end
+${sidd_disp}##
+#end
+
+## -------------------------------------------------------------
+
+## Adds some label checks to determine if we need the IMG data dict
+## Rules: Do not include IMG data dict unless either:
+##        1) INSTRUMENT_ID starts with Supercam; (using label or $INSTRUMENT_ID varaible)
+##        2) INSTRUMENT_STATE_PARMS has INSTRUMENT_TEMPERATURE
+##           and INSTRUMENT_TEMPERATURE_NAME
+##
+
+#macro (shouldIncludeSectionForImaging)
+#set ( $sidd_img = $CONST_FALSE)
+#if ( $label.INSTRUMENT_ID && $label.INSTRUMENT_ID.toString().toLowerCase().startsWith("supercam"))
+#set ( $sidd_img = $CONST_TRUE)
+#elseif ( $INSTRUMENT_ID.toLowerCase().startsWith("supercam"))
+#set ( $sidd_img = $CONST_TRUE)
+#end
+#if ( $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE && $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_NAME)
+#set ( $sidd_img = $CONST_TRUE)
+#end
+${sidd_img}##
+#end
+
+## -------------------------------------------------------------
+
+## Adds some label checks to determine if we need the IMG_SURFACE data dict
+## Rules: Do not include IMG_SURFACE data dict by default.
+##
+
+#macro (shouldIncludeSectionForImageSurface)
+${CONST_FALSE}##
+#end
+
+## -------------------------------------------------------------
+
+## Adds some label checks to determine if we need the PROC data dict
+## Rules: Do not include PROC data dict unless either:
+##           Any of the programs in $HISTORICAL_SOFTWARE_NAMES is found in label
+##
+
+#macro (shouldIncludeSectionForProcess)
+#set ( $sidd_procinfo = $CONST_FALSE)
+#foreach ( $program_name in $HISTORICAL_SOFTWARE_NAMES )
+#if ( $label.get($program_name) )
+#set ( $sidd_procinfo = $CONST_TRUE)
+#end
+#end
+${sidd_procinfo}##
+#end
+
+## -------------------------------------------------------------
+
+## Clear values for dict entries that should not be included with non-imaging Prolog
+#macro (clearUnusedDataDictsFromPrologMap)
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("CART",         ''))
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("MSN",          ''))
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("MSSS_CAM_MH",  ''))
+##Some dict entries are conditionally included, use associated macros to
+##tell us yes/no and clear value if no
+#if ( $CONST_FALSE.equals("#shouldIncludeSectionForDisplay()") )
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("DISP",         ''))
+#end
+#if ( $CONST_FALSE.equals("#shouldIncludeSectionForImaging()") )
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("IMG",         ''))
+#end
+#if ( $CONST_FALSE.equals("#shouldIncludeSectionForImageSurface()") )
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("IMG_SURFACE",  ''))
+#end
+#if ( $CONST_FALSE.equals("#shouldIncludeSectionForProcess()") )
+#set ($msn_dict_silencer = $MSN_PROLOG_VERSION_DICT.put("PROC",  ''))
+#end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Have to deal with two formats tho:
+## 1) list value, where filename is first elemment 
+##    ^PRIMARY_HEADER = (LS__C293T0624851584_618EA2__0010094scam15215_0001LUJ01.fits,0<BYTES>)
+## 2) string value: 
+##    ^RIMFAX_METADATA_SPREADSHEET = XS1_0084T0674392020EDM0130008N__A_1ER1rfax00011J01.CSV
+## 
+
+#macro (getFirstValueFromStringOrList $node_value )
+#set ($gfvfsol_val = '')
+#if ( ! $list_class.isAssignableFrom( $node_value.class ) )
+#set ( $gfvfsol_val = $node_value.toString())
+#else
+#set ( $gfvfsol_val = $node_value.get(0).toString())
+#end
+${gfvfsol_val}##
+#end
+
+## -------------------------------------------------------------
+
+
+## Examines the node under a parent to determine if that node is
+## a single node or a list of nodes.  If single, then the value
+## is returned.  If list, then the first node's value is returned.
+## $parent The parent node that contains a single or list of $node_name nodes.
+## $node_name The node that is either a single node or list of nodes
+## $value_node The name of the child of $node_name that contains value to be returned.
+## If a node does not exist, then empty string is returned.
+
+#macro (getFirstValueFromStringOrListNode $parent $node_name $value_node )
+#set ($gfvfsoln_val = '')
+#if ( $parent.get($node_name) )
+#set ($gfvfsoln_node = $parent.get($node_name) )
+#if ( ! $list_class.isAssignableFrom( $gfvfsoln_node.class ) )
+#set ($gfvfsoln_val_node = $gfvfsoln_node.get($value_node) )
+#set ( $gfvfsoln_val = $gfvfsoln_val_node.toString())
+#elseif ( $gfvfsoln_node.size() > 0 && $gfvfsoln_node.get(0).get($value_node) )
+#set ( $gfvfsoln_val_node = $gfvfsoln_node.get(0).get($value_node) )
+#set ( $gfvfsoln_val = $gfvfsoln_val_node.toString())
+#end
+#end
+${gfvfsoln_val}##
+#end
+
+## -------------------------------------------------------------
+
+## Hacky utility macro that iterates over all the of the 'PTR_'
+## nodes with the assumption that the first one it finds has
+## a value that points to the relevant file.
+
+#macro (getFirstPtrFileEntry)
+#set ( $gfpef_rval = "")
+#set($ptrList = $!$label.get("PTR_\w*") )
+#set($ptrListLen = $ptrList.size())
+#if ( $ptrListLen > 0)
+#foreach ( $i in [1..$ptrListLen] )
+#if ( $gfpef_rval.isEmpty() )
+#set ($curPtrName = $ptrList.get($foreach.index))
+#set ( $curPtrValue = $label.get($curPtrName))
+#set ( $gfpef_rval = "#getFirstValueFromStringOrList($curPtrValue)")
+#end
+#end
+#end
+${gfpef_rval}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Hacky utility macro that iterates over all the of the 'PTR_'
+## nodes and collects the list of unique filenames.
+## List is returned as ';'-delimited string
+
+#macro (getAllPtrFileEntries)
+#set ( $gapfe_rval = "")
+#set($unique_file_list = [])
+#set($ptrList = $!$label.get("PTR_\w*") )
+#set($ptrListLen = $ptrList.size())
+#if ( $ptrListLen > 0)
+#foreach ( $i in [1..$ptrListLen] )
+#set ($curPtrName = $ptrList.get($foreach.index))
+#set ( $curPtrValue = $label.get($curPtrName))
+#set ( $curFilename = "#getFirstValueFromStringOrList($curPtrValue)")
+#if ( ! $unique_file_list.contains($curFilename) )
+#set($silencer = $unique_file_list.add( $curFilename  ) )
+#end
+#end
+#end
+#set ( $gfpef_rval = "#joinStrList( $unique_file_list ';' )" )    
+${gfpef_rval}##
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Grabs all unique filenames extracted from all PTR_ nodes and 
+## for each, populates a FOA <File> node.
+## The first filename will use label PRODUCT_ID as a local_identifier,
+## while remaining entries have local_indentifier built from the 
+## filename (with extension).
+
+#macro (generateAllFoaFileEntries)
+        #set ( $fao_ptr_filename_list = "" )
+        #set ( $fao_ptr_filename_list = "#getAllPtrFileEntries()" ) ##returns formatted string
+        #set ( $fao_ptr_filename_list = $fao_ptr_filename_list.split(';') )
+        #set ( $fao_ptr_filename_list_is_empty = "#isSplitListFromJoinStrListEmpty($fao_ptr_filename_list)" )
+        #if ( $CONST_FALSE.equals($fao_ptr_filename_list_is_empty))
+          #set($fao_ptr_filename_first = $CONST_TRUE) ##track our first entry
+          #set($fao_ptr_filename_count = $fao_ptr_filename_list.size())
+          #foreach ( $i in [1..$fao_ptr_filename_count] )
+
+            #set ( $fao_ptr_filename = $fao_ptr_filename_list.get($foreach.index))            
+            #set ( $fpf_local_id     = $fao_ptr_filename.toLowerCase() )
+
+            ## if first, then use label PRODUCT_ID for local_identifier if available
+            #if ($fao_ptr_filename_first == $CONST_TRUE)
+              #set($fao_ptr_filename_first = $CONST_FALSE)
+              #if ( $label.PRODUCT_ID  )
+                #set ( $fpf_local_id = $!label.PRODUCT_ID.toLowerCase())
+              #end              
+            #end
+
+            <File>
+              <file_name>$fao_ptr_filename</file_name>
+              <local_identifier>$!fpf_local_id</local_identifier>
+              <creation_date_time>$!generate.current_date_utc</creation_date_time>
+            </File>
+
+           #end##foreach
+        #end##IfNonEmpty
+
+#end
+
+## Grabs the first found PTR_ node and uses the associated filename 
+## value to populate a single FOA <File> node, using the label
+## PRODUCT_ID for the local_identifier.
+
+#macro (generateSingleFoaFileEntry)
+        #set ( $fao_ptr_filename = '')
+        #set ( $fao_ptr_filename = "#getFirstPtrFileEntry()" )
+        #if ( $fao_ptr_filename != '')
+            <File>
+              <file_name>$fao_ptr_filename</file_name>
+              <local_identifier>$!label.PRODUCT_ID.toLowerCase()</local_identifier>
+              <creation_date_time>$!generate.current_date_utc</creation_date_time>
+            </File>
+        #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+## Macro that decides which LID/VID approach we use:
+## IMG (where LID does not contain version), or
+## GEO (where LID contains version).
+## We check product type first via shouldUsePdsGeoRulesForPid()
+## Then we check IDENT.RELEASE_RULES to see if that indicates a particular position.
+## Assume IMG rules until told otherwise
+
+#macro (shouldUsePdsGeoRulesForTemplate $pid)
+#set ($epgr_rval = $CONST_FALSE )
+#set ($epgr_rval = "#shouldUsePdsGeoRulesForPid($pid)" )
+##Now, check if RELEASE_RULES is included in label and if they say GEO 
+#if ( $IDENT.RELEASE_RULES )
+#set ( $supgrft_rule_val = '' )
+#set ( $supgrft_rule_val = $!IDENT.RELEASE_RULES.toString() )
+#if ( $supgrft_rule_val.equalsIgnoreCase("GEO") )
+#set ($epgr_rval = $CONST_TRUE )
+#elseif ( $supgrft_rule_val.equalsIgnoreCase("IMG") )
+#set ($epgr_rval = $CONST_FALSE )
+#end
+#end
+${epgr_rval}##
+#end
+
+## Macro that decides which LID/VID approach we use by inspecting pid argument:
+## IMG (where LID does not contain version), or
+## GEO (where LID contains version).
+##
+## Basically, for nonimg: we extract product type from the pid arg.
+## If the product type is defined AND does not start with 'E', then GEO applies and CONST_TRUE is returned
+## Otherwise, IMG applies, and CONST_FALSE is returned.
+
+#macro (shouldUsePdsGeoRulesForPid $pid)
+#set ($epgr_rval = $CONST_FALSE )
+##First check if we can make determination by product type (E** means IMG, else GEO)
+#set ($sliv_prod_type = '' )
+#set ($sliv_prod_type = "#getProductType($pid)" )
+#if ( $sliv_prod_type != '' && $CONST_FALSE.equals("#valueIsNilValue($sliv_prod_type)") && (! $!sliv_prod_type.toString().toUpperCase().startsWith("E")) )
+#set ($epgr_rval = $CONST_TRUE )
+#end
+${epgr_rval}##
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro (getModificationHistory)
+
+    ##Ensure our referenced variable is set, or use default of 1
+    #if ( $!MODIFICATION_VERSION_ID_MAJOR == '')
+    #set ( $MODIFICATION_VERSION_ID_MAJOR = '1')
+    #end
+
+    <Modification_History>
+        <Modification_Detail>
+            <modification_date>$generate.current_date_utc</modification_date>
+            <version_id>${MODIFICATION_VERSION_ID_MAJOR}.0</version_id>
+            <description>
+            This version_id matches the Mars 2020 internal processing version 
+            number, which provides consistency and tracability across both ops 
+            and archive products.  Lower-numbered versions of this product thus 
+            may not be present in this collection.  The collection inventory 
+            lists all the versions of this product in the collection.
+            </description>
+        </Modification_Detail>
+    </Modification_History>
+#end
+
+
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Scans the label's PTR_* entries looking for undeclared PTRs,
+## specifically for files of known types (right now only CSV).  
+## For each mapped file type, the PTR suffix (original PTR name 
+## but without the 'PTR_' prefix) is compared to existing list 
+## of strings.  If not present, it is added.
+##
+## Context: Everytime we ran with on a new PIXL product set, there would
+## be at least one new PTR_ entry that we didn't know about.  So
+## this macro adds some flexibility by automatically adding new PTR_ entries
+## to the appropriate list (when the PTR_ entry filetype can safely
+## be determined - which is why only CSV for now)
+
+#macro (scanForUndeclaredPtrEntries)
+#set($unique_ptr_list = [])
+#set($del_items_to_add_list = [])
+#set($bin_items_to_add_list = [])
+#set($ptrList = $!$label.get("PTR_\w*") )
+#set($ptrListLen = $ptrList.size())
+#if ( $ptrListLen > 0)
+#foreach ( $i in [1..$ptrListLen] )
+#set ($curPtrName = $ptrList.get($foreach.index))
+#set ($curPtrNameSansPtr = $curPtrName.substring(4) )##Remove 'PTR_'
+#set ($curPtrValue = $label.get($curPtrName) )
+#set ($curFilename = "#getFirstValueFromStringOrList($curPtrValue)")
+#set ($curFilenameUp = $curFilename.toUpperCase() )
+## Sigh, MSL seems to to be including '_TABLE' in the name....
+#set ($curPtrNameSansPtr = "#removeEndingStrIfFound($curPtrNameSansPtr '_TABLE'  $CONST_TRUE )" )
+## Check if it should be considered for Delimited table prefixes
+#foreach ( $del_table_exten in $DEL_TABLE_FILE_EXTENS )
+#set ($del_table_exten_up = $del_table_exten.toUpperCase() )
+#if ( $curFilenameUp.endsWith($del_table_exten_up) )
+#set ( $addCurPtrName = $CONST_TRUE )
+#foreach ( $prefix in $DEL_TABLE_PREFIXES )
+#if ( $prefix.equals($curPtrNameSansPtr))
+#set ( $addCurPtrName = $CONST_FALSE )
+#elseif ( $prefix.contains(":") )##Sigh,thanksSherloc...
+#set ( $prefixNoColon = $prefix.replaceAll(":", "") )
+#if ( $prefixNoColon.equals($curPtrNameSansPtr) )
+#set ( $addCurPtrName = $CONST_FALSE )
+#end
+#end
+#end
+#if( $addCurPtrName.equals($CONST_TRUE ) )
+#set($silencer = $del_items_to_add_list.add( $curPtrNameSansPtr ) )
+#end
+#end
+#end##EndForEachDelExtens
+## Check if it should be considered for Binary table prefixes
+#foreach ( $bin_table_exten in $BIN_TABLE_FILE_EXTENS )
+#set ($bin_table_exten = $bin_table_exten.toUpperCase() )
+#if ( $curFilenameUp.endsWith($bin_table_exten) )
+#set ( $addCurPtrName = $CONST_TRUE )
+#foreach ( $prefix in $BIN_TABLE_PREFIXES )
+#if ( $prefix.equals($curPtrNameSansPtr))
+#set ( $addCurPtrName = $CONST_FALSE )
+#elseif ( $prefix.contains(":") )##Sigh,thanksSherloc...
+#set ( $prefixNoColon = $prefix.replaceAll(":", "") )
+#if ( $prefixNoColon.equals($curPtrNameSansPtr) )
+#set ( $addCurPtrName = $CONST_FALSE )
+#end
+#end
+#end
+#if( $addCurPtrName.equals($CONST_TRUE ) )
+#set($silencer = $bin_items_to_add_list.add( $curPtrNameSansPtr ) )
+#end
+#end
+#end##EndForEachBinExtens
+#end##EndForEachPtrEntryInList
+#end##EndIfPtrListNonEmpty
+## Now iterate over new DEL items to add and add to the list
+#foreach ( $del_item_to_add in $del_items_to_add_list )
+#set( $silencer = $DEL_TABLE_PREFIXES.add( $del_item_to_add ) )
+#end
+## Now iterate over new BIN items to add and add to the list
+#foreach ( $bin_item_to_add in $bin_items_to_add_list )
+#set( $silencer = $BIN_TABLE_PREFIXES.add( $bin_item_to_add ) )
+#end
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+##Overrides general.vm::getFileExtensionBestEffort() to:
+## Check if initial match for filename ends in LBL
+## Adds the first PTR entry as a possible filename source
+
+#macro(getFileExtensionBestEffort $filepath_maybe )
+#set ($gfebe_filext   = "")
+#set ($gfebe_filename = "" )
+#if ( $filepath_maybe != '' && $filepath_maybe.toString().contains(".") )
+#set ($gfebe_filename = $filepath_maybe.toString() )
+#elseif ( $IDENT.PRODUCT_ID && $IDENT.PRODUCT_ID.toString().contains("."))
+#set ($gfebe_filename = $IDENT.PRODUCT_ID.toString() )
+#elseif ( $label.PDS4_IMAGE && $label.PDS4_IMAGE.detached_filename && $label.PDS4_IMAGE.detached_filename.contains("."))
+#set ($gfebe_filename = $label.PDS4_IMAGE.detached_filename.toString() )
+#end
+#if ( $gfebe_filename != '' )
+#set ($gfebe_filext = "#getFileExtension($gfebe_filename)")
+#end
+#if ( $gfebe_filext == '' || $gfebe_filext.equalsIgnoreCase($CONST_UNKNOWN) || $gfebe_filext.equalsIgnoreCase("LBL"))
+#set ( $gfebe_filext   = "")
+#set ( $gfebe_filename = "" )
+#set ( $gfebe_filename = "#getFirstPtrFileEntry()" )
+#if ( $gfebe_filename != '')
+#set ( $gfebe_filext = "#getFileExtension($gfebe_filename)" )
+#end
+#end
+#if ( $gfebe_filext == '' || $gfebe_filext.equalsIgnoreCase($CONST_UNKNOWN) || $gfebe_filext.equalsIgnoreCase("LBL"))
+#set ( $gfebe_filext = "")
+#end
+${gfebe_filext}##
+#end
+
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro( m20_includeOdlLabelFile $pid )
+#set ( $m20iolf_result = $CONST_FALSE )
+#if ( $INSTRUMENT_ID.toUpperCase().startsWith("RIMFAX") )
+#set ( $m20iolf_result = $CONST_TRUE )
+#end
+${m20iolf_result}##
+#end
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+##################################
+## Override's general's generateLIDVID()
+## for M20 specifics.
+## We need to look at the $pidFull to see if it should follow
+## Imaging node or Geo node rules and react accordingly.
+##
+## By default, treat with IMG mode.  Then check if
+## GEO node is enabled, in which case update values
+##
+#macro(generateLIDVID $lid_prefix $collection $pidFull)
+#set ($lid_suffix     = $collection.toLowerCase())
+#set ($pid_w_wo_vers  = "#createPidFromVersionedName($pidFull)")
+#set ($pid_version_id = "#getPIDVersion($pidFull)" )
+#if ( $CONST_TRUE.equals("#shouldUsePdsGeoRulesForPid($pidFull)") )
+#set ($pid_w_wo_vers  = "#createPidFromVersionlessName($pidFull)")
+#set ($pid_version_id = "1" )
+#end
+#set ($pid_w_wo_vers  = $pid_w_wo_vers.toLowerCase() )
+${lid_prefix}:${lid_suffix}:${pid_w_wo_vers}::${pid_version_id}.0##
+#end
+##################################
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+#macro(generateReferenceDocumentSisEntries $filename)
+  #set ($gdll_res = '')
+  #set ($gdll_lid_prefix = "#msn_getProductLidPrefix($filename)")
+  #set ($gdll_doc_list = '' )
+  #if ($gdll_lid_prefix.endsWith("pixl"))
+    #set ($gdll_doc_list = $M20_DOC_LIST_PIXL )
+  #elseif ($gdll_lid_prefix.endsWith("rimfax"))
+    #set ($gdll_doc_list = $M20_DOC_LIST_RIMFAX )
+  #elseif ($gdll_lid_prefix.endsWith("sherloc"))
+    #set ($gdll_doc_list = $M20_DOC_LIST_SHERLOC )
+  #elseif ($gdll_lid_prefix.endsWith("supercam"))
+    #set ($gdll_doc_list = $M20_DOC_LIST_SUPERCAM )
+  #end
+  #if ( $gdll_doc_list != '' )
+    #foreach ( $gdll_doc in $gdll_doc_list )
+        <Internal_Reference>            
+            <lid_reference>${gdll_lid_prefix}:document:${gdll_doc}</lid_reference>
+            <reference_type>data_to_document</reference_type>
+        </Internal_Reference>
+    #end
+  #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## Prints the Special_Constants section for a Field_Delimited parent element
+
+#macro (getFieldDelimitedSpecialConstants $node )
+  #if ( $node && ( $node.MISSING_CONSTANT || $node.INVALID_CONSTANT || 
+                   $node.UNKNOWN_CONSTANT || $!node.NOT_APPLICABLE_CONSTANT) )
+    <Special_Constants>
+      <missing_constant>$!node.MISSING_CONSTANT</missing_constant>
+      <invalid_constant>$!node.INVALID_CONSTANT</invalid_constant>
+      <unknown_constant>$!node.UNKNOWN_CONSTANT</unknown_constant>
+      <not_applicable_constant>$!node.NOT_APPLICABLE_CONSTANT</not_applicable_constant>
+    </Special_Constants>
+  #end
+#end
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------
+
+## -------------------------------------------------------------
+## -------------------------------------------------------------

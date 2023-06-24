@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8"?>
+###set ( $DEBUG = 1 )
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+## Parse the various macro files...
+
+## The reason this vmac goes first is that it allows us to override any
+## macros that might be declared later in the usual vmac files.
+#parse("m2020_nonimg_macros.vmac" ) ## M20 Non-Imaging macros
+
+## The usual suspects...
+#parse( "vcore.vmac" )          ##Core constants and values
+#parse( "utils.vmac" )          ##Generic utilities
+#parse( "general.vmac" )        ##Common PDS macros
+#parse( "image.vmac" )          ##Image macros
+#parse( "surface.vmac" )        ##Surface macros
+#parse( "mission_factory.vmac" )##Load mission-specific macros
+
+
+## ------------------------------------------------------------------------
+
+## PID_FULL is same for all cases
+#set ($PID_FULL = "#getPidFullname()" )
+
+
+## Set the PID and VERSION_ID, depending on whether filename fits the spec
+
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+  ## Filename spec is in play, we can parse the filename for PID and version
+  #set ($PID               = "#createPidFromVersionedName($PID_FULL)" )
+  #set ($VERSION_ID        = "#getPIDVersionCheckLabel($PID_FULL)")
+#else
+  ## Filename spec is NOT in play, so force versionless parsing
+  #set ($PID               = "#createPidFromVersionlessName($PID_FULL)" )
+  #set ($VERSION_ID        = "#getPIDVersionCheckLabel($PID_FULL)")
+  #if ( $CONST_UNKNOWN.equals($VERSION_ID))
+    #set ($VERSION_ID      = '1' )
+  #end
+#end
+
+## Assume IMG method such that the PID is with version removed
+#set ($PRIMARY_PID_VALUE = $PID )
+
+## Note: These macros are still enabled check the label, which is
+## why we still call them in either case:
+#set ($INSTRUMENT_NAME   = "#getInstrumentName($PID)")
+#set ($INSTRUMENT_ID     = "#getInstrumentId($PID)")
+#set ($PLANET_DAY_NUMBER = "#getPlanetDayNumberOrSol($PID)" )
+
+## Next set of variables are dependent on the PID being parsable.
+## If its not parseable, using dummy defaults
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+  #set ($PRODUCT_TYPE      = "#getProductType($PID)" )  
+  #set ($IS_MOSAIC         = "#isMosaic($PID)")
+  #set ($IS_DATATYPE_FLOAT = "#isFloatDataType()")
+  #set ($IS_THUMBNAIL      = "#isThumbnail($PID)")
+  #set ($PROCESSING_LEVEL  = "#getProcessingLevelCheckLabel($PRODUCT_TYPE $IS_MOSAIC)" )
+  #set ($COMPRESSION_NAME  = "#getCompressionName()" ) 
+#else
+  ## Filename spec is NOT in play, so set dummy defaults
+  #set ($PRODUCT_TYPE      = '' )
+  #set ($IS_MOSAIC         = $CONST_FALSE )
+  #set ($IS_DATATYPE_FLOAT = $CONST_FALSE )
+  #set ($IS_THUMBNAIL      = $CONST_FALSE )
+  #set ($PROCESSING_LEVEL  = "#getProcessingLevelCheckLabel($PRODUCT_TYPE $IS_MOSAIC)" )
+  #set ($COMPRESSION_NAME  = '') 
+#end
+
+#set ($LID_PREFIX      = "#getProductLidPrefixCheckLabel($PID)" )
+#set ($LID_COLLECTION  = "#getProductLidCollectionCheckLabel($PID)" )
+
+## Assume IMG method such that the PID is with version removed
+#set ($PRIMARY_PID_VALUE = $PID )
+
+
+## Non-img macro handles this on an instrument basis
+#set ($ID_TITLE_PREFIX = "#getIdentTitlePrefix($PID)" )
+
+
+## For use with the Title element, optMosaicStr will be 
+## rendered as either 'Mosaic' or ''
+#set ( $optMosaicStr = "" )
+
+## Get input filename
+#set ($INPUT_FILE_NAME  = "#getInputFilename()" )
+#set ($INPUT_FILE_EXTEN = "#getFileExtension( $INPUT_FILE_NAME )" )
+
+## Translated filename extension as determined by the mission.
+## Default case just returns the passed-in argument.
+#set ($LEGAL_FILE_EXTEN  = "#msn_getLegalFileExtension( $INPUT_FILE_EXTEN )" )
+#set ($SPECIAL_PROC_FLAG = "#msn_getSpecialProcessingFlag($INPUT_FILE_NAME)" )
+
+
+#set ($MODIFICATION_VERSION_ID_MAJOR  = "1")
+
+## -----------------------------
+## PDS has two approaches to LIDs:  (Identification_Area::logical_identifier)
+## 1) IMG: LID does not include filename version, VID contains the version.
+## 2) GEO: LID includes filename version, VID defaults to 1.0
+## This template will need to handle both.
+## Typically, nonimg EDR's follow the IMG rules, while RDRs follow the GEO rules.
+## By default, we assume IMG rules, so check if we need to use GEO instead
+
+
+##Check for GEO rules here, if true, update some variables, including
+## $PDS_IMG_NODE_RULES_ENFORCED which was set to CONST_TRUE in vcore
+#if ( $CONST_TRUE.equals("#shouldUsePdsGeoRulesForTemplate($PID)") )
+#set ($PDS_IMG_NODE_RULES_ENFORCED = $CONST_FALSE )
+#set ($PRIMARY_PID_VALUE = $PID_FULL )
+#set ($VERSION_ID = "1")
+#end
+
+
+## -------------------------------------------------
+## List entries for iteration in this template
+
+## Software programs
+#populateSoftwarePrograms()
+
+## Msn ptr tables for binary, delimited, and images
+#populateMsnPtrPrefixes()
+
+## -------------------------------------------------   
+
+## Modify some of the Mission variables that m20 velo library setup
+## to make them work for non-imaging case:
+
+
+## Determine which data-dicts should not be included and clear
+## their value from the prolog version map
+
+#clearUnusedDataDictsFromPrologMap()
+ 
+
+##============================================
+## Create the mission-specific prolog section
+##
+
+#generateProlog($MSN_PROLOG_VERSION_DICT)
+
+
+
+  ## ------------------------------------------------------------------
+  ## ------------------------------------------------------------------
+
+  <Identification_Area>    
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PRIMARY_PID_VALUE )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    
+    <title>$ID_TITLE_PREFIX Observational Product - $PRIMARY_PID_VALUE </title>
+
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Observational</product_class>
+
+    #if ( $label.PRODUCT_ID )
+     <Alias_List>
+      <Alias>
+        <alternate_id>$label.PRODUCT_ID</alternate_id>
+        #if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+          <comment>VICAR PRODUCT_ID</comment>
+        #else
+          <comment>PRODUCT_ID</comment>
+        #end
+      </Alias>
+     </Alias_List>
+    #end
+
+    ## Nov'21: Bob requests that IMG case not include ModHistory at all
+    #if ( $CONST_FALSE.equals($PDS_IMG_NODE_RULES_ENFORCED) )
+        #getModificationHistory()
+    #end
+    
+  </Identification_Area>
+
+  ## ------------------------------------------------------------------
+  ## ------------------------------------------------------------------
+
+  <Observation_Area>
+
+    ## <!-- From mipl, but modified to add Nil-checks -->    
+    <Time_Coordinates>
+      
+      #if ( $IDENT.START_TIME && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'START_TIME')") ))
+        <start_date_time>#getZuluTime( $IDENT.START_TIME )</start_date_time>
+      #else
+        #getNodeWithValueOrAsNil( $IDENT  'START_TIME'  'start_date_time'  $NO_UNIT   $CONST_TRUE )
+      #end
+
+      #if( $IDENT.STOP_TIME && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'STOP_TIME')") ))
+        <stop_date_time>#getZuluTime( $IDENT.STOP_TIME )</stop_date_time>
+      #else
+        #getNodeWithValueOrAsNil( $IDENT  'STOP_TIME'  'stop_date_time'  $NO_UNIT  $CONST_TRUE )
+      #end
+      
+      #if ( $IDENT.LOCAL_MEAN_SOLAR_TIME && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'LOCAL_MEAN_SOLAR_TIME')") ))
+        <local_mean_solar_time>#splitSolarTimeSol( $!IDENT.LOCAL_MEAN_SOLAR_TIME.toString() $CONST_TIME )</local_mean_solar_time>
+      #end
+      
+      #if ( $IDENT.LOCAL_TRUE_SOLAR_TIME && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'LOCAL_TRUE_SOLAR_TIME')") ))
+        <local_true_solar_time>$!IDENT.LOCAL_TRUE_SOLAR_TIME</local_true_solar_time>
+      #end
+
+      #if ( $IDENT.SOLAR_LONGITUDE && ( $CONST_FALSE.equals("#nodeHasNilValue( $IDENT 'SOLAR_LONGITUDE')") ))
+        <solar_longitude unit="deg">$!IDENT.SOLAR_LONGITUDE</solar_longitude>
+      #end
+
+    </Time_Coordinates>
+
+    ## <!-- From MIPL -->  
+    #getInvestigationArea()
+
+    ## <!-- From MIPL -->
+    #getObservingSystem()
+
+    ## <!-- From MIPL -->
+    #getTargetIdentification()
+
+    ## <!-- From MIPL -->
+    <Mission_Area>
+        ##Include mission-specific entries for this section
+        #msn_generateMissionAreaSection( $PRIMARY_PID_VALUE )
+    </Mission_Area>
+
+
+    <Discipline_Area>
+    
+        ######################################
+        ## Display Discipline Area
+        ######################################
+
+        ## We asked this macro if the DISP DataDict was included, so ask again.
+        ## If so then we were expecting <Imaging> node to be included as well 
+
+        #if ($CONST_TRUE.equals("#shouldIncludeSectionForDisplay()") )
+
+            ## Based on one example XML, it seemed DisplaySettings entries were added
+            ## for each image entry from IMAGE_PREFIXES (with some string manip applied)
+            #foreach ( $img_pref in $IMAGE_PREFIXES )
+                #set ( $img_node_name = "${img_pref}_IMAGE" )
+                #if ( $label.get($img_node_name) )
+                    #set ( $img_pid = $img_pref.toLowerCase() )
+                    #set ( $img_pid = $img_pid.replaceAll("_", "-") )
+                    #set ( $img_pid = "${img_pid}-image" )
+                    <disp:Display_Settings>
+                        #defaultDisplaySettings( '' $img_pid )
+                    </disp:Display_Settings>
+                #end
+            #end
+
+        #end
+
+        ######################################
+        ## Geometry Discipline Area
+        ######################################
+
+        ## <!-- From MIPL, new tho -->
+        #getGeometrySection()
+
+
+        ######################################
+        ## Imaging Discipline Area
+        ######################################
+
+        ## We asked this macro if the IMG DataDict was included, so ask again.
+        ## If so then we were expecting <Imaging> node to be included as well 
+
+        #if ($CONST_TRUE.equals("#shouldIncludeSectionForImaging()") )
+
+            <img:Imaging>
+
+                <Local_Internal_Reference>
+                    <local_identifier_reference>$!label.PRODUCT_ID.toLowerCase()</local_identifier_reference>
+                    <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+                </Local_Internal_Reference>
+
+                ## <!-- From MIPL, new tho -->
+                #generateFrameParameters()
+
+                <img:Instrument_State>
+                    
+                ## <!-- From MIPL templates (updated for M20 nonimg tho) -->
+                #if ( $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE && $label.INSTRUMENT_STATE_PARMS.INSTRUMENT_TEMPERATURE_NAME)
+                    #get_Img_DeviceState_DeviceTemps()
+                #end
+
+                </img:Instrument_State>
+            </img:Imaging>
+
+        #end
+        
+        ######################################
+        ## Image Surface Discipline Area
+        ######################################
+
+        #if ($CONST_TRUE.equals("#shouldIncludeSectionForImageSurface()") )
+                  
+            <img_surface:Surface_Imaging>
+
+                <img_surface:Instrument_Information>                
+                    <img_surface:instrument_type>$!label.INSTRUMENT_TYPE</img_surface:instrument_type>
+                    <img_surface:instrument_serial_number>$!label.INSTRUMENT_SERIAL_NUMBER</img_surface:instrument_serial_number>
+                    <img_surface:instrument_version_number>$!label.INSTRUMENT_VERSION_ID</img_surface:instrument_version_number>
+                </img_surface:Instrument_Information>
+
+                <img_surface:Geometry_Projection>            
+                    <img_surface:geometry_projection_type>$!text.capitalize($!label.GEOMETRY_PROJECTION_TYPE.toString())</img_surface:geometry_projection_type>
+                </img_surface:Geometry_Projection>
+
+            </img_surface:Surface_Imaging>
+            
+        #end
+
+
+        ######################################
+        ## Mission Surface Discipline Area
+        ######################################
+
+        <msn_surface:Surface_Mission_Information>
+
+            ## <!-- From MIPL templates (updated for M20 nonimg tho) -->
+            #getMissionSurfaceCommandExecution()
+
+            ## <!-- From MIPL templates (updated for M20 nonimg tho) -->
+            #getMissionSurfaceTelemetry()
+
+
+            ## <!-- From M20 example, but was commenteded out, leave for reference as a TODO? -->
+            ## <!-- Update: Enabled now to allow for activity_id  03.31.21 -->
+            ## <!-- Omit Observational_Intent class if not in ODL label   -->
+            <msn_surface:Observational_Intent>
+                <msn_surface:campaign></msn_surface:campaign>
+                <msn_surface:goal></msn_surface:goal>
+                <msn_surface:activity_id>$!IDENT.ACTIVITY_ID</msn_surface:activity_id>
+                <msn_surface:target_id>$!IDENT.TARGET_ID</msn_surface:target_id>
+                <msn_surface:task></msn_surface:task>
+                <msn_surface:activity_notes></msn_surface:activity_notes>
+                <msn_surface:keyword></msn_surface:keyword>
+            </msn_surface:Observational_Intent>
+            
+            ## <!-- From M20 ex: "Omit surface_gravity attribute if not in ODL label"
+            ##     <msn_surface:surface_gravity unit="m/s**2"></msn_surface:surface_gravity>
+            ## -->
+        </msn_surface:Surface_Mission_Information>
+        
+        ######################################
+        ## Process Discipline Area
+        ######################################
+
+        #if ($CONST_TRUE.equals("#shouldIncludeSectionForProcess()") )
+
+            ## <!-- From M20 example label -->        
+            ## <!-- ....Seems a bit specific to the non-img case, so leave in for now -->
+            <proc:Processing_Information>
+                <Local_Internal_Reference>                    
+                    <local_identifier_reference>$!label.PRODUCT_ID.toLowerCase()</local_identifier_reference>
+                    <local_reference_type>processing_information_to_data_object</local_reference_type>
+                </Local_Internal_Reference>
+                <proc:Process>
+                    <proc:process_owner_institution_name>$!label.PRODUCER_INSTITUTION_NAME</proc:process_owner_institution_name>
+                    <proc:Software>
+
+                    ##Iterate over list of potential historial software program names declared above
+
+                    #foreach ( $program_name in $HISTORICAL_SOFTWARE_NAMES )                  
+                        #if ( $label.get($program_name) )
+                        #set ( $program_node = $label.get($program_name) )  
+                        <proc:Software_Program>
+                            <proc:name>$!program_node.SOFTWARE_NAME</proc:name>
+                            <proc:program_version>$!program_node.SOFTWARE_VERSION_ID</proc:program_version>
+                            <proc:description>$!program_node.PROCESSING_HISTORY_TEXT</proc:description>
+                        </proc:Software_Program>
+                        #end
+                    #end ##foreach
+
+                    </proc:Software>
+                </proc:Process>
+            </proc:Processing_Information>
+        #end
+
+        ######################################        
+        ######################################
+            
+    </Discipline_Area>
+  </Observation_Area>
+
+  ## ------------------------------------------------------------------
+  ## ------------------------------------------------------------------
+
+  <Reference_List>
+
+      #generateReferenceDocumentSisEntries($PID)
+
+      ## <!-- Copied from mipl_cameras 03.31.21 -->
+      ## <!-- but modified since then.... -->
+      #if ( $IDENT.SOURCE_PRODUCT_ID ) 
+        ##SOURCE_PRODUCT_ID can be a single string or a list of strings,
+        #set ( $ident_srcProdId_list = "#joinStrList( $!IDENT.SOURCE_PRODUCT_ID ';' )" )
+        #set ( $ident_srcProdId_list = $ident_srcProdId_list.split(';') )
+        #set ( $ident_srcProdId_list_is_empty = "#isSplitListFromJoinStrListEmpty($ident_srcProdId_list)" )        
+        #if ( $ident_srcProdId_list_is_empty == $CONST_FALSE )
+          #foreach ( $ident_srcProdId_item in $ident_srcProdId_list )     
+
+            ##October '21: Do not include 'Source_Product_Internal' when prodid "matches" label PID
+            #if ( ! $ident_srcProdId_item.toLowerCase().startsWith( $PID.toLowerCase() ) )
+
+              #set ($sourceProductLidColl      = "#msn_getProductLidCollection($ident_srcProdId_item)" )
+              #set ($sourceProductProcLevel    = "#msn_getProductStageForSrcProdIntl($ident_srcProdId_item)" )        
+              #set ($sourceProductProcLevel    = $sourceProductProcLevel.toLowerCase() )
+              #set ($sourceProductProcLevelRef = $sourceProductProcLevel.replace(' ','_') )
+
+              ## Jan '22: Per Susie, 'partially_processed' is not yet supported in reference_type.
+              ## So temporary hack is to convert that to....'calibrated'?
+              #if  ( $sourceProductProcLevelRef.equalsIgnoreCase('partially_processed') )
+                #set ( $sourceProductProcLevelRef = 'calibrated' )
+              #end
+
+
+              #set ( $ident_srcProdId_item_pid = "#createPidFromVersionedName($ident_srcProdId_item)" )
+              #set ( $sourceProductLid = "#generateLID( $LID_PREFIX $sourceProductLidColl $ident_srcProdId_item_pid )" )
+              #set ( $sourceProductLid = $sourceProductLid.toLowerCase() )
+
+              ##Jan '22: This replaces Source_Product_Internal and its associated lidvid reference
+              <Internal_Reference>
+                <lid_reference>$sourceProductLid</lid_reference>
+                <reference_type>data_to_${sourceProductProcLevelRef}_product</reference_type>
+                <comment>Reference pointer to the $sourceProductProcLevel product.</comment>
+              </Internal_Reference>
+
+            #end  ##endIfNotPid
+          #end  ##endForeach
+        #end  ##endListNotEmpty
+      #end   ##endIfLabelExists
+
+  </Reference_List>
+
+  ## ------------------------------------------------------------------
+  ## ------------------------------------------------------------------
+
+  <File_Area_Observational>
+
+
+        ## A) This assumes all PTR_* nodes refer to the same filename.        
+        ## #generateSingleFoaFileEntry()
+
+        ## B) This does not assume all PTR_* nodes refer to the same filename.
+        ## The first filename is treated as the primary, using label PRODUCT_ID for label-identifier
+        ## while the remaining use their filename for the label-id.
+        #generateAllFoaFileEntries()
+        
+        
+        ## ---------------------------------------
+      
+        ## have to use dumb version thanks to 'PRIMARY_HDU_HEADER' 
+        #if ( $label.PTR_PRIMARY_HEADER && $label.PRIMARY_HDU_HEADER.BYTES && $label.PTR_PRIMARY_HEADER.get(1) )
+            #set ( $phhe_offset = '' )
+            #set ( $phhe_bytes  = '' )
+            #set ( $phhe_offset = "#getPtrOffsetValue('PTR_PRIMARY_HEADER')" )
+            #set ( $phhe_bytes  = $!label.PRIMARY_HDU_HEADER.BYTES )
+            #createHeaderEntry('PRIMARY HEADER' 'primary-header' $phhe_offset  $phhe_bytes  $CONST_M20_HEADER_PARSING_STANDARD   $CONST_M20_HEADER_DESCRIPTION  )
+        #end
+
+        #createHeaderEntrySmart('ODL_LABEL_HEADER'  ''   '' )
+        #createStreamTextEntrySmart( 'ODL_LABEL_TABLE'  '' '' )
+        
+        ## ---------------------------------------
+
+        ## IF, only IF, all of these entries follow the same pattern of common
+        ## name prefix and default values, then this will work.
+        ## One violation of these assumptions could kill it all tho...fingers crossed.
+
+        ## -----------------
+
+        #foreach ( $prefix in $BIN_TABLE_PREFIXES )
+            #set ( $HEADER_NAME = "${prefix}_HEADER" )
+            #set ( $TABLE_NAME  = "${prefix}_TABLE" )
+
+            #createHeaderEntrySmart($HEADER_NAME  ''   '' )      
+            #createTableBinaryEntrySmart($TABLE_NAME  '' )
+        #end
+
+        ## -----------------
+
+        ## Similar to above, but these are Images, not bin-tables
+        #foreach ( $prefix in $IMAGE_PREFIXES )
+            #set ( $HEADER_NAME = "${prefix}_HEADER" )
+            #set ( $IMAGE_NAME  = "${prefix}_IMAGE" )
+
+            #createHeaderEntrySmart($HEADER_NAME  ''   '' )      
+            #createImageEntrySmart( $IMAGE_NAME   '' )
+        #end
+
+        ## -----------------
+
+        ## Similar to above, but these are Delimited-tables
+        #foreach ( $prefix in $DEL_TABLE_PREFIXES )
+            #set ( $TABLE_NAME  = "${prefix}" )
+
+            #createTableDelimitedEntrySmart( $TABLE_NAME   '' )
+        #end
+        
+        ## -----------------
+      
+  </File_Area_Observational>
+
+
+  ##This was disabled at last minute for M20 PDS delivery 1, rgd not happy (2021.07.28 nttoole)
+  #set ( $includeLblFile = $CONST_FALSE )
+  ## #set ( $includeLblFile = "#m20_includeOdlLabelFile($PID)" )
+  #if ( $CONST_TRUE.equals($includeLblFile) )
+    #set ( $faos_filename = '')    
+    #if ( $label.PDS4_IMAGE && $label.PDS4_IMAGE.detached_filename && 
+          $!label.PDS4_IMAGE.detached_filename.toString().toUpperCase().endsWith("LBL") )
+        #set ( $faos_filename = $label.PDS4_IMAGE.detached_filename.toString() )
+    #elseif ( $IDENT.PRODUCT_ID )
+        #set ( $faos_filename = $IDENT.PRODUCT_ID.toString() + ".LBL" )
+    #end
+
+    #if ( $!faos_filename != '' )
+      <File_Area_Observational_Supplemental>
+        <File>
+            <file_name>$!faos_filename</file_name>
+        </File>
+        <Stream_Text>
+            <offset unit="byte">0</offset>
+            <parsing_standard_id>$CONST_M20_STREAMTEXT_PARSING_STANDARD</parsing_standard_id>
+            <description>ODL-format label</description>
+            <record_delimiter>$CONST_M20_STREAMTEXT_RECORD_DELIMITER</record_delimiter>
+        </Stream_Text>
+      </File_Area_Observational_Supplemental>
+    #end
+  #end
+
+
+
+</Product_Observational>

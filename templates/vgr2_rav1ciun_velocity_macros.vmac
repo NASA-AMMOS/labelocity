@@ -1,0 +1,27 @@
+## Mission-specific variables and macros for: RAV1CIUN PDART, Voyager Project.
+## Specifically, the Voyager-2 variant.  It's the same as the main
+## RAV1CIUN with just a few changes.
+
+#parse( "vgr1_rav1ciun_velocity_macros.vmac" )##
+
+#set ($MSN_PLATFORM           = "vg2")
+#set ($MSN_SPACECRAFT         = "Voyager 2")
+#set ($MSN_SPACECRAFT_SHORT   = "VGR2")
+
+
+## Mission Phase and Start-time list for VGR2
+#set ($VGR_MSN_PHASE_TIME_LIST = [
+"1900-01-01;Instellar Mission",
+"1977-08-20;Launch",
+"1977-08-20;Earth-Jupiter Cruise",
+"1979-04-25;Jupiter Encounter",
+"1979-08-05;Jupiter-Saturn Cruise",
+"1981-06-05;Saturn Encounter",
+"1981-09-25;Saturn-Uranus Cruise",
+"1985-11-04;Uranus Encounter",
+"1986-02-25;Uranus-Neptune Cruise",
+"1989-06-05;Neptune Encounter",
+"1989-10-02;Interstellar Mission"
+] )
+
+

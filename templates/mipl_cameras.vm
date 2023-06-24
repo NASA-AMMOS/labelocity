@@ -1,0 +1,1809 @@
+<?xml version="1.0" encoding="UTF-8"?>
+###set ( $DEBUG = 1 )
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------
+## Parse the various macro files...
+
+#parse( "vcore.vmac" )          ##Core constants and values
+#parse( "utils.vmac" )          ##Generic utilities
+#parse( "general.vmac" )        ##Common PDS macros
+#parse( "image.vmac" )          ##Image macros
+#parse( "surface.vmac" )        ##Surface macros
+#parse( "mission_factory.vmac" )##Load mission-specific macros
+
+## ------------------------------------------------------------------------
+## Set some needed variables
+
+#set ($PID_FULL          = "#getPidFullname()" )
+
+#if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+
+  ## Filename spec is in play, we can parse the filename
+
+  #set ($PID               = "#createPidFromVersionedName($PID_FULL)" )
+  #set ($VERSION_ID        = "#getPIDVersionCheckLabel($PID_FULL)")
+
+  #set ($INSTRUMENT_NAME   = "#getInstrumentName($PID)")
+  #set ($INSTRUMENT_ID     = "#getInstrumentId($PID)")
+  #set ($PLANET_DAY_NUMBER = "#getPlanetDayNumberOrSol($PID)" )
+
+  #set ($PRODUCT_TYPE      = "#getProductType($PID)" )  
+  #set ($IS_MOSAIC         = "#isMosaic($PID)")
+  #set ($IS_DATATYPE_FLOAT = "#isFloatDataType()")
+  #set ($IS_THUMBNAIL      = "#isThumbnail($PID)")
+  #set ($PROCESSING_LEVEL  = "#getProcessingLevelCheckLabel($PRODUCT_TYPE $IS_MOSAIC)" )
+  #set ($COMPRESSION_NAME  = "#getCompressionName()" ) 
+
+#else
+
+  ## Filename spec is NOT in play, so do not made decisions on filename solely
+
+  ## Note: Some of the macros that are still enabled check the label, which is
+  ## why we still call them.
+
+  #set ($PID               = "#createPidFromVersionlessName($PID_FULL)" )
+  #set ($VERSION_ID        = "#getPIDVersionCheckLabel($PID_FULL)")
+  #if ( $CONST_UNKNOWN.equals($VERSION_ID))
+    #set ($VERSION_ID      = '1' )
+  #end
+
+  ## Set defaults for these
+  #set ($PRODUCT_TYPE      = '' )
+  #set ($IS_MOSAIC         = $CONST_FALSE )
+  #set ($IS_DATATYPE_FLOAT = $CONST_FALSE )
+  #set ($IS_THUMBNAIL      = $CONST_FALSE )  
+  #set ($COMPRESSION_NAME  = '') 
+
+
+  ## These macros still check label before looking at PID argument
+  #set ($INSTRUMENT_NAME   = "#getInstrumentName($PID)")
+  #set ($INSTRUMENT_ID     = "#getInstrumentId($PID)")
+  #set ($PLANET_DAY_NUMBER = "#getPlanetDayNumberOrSol($PID)" )
+  
+  #set ($PROCESSING_LEVEL  = "#getProcessingLevelCheckLabel($PRODUCT_TYPE $IS_MOSAIC)" )
+
+#end
+
+
+#set ($LID_PREFIX      = "#getProductLidPrefixCheckLabel($PID)" )
+#set ($LID_COLLECTION  = "#getProductLidCollectionCheckLabel($PID)" )
+
+#set ($LID_BROWSE_COLLECTION  = "#getBrowseLidCollectionCheckLabel($PID)" )
+
+## For use with the Title element, optMosaicStr will be 
+## rendered as either 'Mosaic' or ''
+#if ($IS_MOSAIC eq $CONST_TRUE)
+    #set ( $optMosaicStr = "Mosaic" )
+#end  
+
+
+#set ($INPUT_FILE_NAME  = "#getInputFilename()" )
+#set ($INPUT_FILE_EXTEN = "#getFileExtension( $INPUT_FILE_NAME )" )
+
+## Translated filename extension as determined by the mission.
+## Default case just returns the passed-in argument.
+#set ($LEGAL_FILE_EXTEN = "#msn_getLegalFileExtension( $INPUT_FILE_EXTEN )" )
+
+#set ($SPECIAL_PROC_FLAG = "#msn_getSpecialProcessingFlag($INPUT_FILE_NAME)" )
+
+##============================================
+## Create the mission-specific prolog section
+##
+
+#generateProlog($MSN_PROLOG_VERSION_DICT)
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${VERSION_ID}.0</version_id>
+    <title>$MSN_IDENTIFICATION_AREA_TITLE_PREFIX $INSTRUMENT_ID.toUpperCase() $PRODUCT_TYPE $!optMosaicStr Observational Product - $PID</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Observational</product_class>
+    <Alias_List>
+      <Alias>
+        #debug("IDENTIFICATION.PRODUCT_ID")        
+        <alternate_id>$IDENT.PRODUCT_ID</alternate_id>
+        #if ( $CONST_TRUE.equals("#isStandardMissionFilename()") )
+          <comment>VICAR PRODUCT_ID</comment>
+        #else
+          <comment>Product Id</comment>
+        #end
+      </Alias>
+    </Alias_List>
+
+## Removed evil Modification_History.... yayyyy!!!  Retaining the dead code
+## in case someone squawks.
+##    <Modification_History>
+##      <Modification_Detail>
+##        <modification_date>$date.get("yyyy-MM-dd")</modification_date>
+##        <version_id>${VERSION_ID}.0</version_id>
+##        <description>Current version, date product label was created</description>
+##      </Modification_Detail>
+##    </Modification_History>
+
+  </Identification_Area>
+  <Observation_Area>
+    <comment>Observational Intent</comment>
+    <Time_Coordinates>
+      
+      ## start_date_time and stop_date_time required, so add nil-checks
+      #if ( $IDENT.START_TIME )
+        <start_date_time>#getZuluTime( $!IDENT.START_TIME.toString() )</start_date_time>
+      #else
+        #getNodeWithValueOrAsNil( $IDENT 'START_TIME'  'start_date_time'  ''  $CONST_TRUE )
+      #end
+
+      #if ( $IDENT.STOP_TIME )
+          <stop_date_time>#getZuluTime( $!IDENT.STOP_TIME.toString() )</stop_date_time>
+      #else      
+        #getNodeWithValueOrAsNil( $IDENT 'STOP_TIME'   'stop_date_time'   ''  $CONST_TRUE )
+      #end
+
+      #debug("IDENTIFICATION.LOCAL_MEAN_SOLAR_TIME")
+      <local_mean_solar_time>#splitSolarTimeSol( $!IDENT.LOCAL_MEAN_SOLAR_TIME.toString() $CONST_TIME )</local_mean_solar_time>
+      #debug("IDENTIFICATION.LOCAL_TRUE_SOLAR_TIME")
+      <local_true_solar_time>$!IDENT.LOCAL_TRUE_SOLAR_TIME</local_true_solar_time>
+      #debug("IDENTIFICATION.SOLAR_LONGITUDE")
+      <solar_longitude unit="deg">$!IDENT.SOLAR_LONGITUDE</solar_longitude>
+    </Time_Coordinates>
+    <Primary_Result_Summary>
+      <purpose>Science</purpose>
+      <processing_level>$PROCESSING_LEVEL</processing_level>
+      #getScienceFacetsSection()## <Science_Facets> section      
+    </Primary_Result_Summary>
+
+
+    #getInvestigationArea()
+    
+    #getObservingSystem()
+    
+    #getTargetIdentification()
+
+
+    <Mission_Area>
+    
+        ##Include mission-specific entries for this section
+        #msn_generateMissionAreaSection( $PID )
+
+    </Mission_Area>
+
+
+    <Discipline_Area>
+
+      ######################################
+      ## Cartography Discipline Area
+      ######################################
+      
+      ## -------------------
+      ## Cartography section associated with IMAGE_MAP_PROJECTION (added Nov'21)
+      ## PDS rules does not prevent us from having two sibling Cartography sections, and the new one goes first
+
+
+      #if ( $label.IMAGE_MAP_PROJECTION )
+       #set ($imp_node = $label.IMAGE_MAP_PROJECTION )
+       #set ($imp_map_proj_type = $!imp_node.MAP_PROJECTION_TYPE.toString() )
+             
+       <cart:Cartography>
+        <Local_Internal_Reference>
+            <local_identifier_reference>$PID</local_identifier_reference>
+            <local_reference_type>cartography_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+        <cart:Spatial_Domain>
+          <cart:Bounding_Coordinates>
+            <cart:west_bounding_coordinate unit="deg">$!imp_node.WESTERNMOST_LONGITUDE</cart:west_bounding_coordinate>
+            <cart:east_bounding_coordinate unit="deg">$!imp_node.EASTERNMOST_LONGITUDE</cart:east_bounding_coordinate>
+            <cart:north_bounding_coordinate unit="deg">$!imp_node.MAXIMUM_LATITUDE</cart:north_bounding_coordinate>
+            <cart:south_bounding_coordinate unit="deg">$!imp_node.MINIMUM_LATITUDE</cart:south_bounding_coordinate>
+          </cart:Bounding_Coordinates>
+        </cart:Spatial_Domain>
+
+        <cart:Spatial_Reference_Information>        
+          <cart:Horizontal_Coordinate_System_Definition>
+
+            <cart:Planar>
+              <cart:Map_Projection>
+                <cart:map_projection_name>$text.capitalize($imp_map_proj_type)</cart:map_projection_name>
+                #if ( $imp_map_proj_type.toLowerCase().equals('equirectangular') )
+                  <cart:Equirectangular>  
+                    <cart:latitude_of_projection_origin unit="deg">$!imp_node.LATITUDE_ORIGIN</cart:latitude_of_projection_origin>
+                    <cart:standard_parallel_1 unit="deg">$!imp_node.CENTER_LATITUDE</cart:standard_parallel_1>
+                    <cart:longitude_of_central_meridian unit="deg">$!imp_node.CENTER_LONGITUDE</cart:longitude_of_central_meridian>
+                  </cart:Equirectangular>
+                #end
+              </cart:Map_Projection>
+
+              <cart:Planar_Coordinate_Information>
+                <cart:planar_coordinate_encoding_method>Coordinate Pair</cart:planar_coordinate_encoding_method>
+                <cart:Coordinate_Representation>
+                  ## yes, resolution and scale are swapped below, sigh... ##                    
+                  <cart:pixel_resolution_x #getUnitAttrOrDefault( $imp_node  'MAP_SCALE'  ''  'm/pixel') >$imp_node.MAP_SCALE</cart:pixel_resolution_x>
+                  <cart:pixel_resolution_y #getUnitAttrOrDefault( $imp_node  'MAP_SCALE'  ''  'm/pixel') >$imp_node.MAP_SCALE</cart:pixel_resolution_y>
+                    
+                  <cart:pixel_scale_x #getUnitAttrOrDefault( $imp_node  'MAP_RESOLUTION'  ''  'pixel/deg') >$imp_node.MAP_RESOLUTION</cart:pixel_scale_x>
+                  <cart:pixel_scale_y #getUnitAttrOrDefault( $imp_node  'MAP_RESOLUTION'  ''  'pixel/deg') >$imp_node.MAP_RESOLUTION</cart:pixel_scale_y>                    
+                </cart:Coordinate_Representation>
+              </cart:Planar_Coordinate_Information>
+
+              <cart:Geo_Transformation>
+                #if ( $imp_node.MAP_SCALE && $imp_node.SAMPLE_PROJECTION_OFFSET && $imp_node.LINE_PROJECTION_OFFSET )
+
+                  ## Trent, is sample==x and line==y?  Also, are these labels equivalent?  In a subpixel sense?##
+                  #set ( $imp_map_scale = $imp_node.MAP_SCALE.toString() )
+                  #set ( $imp_samp_off  = $imp_node.SAMPLE_PROJECTION_OFFSET.toString() )
+                  #set ( $imp_line_off  = $imp_node.LINE_PROJECTION_OFFSET.toString() )
+
+                  #set ( $imp_ul_corn_x = $math.add($imp_samp_off,  '0.5')  )
+                  #set ( $imp_ul_corn_x = $math.mul($imp_ul_corn_x, $imp_map_scale)  )
+                  #set ( $imp_ul_corn_x = $math.mul($imp_ul_corn_x, '-1.0')  )
+                  #set ( $imp_ul_corn_y = $math.add($imp_line_off,  '0.5')  )
+                  #set ( $imp_ul_corn_y = $math.mul($imp_ul_corn_y, $imp_map_scale)  )
+                  
+                  <cart:upperleft_corner_x unit="m">$imp_ul_corn_x</cart:upperleft_corner_x>
+                  <cart:upperleft_corner_y unit="m">$imp_ul_corn_y</cart:upperleft_corner_y>
+                #end
+              </cart:Geo_Transformation>
+
+            </cart:Planar>
+
+            <cart:Geodetic_Model>
+                #if ( $imp_node.COORDINATE_SYSTEM_NAME )
+                  <cart:latitude_type>$text.capitalize($imp_node.COORDINATE_SYSTEM_NAME.toString())</cart:latitude_type>
+                #end
+                #if ( $IDENT.TARGET_NAME )
+                  <cart:spheroid_name>$text.capitalize($IDENT.TARGET_NAME.toString())</cart:spheroid_name> ## or if you have a better way to get "Mars" ##
+                #end
+                <cart:a_axis_radius #getUnitAttrOrDefault( $imp_node  'A_AXIS_RADIUS'  ''  'km') >$imp_node.A_AXIS_RADIUS</cart:a_axis_radius>
+                <cart:b_axis_radius #getUnitAttrOrDefault( $imp_node  'B_AXIS_RADIUS'  ''  'km') >$imp_node.B_AXIS_RADIUS</cart:b_axis_radius>
+                <cart:c_axis_radius #getUnitAttrOrDefault( $imp_node  'C_AXIS_RADIUS'  ''  'km') >$imp_node.C_AXIS_RADIUS</cart:c_axis_radius>
+                #if ( $imp_node.POSITIVE_LONGITUDE_DIRECTION )
+                  #set ( $imp_pld_val = $imp_node.POSITIVE_LONGITUDE_DIRECTION.toString() )
+                  #if ( $imp_pld_val.toLowerCase().equals('east') )
+                    #set ( $imp_pld_val = 'Positive East' )
+                  #end
+                  <cart:longitude_direction>$imp_pld_val</cart:longitude_direction>                  
+                #end
+                #if ( $imp_node.COORDINATE_SYSTEM_TYPE ) 
+                  <cart:coordinate_system_type>$text.capitalize($imp_node.COORDINATE_SYSTEM_TYPE.toString())</cart:coordinate_system_type>
+                #end
+            </cart:Geodetic_Model>
+
+          </cart:Horizontal_Coordinate_System_Definition>
+        </cart:Spatial_Reference_Information>
+       </cart:Cartography>
+      #end
+
+      ## -------------------
+      ## Cartography section associated with SURFACE_PROJECTION_PARMS
+
+      #set ( $mapProjection = '' )
+      #if ( $label.SURFACE_PROJECTION_PARMS && $label.SURFACE_PROJECTION_PARMS.MAP_PROJECTION_TYPE )
+        #set ( $mapProjection =  $!label.SURFACE_PROJECTION_PARMS.MAP_PROJECTION_TYPE.toString() )
+      #end
+      #if ( $mapProjection != '')
+      <cart:Cartography>
+        <Local_Internal_Reference>
+          <local_identifier_reference>$PID</local_identifier_reference>
+          <local_reference_type>cartography_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+        
+        <cart:Spatial_Reference_Information>
+          <cart:Horizontal_Coordinate_System_Definition>
+            <cart:Local>
+              
+              #set ( $mapProjection = $text.capitalize($mapProjection.replace("-"," ")) )
+                <cart:local_description>$mapProjection Lander Map Projection</cart:local_description>
+              
+                <cart:Map_Projection_Lander>
+                  #debug ( "SURFACE_PROJECTION_PARMS.MAP_PROJECTION_TYPE" )
+                  <cart:lander_map_projection_name>$mapProjection.replace(' ','_')</cart:lander_map_projection_name>
+                  #if ( !$mapProjection )
+                    #set ( $mapProjection = "NA" )
+                  #elseif ( $mapProjection.equals("Orthographic") )
+                    #set ( $mapProjection = "Orthographic_Lander" )
+                  #end
+                  
+                  #cartMapProjTagOpen( $mapProjection )
+                    #if ( $mapProjection.equals("Polar") )
+                      #debug ( "SURFACE_PROJECTION_PARMS.MAP_RESOLUTION" )
+                      <cart:pixel_scale #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAP_RESOLUTION'   0)>$!label.SURFACE_PROJECTION_PARMS.MAP_RESOLUTION[0]</cart:pixel_scale>
+                    #else
+                      #debug ( "SURFACE_PROJECTION_PARMS.MAP_RESOLUTION" )
+                      <cart:pixel_scale_x #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAP_RESOLUTION'   0)>$!label.SURFACE_PROJECTION_PARMS.MAP_RESOLUTION[0]</cart:pixel_scale_x>
+                      <cart:pixel_scale_y #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAP_RESOLUTION'   1)>$!label.SURFACE_PROJECTION_PARMS.MAP_RESOLUTION[1]</cart:pixel_scale_y>
+                    #end
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.MAP_SCALE")
+                    <cart:pixel_resolution_x #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAP_SCALE'   0)>$!label.SURFACE_PROJECTION_PARMS.MAP_SCALE[0]</cart:pixel_resolution_x>
+                    <cart:pixel_resolution_y #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAP_SCALE'   1)>$!label.SURFACE_PROJECTION_PARMS.MAP_SCALE[1]</cart:pixel_resolution_y>
+                    
+                    ## Use pollNodes to provide a backup unit if one not found
+                    #pollNodes(   $label.SURFACE_PROJECTION_PARMS   'X_AXIS_MAXIMUM'   'cart:x_axis_maximum'   'm'    $CONST_TRUE )
+                    
+                    #pollNodes(   $label.SURFACE_PROJECTION_PARMS   'X_AXIS_MINIMUM'   'cart:x_axis_minimum'   'm'    $CONST_TRUE )
+                    
+                    #pollNodes(   $label.SURFACE_PROJECTION_PARMS   'Y_AXIS_MAXIMUM'   'cart:y_axis_maximum'   'm'    $CONST_TRUE )
+                    
+                    #pollNodes(   $label.SURFACE_PROJECTION_PARMS   'Y_AXIS_MINIMUM'   'cart:y_axis_minimum'   'm'    $CONST_TRUE )                    
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.MAXIMUM_ELEVATION" )
+                    <cart:maximum_elevation #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MAXIMUM_ELEVATION'   '')>$!label.SURFACE_PROJECTION_PARMS.MAXIMUM_ELEVATION</cart:maximum_elevation>
+
+                    #debug ( "SURFACE_PROJECTION_PARMS.MINIMUM_ELEVATION" )
+                    <cart:minimum_elevation #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'MINIMUM_ELEVATION'   '')>$!label.SURFACE_PROJECTION_PARMS.MINIMUM_ELEVATION</cart:minimum_elevation>
+                                        
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_AZIMUTH" )
+                    <cart:projection_azimuth #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'PROJECTION_AZIMUTH'   '')>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_AZIMUTH</cart:projection_azimuth>
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_ELEVATION" )
+                    <cart:projection_elevation #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS   'PROJECTION_ELEVATION'   '')>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_ELEVATION</cart:projection_elevation>
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_ELEVATION_LINE" )
+                    <cart:projection_elevation_line>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_ELEVATION_LINE</cart:projection_elevation_line>
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.START_AZIMUTH" )
+                    ## <cart:start_azimuth #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'START_AZIMUTH'   '')>$!label.SURFACE_PROJECTION_PARMS.START_AZIMUTH</cart:start_azimuth>
+                    #getNodeValueNotNil( $label.SURFACE_PROJECTION_PARMS    'START_AZIMUTH'      'cart:start_azimuth'           'deg')
+                    
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.STOP_AZIMUTH" )
+                    ## <cart:stop_azimuth #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'STOP_AZIMUTH'   '')>$!label.SURFACE_PROJECTION_PARMS.STOP_AZIMUTH</cart:stop_azimuth>
+                    #getNodeValueNotNil( $label.SURFACE_PROJECTION_PARMS    'STOP_AZIMUTH'      'cart:stop_azimuth'             'deg')
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.ZERO_ELEVATION_LINE" )
+                    <cart:zero_elevation_line>$!label.SURFACE_PROJECTION_PARMS.ZERO_ELEVATION_LINE</cart:zero_elevation_line>
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_AXIS_OFFSET" )
+                    <cart:projection_axis_offset #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'PROJECTION_AXIS_OFFSET'   '')>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_AXIS_OFFSET</cart:projection_axis_offset>
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.REFERENCE_AZIMUTH" )
+                    <cart:reference_azimuth #getUnitAttr( $!label.SURFACE_PROJECTION_PARMS    'REFERENCE_AZIMUTH'   '')>$!label.SURFACE_PROJECTION_PARMS.REFERENCE_AZIMUTH</cart:reference_azimuth>
+                    
+                    #if ( $mapProjection.equals("Polar") )
+                    <cart:Pixel_Position_Nadir_Polar>
+                      #debug ( "SURFACE_PROJECTION_PARMS.LINE_PROJECTION_OFFSET" )
+                      <cart:line>$!label.SURFACE_PROJECTION_PARMS.LINE_PROJECTION_OFFSET</cart:line>
+                      #debug ( "SURFACE_PROJECTION_PARMS.SAMPLE_PROJECTION_OFFSET" )
+                      <cart:sample>$!label.SURFACE_PROJECTION_PARMS.SAMPLE_PROJECTION_OFFSET</cart:sample>
+                    </cart:Pixel_Position_Nadir_Polar>
+                    #else
+                    <cart:Pixel_Position_Origin>
+                      #debug ( "SURFACE_PROJECTION_PARMS.LINE_PROJECTION_OFFSET" )
+                      <cart:line>$!label.SURFACE_PROJECTION_PARMS.LINE_PROJECTION_OFFSET</cart:line>
+                      #debug ( "SURFACE_PROJECTION_PARMS.SAMPLE_PROJECTION_OFFSET" )
+                      <cart:sample>$!label.SURFACE_PROJECTION_PARMS.SAMPLE_PROJECTION_OFFSET</cart:sample>
+                    </cart:Pixel_Position_Origin>
+                    #end
+                    
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_ORIGIN_VECTOR" )
+                    <cart:Vector_Projection_Origin>
+                      <cart:x_position unit="m">$!label.SURFACE_PROJECTION_PARMS.PROJECTION_ORIGIN_VECTOR[0]</cart:x_position>
+                      <cart:y_position unit="m">$!label.SURFACE_PROJECTION_PARMS.PROJECTION_ORIGIN_VECTOR[1]</cart:y_position>
+                      <cart:z_position unit="m">$!label.SURFACE_PROJECTION_PARMS.PROJECTION_ORIGIN_VECTOR[2]</cart:z_position>
+                    </cart:Vector_Projection_Origin>
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_X_AXIS_VECTOR" )
+                    <cart:Vector_Projection_X_Axis>
+                      <cart:x_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_X_AXIS_VECTOR[0]</cart:x_unit>
+                      <cart:y_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_X_AXIS_VECTOR[1]</cart:y_unit>
+                      <cart:z_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_X_AXIS_VECTOR[2]</cart:z_unit>
+                    </cart:Vector_Projection_X_Axis>
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_Y_AXIS_VECTOR" )
+                    <cart:Vector_Projection_Y_Axis>
+                      <cart:x_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Y_AXIS_VECTOR[0]</cart:x_unit>
+                      <cart:y_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Y_AXIS_VECTOR[1]</cart:y_unit>
+                      <cart:z_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Y_AXIS_VECTOR[2]</cart:z_unit>
+                    </cart:Vector_Projection_Y_Axis>
+                    #debug ( "SURFACE_PROJECTION_PARMS.PROJECTION_Z_AXIS_VECTOR" )
+                    <cart:Vector_Projection_Z_Axis>
+                      <cart:x_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Z_AXIS_VECTOR[0]</cart:x_unit>
+                      <cart:y_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Z_AXIS_VECTOR[1]</cart:y_unit>
+                      <cart:z_unit>$!label.SURFACE_PROJECTION_PARMS.PROJECTION_Z_AXIS_VECTOR[2]</cart:z_unit>
+                    </cart:Vector_Projection_Z_Axis>
+                    #debug ( "SURFACE_PROJECTION_PARMS.CAMERA_ROTATION_AXIS_VECTOR" )
+                    <cart:Vector_Projection_Z_Axis_Initial>
+                      <cart:x_unit>$!label.SURFACE_PROJECTION_PARMS.CAMERA_ROTATION_AXIS_VECTOR[0]</cart:x_unit>
+                      <cart:y_unit>$!label.SURFACE_PROJECTION_PARMS.CAMERA_ROTATION_AXIS_VECTOR[1]</cart:y_unit>
+                      <cart:z_unit>$!label.SURFACE_PROJECTION_PARMS.CAMERA_ROTATION_AXIS_VECTOR[2]</cart:z_unit>
+                    </cart:Vector_Projection_Z_Axis_Initial>
+                    <cart:Camera_Model_Offset>
+                      #debug ("SURFACE_PROJECTION_PARMS.LINE_CAMERA_MODEL_OFFSET" )
+                      <cart:line>$!label.SURFACE_PROJECTION_PARMS.LINE_CAMERA_MODEL_OFFSET</cart:line>
+                      #debug ("SURFACE_PROJECTION_PARMS.SAMPLE_CAMERA_MODEL_OFFSET" )
+                      <cart:sample>$!label.SURFACE_PROJECTION_PARMS.SAMPLE_CAMERA_MODEL_OFFSET</cart:sample>
+                    </cart:Camera_Model_Offset>
+                  #cartMapProjTagClose( $mapProjection )
+                  
+                  #debug("SURFACE_PROJECTION_PARMS.REFERENCE_COORD_SYSTEM_NAME")
+                  #debug("SURFACE_PROJECTION_PARMS.REFERENCE_COORD_SYSTEM_INDEX")
+                  #set ( $coordSystemName  = "" )
+                  #set ( $coordSystemIndex = "" )
+                  #set ( $coordSystemName  = $label.SURFACE_PROJECTION_PARMS.REFERENCE_COORD_SYSTEM_NAME ) 
+                  #set ( $coordSystemIndex = $label.SURFACE_PROJECTION_PARMS.REFERENCE_COORD_SYSTEM_INDEX )
+                  #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "cart" "SURFACE_PROJECTION_PARMS" )
+                </cart:Map_Projection_Lander>
+              
+                #if ($label.SURFACE_MODEL_PARMS)
+                <cart:Surface_Model_Parameters>
+                  #debug("SURFACE_MODEL_PARMS.SURFACE_MODEL_TYPE")
+                  #set ($surfaceModelType = $label.SURFACE_MODEL_PARMS.SURFACE_MODEL_TYPE.toString()) 
+                  #if ($surfaceModelType.contains("SPHERE"))
+                    #set ($surfaceModel = "Spherical")
+                    <cart:surface_model_type>$!surfaceModel</cart:surface_model_type>
+                    <cart:Surface_Model_Spherical>
+                      #debug("SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR")
+                      <cart:sphere_radius unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR[0]</cart:sphere_radius>
+                      
+                      ## check if it the surface model type has an intersection count
+                      #if (! $surfaceModelType.equals("SPHERE1"))
+                        #set ($length = $surfaceModelType.length() - 1)
+                        #set ($count = $surfaceModelType.charAt($length))
+                        <cart:sphere_intersection_count>$!count</cart:sphere_intersection_count>
+                      #end
+                      
+                      #debug("SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION")
+                      <cart:Vector_Sphere_Center>
+                        <cart:x_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[0]</cart:x_position>
+                        <cart:y_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[1]</cart:y_position>
+                        <cart:z_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[2]</cart:z_position>
+                      </cart:Vector_Sphere_Center>
+                    </cart:Surface_Model_Spherical>
+                  #else
+                    #set ($surfaceModel = "Planar")
+                    <cart:surface_model_type>$!surfaceModel</cart:surface_model_type>
+                    <cart:Surface_Model_Planar>
+                      #debug("SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR")
+                      <cart:Vector_Surface_Normal>
+                        <cart:x_unit>$!label.SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR[0]</cart:x_unit>
+                        <cart:y_unit>$!label.SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR[1]</cart:y_unit>
+                        <cart:z_unit>$!label.SURFACE_MODEL_PARMS.SURFACE_NORMAL_VECTOR[2]</cart:z_unit>
+                      </cart:Vector_Surface_Normal>
+                      #debug("SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION")
+                      <cart:Vector_Surface_Ground_Location>
+                        <cart:x_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[0]</cart:x_position>
+                        <cart:y_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[1]</cart:y_position>
+                        <cart:z_position unit="m">$!label.SURFACE_MODEL_PARMS.SURFACE_GROUND_LOCATION[2]</cart:z_position>
+                      </cart:Vector_Surface_Ground_Location>
+                    </cart:Surface_Model_Planar>
+                  #end
+
+                  #debug("SURFACE_MODEL_PARMS.REFERENCE_COORD_SYSTEM_NAME")
+                  #debug("SURFACE_MODEL_PARMS.REFERENCE_COORD_SYSTEM_INDEX")
+                  #set ( $coordSystemName  = "" )
+                  #set ( $coordSystemIndex = "" )
+                  #set ( $coordSystemName  = $!label.SURFACE_MODEL_PARMS.REFERENCE_COORD_SYSTEM_NAME ) 
+                  #set ( $coordSystemIndex = $!label.SURFACE_MODEL_PARMS.REFERENCE_COORD_SYSTEM_INDEX )
+                  #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "cart" "SURFACE_MODEL_PARMS" )
+                </cart:Surface_Model_Parameters>
+                #end
+              
+
+            </cart:Local>
+          </cart:Horizontal_Coordinate_System_Definition>
+        </cart:Spatial_Reference_Information>
+      </cart:Cartography>
+      #end
+
+
+
+
+
+      ######################################
+      ## Display Discipline Area
+      ######################################
+      
+      <disp:Display_Settings>
+        #defaultDisplaySettings( $label $PID )
+      </disp:Display_Settings>
+      
+      ######################################
+      ## Geometry Discipline Area
+      ######################################
+      
+      #getGeometrySection()
+
+      ######################################
+      ## Image Discipline Area
+      ######################################
+
+
+      <img:Imaging>
+      
+        <Local_Internal_Reference>
+          <local_identifier_reference>$PID</local_identifier_reference>
+          <local_reference_type>imaging_parameters_to_image_object</local_reference_type>
+        </Local_Internal_Reference>
+
+        ## Arguments for:= macros: Brightness, Pointing and Radiometric correction macros
+        #set ($derivedImgParamsName = "DERIVED_IMAGE_PARMS")
+        #set ($derivedImgParamsNode = $label.get($derivedImgParamsName))
+        
+        
+        #set ($derivedImageType = "")
+        #if($label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE)
+        #set ($derivedImageType = $label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE.toString())
+        #end
+        
+        ## Get the name-node pair for IMAGE_REQUEST_PARMS
+        #set ($imgReqParamsName = "IMAGE_REQUEST_PARMS")
+        #set ($imgReqParamsNode = $label.get($imgReqParamsName))  
+        
+        ## Get the name-node pair for INSTRUMENT_STATE_PARMS
+        #set ($insStParamsName = "INSTRUMENT_STATE_PARMS")
+        #set ($insStParamsNode = $label.get($insStParamsName))          
+
+        ## Get the name-node pair for COMPRESSION_PARMS
+        #set ($cmprsParamsName = "COMPRESSION_PARMS")
+        #set ($cmprsParamsNode = $label.get($cmprsParamsName))  
+        
+        ## Get the name-node pair for IMAGE
+        #set ($imageName = "IMAGE")
+        #set ($imageNode = $IMAGE )  
+        
+        #generateBrightCorrMosaic($derivedImgParamsNode $derivedImgParamsName $derivedImageType $IS_MOSAIC)
+
+        ##<img:Column_Sum>...</img:Column_Sum>
+        #conditionalImageTypeProductFlag( $!IDENT.IMAGE_TYPE 'COL_SUM' )
+        
+        #if($label.INSTRUMENT_STATE_PARMS.CFA_TYPE)
+
+          ## If INSTRUMENT_STATE_PARMS.CFA_TYPE exists, get values from it
+
+          #set ( $arrayType = "")
+          #if ( $!label.INSTRUMENT_STATE_PARMS.CFA_TYPE.toString().equals("BAYER_RGGB") )
+            #set ( $arrayType = "Bayer RGGB")
+          #else 
+            #set ( $arrayType = $text.capitalize($!label.INSTRUMENT_STATE_PARMS.CFA_TYPE.toString().replace('_',' ')) )
+          #end            
+
+          #set ( $processing_venue = ""  )
+          #set ( $processing_venue = $!label.INSTRUMENT_STATE_PARMS.CFA_VENUE.toString().replace('_',' ') )
+          #set ( $processing_venue = $text.capitalize($processing_venue) )
+
+          #set ( $processing_algorithm = ""  )        
+          #set ( $processing_algorithm = $!label.INSTRUMENT_STATE_PARMS.BAYER_METHOD.toString().replace('_',' ') )
+          #set ( $processing_algorithm = $text.capitalize($processing_algorithm) )
+
+          <img:Color_Filter_Array>
+            <img:processing_venue>$!processing_venue</img:processing_venue>
+            <img:processing_algorithm>$!processing_algorithm</img:processing_algorithm>
+            <img:color_filter_array_type>$!arrayType</img:color_filter_array_type>
+            <img:color_filter_array_state>#getCFAstate()</img:color_filter_array_state>
+          </img:Color_Filter_Array>
+
+        #elseif ($label.INSTRUMENT_STATE_PARMS.BAYER_MODE)
+
+          ## If INSTRUMENT_STATE_PARMS.CFA_TYPE does exist, then we will check 
+          ## $label.INSTRUMENT_STATE_PARMS.BAYER_MODE and get values from that
+
+          #set ( $cfa_bayer_mode = "" )
+          #set ( $tmp_frame_id = "" )
+          #set ( $tmp_filter = "" )
+
+          #set ( $cfa_bayer_mode = $!label.INSTRUMENT_STATE_PARMS.BAYER_MODE.toString().toUpperCase() )        
+          #set ( $tmp_frame_id   = $!IDENT.FRAME_ID.toString() )
+          #set ( $tmp_filter     = $!label.INSTRUMENT_STATE_PARMS.FILTER_NUMBER.toString() )
+
+          #set ( $cfa_proc_ven = "")
+          #set ( $cfa_proc_alg = "")
+
+          ## Handle venue logic
+          #if ( $cfa_bayer_mode != 'RAW_BAYER')
+            #if ( $cfa_bayer_mode.contains("ONBOARD") )
+              #set ( $cfa_proc_ven = "Onboard" )
+            #else
+              #set ( $cfa_proc_ven = "Ground" )
+            #end
+          #end
+
+          ## Handle alogrithm logic by passing it off to a macro that hides the UGLY
+          #set ( $cfa_proc_alg = "#getCfaAlgorithmViaIspBayerMode( $cfa_bayer_mode $tmp_frame_id  $tmp_filter )" ) 
+
+          <img:Color_Filter_Array>
+            <img:processing_venue>$!cfa_proc_ven</img:processing_venue>
+            <img:processing_algorithm>$!cfa_proc_alg</img:processing_algorithm>
+            <img:color_filter_array_type>Bayer RGGB</img:color_filter_array_type>
+            <img:color_filter_array_state>#getCFAstate()</img:color_filter_array_state>
+          </img:Color_Filter_Array>
+        #end
+        
+        <img:Color_Processing>
+          #debug ( "DERIVED_IMAGE_PARMS.COLOR_SPACE" )
+          <img:color_space>$!label.DERIVED_IMAGE_PARMS.COLOR_SPACE</img:color_space>
+          #debug ( "INSTRUMENT_STATE_PARMS.COLOR_COMPONENT" )
+          <img:color_component>$!label.INSTRUMENT_STATE_PARMS.COLOR_COMPONENT</img:color_component>
+          #debug ( "DERIVED_IMAGE_PARMS.ILLUMINANT" )
+          <img:illuminant>$!label.DERIVED_IMAGE_PARMS.ILLUMINANT</img:illuminant>
+          #debug ( "DERIVED_IMAGE_PARMS.ENCODED_DISPLAY_GAMMA" )
+          <img:encoded_display_gamma>$!label.DERIVED_IMAGE_PARMS.ENCODED_DISPLAY_GAMMA</img:encoded_display_gamma>
+          #debug ( "DERIVED_IMAGE_PARMS.COLOR_DN_SCALING_METHOD" )
+          <img:color_dn_scaling_method>$!label.DERIVED_IMAGE_PARMS.COLOR_DN_SCALING_METHOD</img:color_dn_scaling_method>
+          #debug ( "DERIVED_IMAGE_PARMS.COLOR_DN_SCALING_FACTOR" )
+          <img:color_dn_scaling_factor>$!label.DERIVED_IMAGE_PARMS.COLOR_DN_SCALING_FACTOR</img:color_dn_scaling_factor>
+
+          #if ($label.INSTRUMENT_STATE_PARMS.ONBOARD_RESPONSIVITY)
+          #debug ( "$label.INSTRUMENT_STATE_PARMS.ONBOARD_RESPONSIVITY" )
+          <img:Onboard_Responsivity>
+            <img:responsivity_factor_r>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_RESPONSIVITY[0]</img:responsivity_factor_r>
+            <img:responsivity_factor_g>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_RESPONSIVITY[1]</img:responsivity_factor_g>
+            <img:responsivity_factor_b>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_RESPONSIVITY[2]</img:responsivity_factor_b>
+          </img:Onboard_Responsivity>
+          #end
+            
+          #if ($label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX)
+          #debug ( "$label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX" )
+          <img:Onboard_Color_Matrix>
+            <img:onboard_R_r>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[0]</img:onboard_R_r>
+            <img:onboard_R_g>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[1]</img:onboard_R_g>
+            <img:onboard_R_b>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[2]</img:onboard_R_b>
+            
+            <img:onboard_G_r>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[3]</img:onboard_G_r>
+            <img:onboard_G_g>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[4]</img:onboard_G_g>
+            <img:onboard_G_b>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[5]</img:onboard_G_b>
+              
+            <img:onboard_B_r>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[6]</img:onboard_B_r>
+            <img:onboard_B_g>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[7]</img:onboard_B_g>
+            <img:onboard_B_b>$!label.INSTRUMENT_STATE_PARMS.ONBOARD_COLOR_MATRIX[8]</img:onboard_B_b>
+          </img:Onboard_Color_Matrix>
+          #end
+        </img:Color_Processing>
+
+        <img:Detector>
+
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_FIRST_LINE")
+          <img:first_line>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_FIRST_LINE</img:first_line>
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_FIRST_LINE_SAMPLE")
+          <img:first_sample>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_FIRST_LINE_SAMPLE</img:first_sample>
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_LINES")
+          <img:lines>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_LINES</img:lines>
+
+          ## samples can be under either label, but not both, so it is safe to just call both.
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_SAMPLES")
+          <img:samples>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_SAMPLES</img:samples>
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_LINE_SAMPLES")
+          <img:samples>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_LINE_SAMPLES</img:samples>
+
+
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_TO_IMAGE_ROTATION")
+          <img:detector_to_image_rotation unit="deg">$!label.INSTRUMENT_STATE_PARMS.DETECTOR_TO_IMAGE_ROTATION</img:detector_to_image_rotation>
+
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_TO_IMAGE_FLIP")
+          #set ( $dtct_to_img_flip = $!label.INSTRUMENT_STATE_PARMS.DETECTOR_TO_IMAGE_FLIP.toString() )
+          #set ( $dtct_to_img_flip = $text.capitalize( $dtct_to_img_flip ) )
+          <img:detector_to_image_flip>$!dtct_to_img_flip</img:detector_to_image_flip>
+
+
+          #debug("INSTRUMENT_STATE_PARMS.DETECTOR_ERASE_COUNT")
+          <img:erase_count>$!label.INSTRUMENT_STATE_PARMS.DETECTOR_ERASE_COUNT</img:erase_count>
+          
+          ## Special case where we may have to convert MHz to Hz, because PDS thinks a single unit should apply for ALL contexts.....
+          #if ( $!label.INSTRUMENT_STATE_PARMS.SENSOR_READOUT_RATE )
+            #set ( $img_dtct_readout_rate = $!label.INSTRUMENT_STATE_PARMS.SENSOR_READOUT_RATE.toString() )
+            #set ( $img_dtct_readout_rate_unit = "#getUnitFrom($!label.INSTRUMENT_STATE_PARMS 'SENSOR_READOUT_RATE' '' )" )
+            #set ( $img_dtct_readout_rate_unit = $img_dtct_readout_rate_unit.toString() )            
+            #if ( $img_dtct_readout_rate_unit.equalsIgnoreCase("MHz") )          
+              #set ( $img_dtct_readout_rate = $math.mul( $img_dtct_readout_rate, '1000000' ) )
+            #end
+            #debug("INSTRUMENT_STATE_PARMS.SENSOR_READOUT_RATE")
+            <img:readout_rate unit="Hz" >$img_dtct_readout_rate</img:readout_rate>
+          #end
+
+          #debug("INSTRUMENT_STATE_PARMS.GAIN_NUMBER")
+          <img:gain_number>$!label.INSTRUMENT_STATE_PARMS.GAIN_NUMBER</img:gain_number>
+
+          #debug("INSTRUMENT_STATE_PARMS.OFFSET_MODE_ID")
+          <img:analog_offset>$!label.INSTRUMENT_STATE_PARMS.OFFSET_MODE_ID</img:analog_offset>                  
+          <img:analog_offset>$!label.INSTRUMENT_STATE_PARMS.DC_OFFSET</img:analog_offset>
+
+
+          ## Added per Git Issue 111
+          #if ( $label.INSTRUMENT_STATE_PARMS.SPECIAL_NAME &&
+                $label.INSTRUMENT_STATE_PARMS.SPECIAL_LINE &&
+                $label.INSTRUMENT_STATE_PARMS.SPECIAL_SAMPLE )
+            <img:Special_Point>
+              <img:name>$!label.INSTRUMENT_STATE_PARMS.SPECIAL_NAME</img:name>
+              <img:description>Location of the LIBS laser spot in the RMI image</img:description>
+              <img:special_line>$!label.INSTRUMENT_STATE_PARMS.SPECIAL_LINE</img:special_line>
+              <img:special_sample>$!label.INSTRUMENT_STATE_PARMS.SPECIAL_SAMPLE</img:special_sample>
+            </img:Special_Point>
+          #end
+
+
+        </img:Detector>
+
+        #generateDownsamplingParameters( $label.INSTRUMENT_STATE_PARMS )
+  
+        #generateExposureParameters($insStParamsNode $insStParamsName '')                                     
+
+        ##For flat-field, we will process either:
+        ## DERIVED_IMAGE_PARMS (if the node includes 'RADIOMETRIC_CORRECTION_TYPE'), 
+        ## otherwise INSTRUMENT_STATE_PARMS - but never both.
+        #if  ( $derivedImgParamsNode.RADIOMETRIC_CORRECTION_TYPE )
+            #generateFlatFieldCorrection($derivedImgParamsNode $derivedImgParamsName )
+        #else
+            #generateFlatFieldCorrection($insStParamsNode      $insStParamsName )
+        #end
+
+
+        #generateFocusParameters( $insStParamsNode 'img' )
+        ###generateFocusParameters( $insStParamsNode $insStParamsName )
+
+        #generateFrameParameters()
+          
+        ##<img:Histogram>...</img:Histogram>
+        #conditionalImageTypeProductFlag( $!IDENT.IMAGE_TYPE 'HISTOGRAM' )
+
+        <img:Illumination>
+          #if ( $label.LED_ILLUMINATION_PARMS )
+            #generateIlluminationMaskParameters($label.LED_ILLUMINATION_PARMS)
+          #end
+          #if ( $label.SLI_ILLUMINATION_PARMS )
+            #generateIlluminationMaskParameters($label.SLI_ILLUMINATION_PARMS)
+          #end
+        </img:Illumination>
+        
+        #generateImageMaskParameters($derivedImgParamsNode $derivedImgParamsName)   
+          
+        #generateOnboardCompressionParameters( $cmprsParamsNode $cmprsParamsName 'img' )
+        
+        #generateDataProductOnboardCompressionParameters()
+
+        #generateOpticalFilterParameters( $insStParamsNode )
+
+        ## Per issue 175, some Optical labels can appear either in INSTRUMENT_STATE_PARMS
+        ## or IMAGE_REQUEST_PARMS, but not both.  So build a list of nodes and pass
+        ## to the macro.
+        #set($optical_nodes = [])
+        #set($silencer = $optical_nodes.add( $insStParamsNode  ) )
+        #set($silencer = $optical_nodes.add( $imgReqParamsNode ) )
+        #generateOpticalProperties( $optical_nodes )
+
+        #generatePointCorr($derivedImgParamsNode $derivedImgParamsName)
+
+        #generateRadCorr($derivedImgParamsNode $derivedImgParamsName $derivedImageType )
+
+        ##<img:Reference_Pixel>...</img:Reference_Pixel>
+        #conditionalImageTypeProductFlag( $!IDENT.IMAGE_TYPE 'REF_PIXELS' )
+
+        ##<img:Row_Sum>...</img:Row_Sum>
+        #conditionalImageTypeProductFlag( $!IDENT.IMAGE_TYPE 'ROW_SUM' )
+
+        <img:Sampling>
+        
+          ##Only include sample bits when not float type
+          #if ( $IS_DATATYPE_FLOAT == $CONST_FALSE )
+
+              #debug("INSTRUMENT_STATE_PARMS.ORIGINAL_SAMPLE_BITS")  
+              <img:original_sample_bits>$!insStParamsNode.ORIGINAL_SAMPLE_BITS</img:original_sample_bits>
+
+              #debug("IMAGE_DATA.SAMPLE_BIT_MASK")          
+              <img:sample_bits>#bitMaskToSampleBits( $!IMAGE.SAMPLE_BIT_MASK.toString() )</img:sample_bits>
+              <img:sample_bit_mask>$!IMAGE.SAMPLE_BIT_MASK</img:sample_bit_mask>
+          #end
+          
+          #debug("INSTRUMENT_STATE_PARMS.SAMPLE_BIT_METHOD")
+          #debug("INSTRUMENT_STATE_PARMS.SAMPLE_BIT_MODE_ID")
+          #getCompandingParameters( $insStParamsNode $insStParamsName $derivedImageType $CONST_TRUE )
+
+        </img:Sampling>
+          
+        #generateShutterSubtraction($insStParamsNode $insStParamsName)
+            
+          
+        #generateSpatialFilterParameters($derivedImgParamsNode $derivedImgParamsName)   
+          
+
+        ## RGD #35: If there is no SUBFRAME_REQUEST_PARMS property group present, skip the group.
+        ## else If SUBFRAME_REQUEST_PARMS.GROUP_APPLICABILITY_FLAG == FALSE, skip the group.
+        ## else, include the group. (meaning it's TRUE or the keyword is not present but the property group is)
+        
+        ## We create Subframe nodes in more than one place, so lets just create a variables
+        #set ( $CREATE_SUBFRAME_NODE = $CONST_FALSE )  ##empty string means false
+        #if ( $!label.SUBFRAME_REQUEST_PARMS && 
+              $!label.SUBFRAME_REQUEST_PARMS.GROUP_APPLICABILITY_FLAG &&
+              $!label.SUBFRAME_REQUEST_PARMS.GROUP_APPLICABILITY_FLAG.toString().toLowerCase() != "false" )
+            #set ( $CREATE_SUBFRAME_NODE = $CONST_TRUE )
+        #end
+
+        #if ( $CREATE_SUBFRAME_NODE == $CONST_TRUE)
+        
+         <img:Subframe>            
+              
+              ##Overly complicated logic for dealing with Subframes that Deen and Ruoff discussed.
+              ##Check with Bob for the clear as mud reasoning...but if IMG_REQ_PRMS contain any of 
+              ##the nodes listed, then use that for source.  Otherwise, use IMAGE with backup
+              ##of label.PDS4_IMAGE for samples in odd cases.
+              
+              ## Sometimes VIC files don't include IMAGE.LINE_SAMPLES, so
+              ## as a backup, macro accepts a third backup value arg, tho it will              
+              ## only be used if node.LINE_LINES exists.
+              
+              #set ($subfrm_ls_prms_smpl_bak = '')
+              
+              #if ( $imgReqParamsNode.FIRST_LINE  ||  $imgReqParamsNode.FIRST_LINE_SAMPLE ||
+                    $imgReqParamsNode.LINES       ||  $imgReqParamsNode.LINE_SAMPLES       )
+                    
+                  #generateSubframeLineSampParameters($imgReqParamsNode $imgReqParamsName $subfrm_ls_prms_smpl_bak )
+              #else
+                   
+                  ## Try and use $label.PDS4_IMAGE.ns as source for backup 'samples'                  
+                  #if ($label.PDS4_IMAGE && $label.PDS4_IMAGE.ns )                      
+                      #set ($subfrm_ls_prms_smpl_bak = $label.PDS4_IMAGE.ns )
+                  #end
+                  
+                  #generateSubframeLineSampParameters($imageNode $imageName $subfrm_ls_prms_smpl_bak )
+              #end
+              
+              
+              ## Can be one of 'ELEVATION_FOV' or 'VERTICAL_FOV':
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'ELEVATION_FOV'   "img:line_fov"   'deg' )
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'VERTICAL_FOV'    "img:line_fov"   'deg' )
+              
+              ## Can be one of 'AZIMUTH_FOV' or 'HORIZONTAL_FOV':
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'AZIMUTH_FOV'      "img:sample_fov"   'deg' )
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'HORIZONTAL_FOV'   "img:sample_fov"   'deg' )
+              
+              #generateSubframeType( $label.SUBFRAME_REQUEST_PARMS 'SUBFRAME_REQUEST_PARMS' )
+
+         </img:Subframe>
+        #else 
+
+            ## Per Git issue 62, In this section, we will create a shortened-Subframe with FOV values only, 
+            ## if they exists.  The velo 'empty' logic should make that determination so we dont have to 
+            ## explicitly test for them.
+
+            <img:Subframe>  
+
+              ## Can be one of 'ELEVATION_FOV' or 'VERTICAL_FOV':
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'ELEVATION_FOV'  "img:line_fov"   'deg' )
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'VERTICAL_FOV'   "img:line_fov"   'deg' )
+              
+              ## Can be one of 'AZIMUTH_FOV' or 'HORIZONTAL_FOV':
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'AZIMUTH_FOV'      "img:sample_fov"   'deg' )
+              #getNodeValueNotNil( $label.INSTRUMENT_STATE_PARMS   'HORIZONTAL_FOV'   "img:sample_fov"   'deg' )
+            
+            </img:Subframe>
+        #end ## IF CREATE_SUBFRAME_NODE
+          
+        ##<img:Thumbnail>...</img:Thumbnail>
+        #conditionalImageTypeProductFlag( $!IDENT.IMAGE_TYPE 'THUMBNAIL' )
+
+        #generateTilingParameters( $insStParamsNode )
+
+
+        ##<img:Video>...</img:Video>
+        #set ($vidParamsName = "VIDEO_PARMS")
+        #if ( $label.get($vidParamsName) )
+          #set ($vidParamsNode = $label.get($vidParamsName)) 
+          #generateVideoParameters( $vidParamsNode  $vidParamsName $CONST_TRUE )
+        #end
+        
+
+        <img:Instrument_State>
+        
+           <img:Device_Component_States>
+          
+            ##COVER_HALL_SENSOR_FLAG
+            #set ($img_is_chsf_val = "#checkNA( $!label.INSTRUMENT_STATE_PARMS.COVER_HALL_SENSOR_FLAG '' )")
+            #if ( "$img_is_chsf_val" != "")
+            <img:Device_Component_State>
+                <img:device_name>Cover_Hall_Sensor</img:device_name>
+                <img:device_state>$img_is_chsf_val</img:device_state>            
+            </img:Device_Component_State>
+            #end
+            
+            ##FILTER_HALL_SENSOR_FLAG
+            #set ($img_is_fihsf_val = "#checkNA( $!label.INSTRUMENT_STATE_PARMS.FILTER_HALL_SENSOR_FLAG '' )")
+            #if ( "$img_is_fihsf_val" != "")
+            <img:Device_Component_State>
+                <img:device_name>Filter_Hall_Sensor</img:device_name>
+                <img:device_state>$img_is_fihsf_val</img:device_state>            
+            </img:Device_Component_State>
+            #end
+            
+            ##FOCUS_HALL_SENSOR_FLAG
+            #set ($img_is_fohsf_val = "#checkNA( $!label.INSTRUMENT_STATE_PARMS.FOCUS_HALL_SENSOR_FLAG '' )")
+            #if ( "$img_is_fohsf_val" != "")
+            <img:Device_Component_State>
+                <img:device_name>Focus_Hall_Sensor</img:device_name>
+                <img:device_state>$img_is_fohsf_val</img:device_state>            
+            </img:Device_Component_State>
+            #end
+          
+            ##List of LED_STATE_FLAG/NAME
+            #if ( $!label.INSTRUMENT_STATE_PARMS.LED_STATE_FLAG )           
+            #set($ispLsf_length = $label.INSTRUMENT_STATE_PARMS.LED_STATE_FLAG.size())
+            #foreach ( $i in [1..$ispLsf_length] )
+              #set ($ispLsnCurFlagVal = $label.INSTRUMENT_STATE_PARMS.LED_STATE_FLAG.get($foreach.index)) 
+              #set ($ispLsnCurFlagVal = "#checkNA( $ispLsnCurFlagVal.toString() '' )" )
+              #if ( "$ispLsnCurFlagVal" != "")
+              #set ($ispLsnCurNameVal = $label.INSTRUMENT_STATE_PARMS.LED_STATE_NAME.get($foreach.index)) 
+              <img:Device_Component_State>
+                  <img:device_name>LED_State_${ispLsnCurNameVal}</img:device_name>
+                  <img:device_state>$ispLsnCurFlagVal</img:device_state>                     
+              </img:Device_Component_State>
+              #end
+            #end
+            #end
+          
+            #if ( $!label.INSTRUMENT_STATE_PARMS.DEVICE_COMPONENT_STATE )           
+            #set($ispDcs_length = $label.INSTRUMENT_STATE_PARMS.DEVICE_COMPONENT_STATE.size())
+            #foreach ( $i in [1..$ispDcs_length] )
+              #set ($ispDcsVal = $label.INSTRUMENT_STATE_PARMS.DEVICE_COMPONENT_STATE.get($foreach.index)) 
+              #set ($ispDcsVal = "#checkNA( $ispDcsVal.toString() '' )" )
+              #if ( "$ispDcsVal" != "")
+              #set ($ispDcsNameVal = $label.INSTRUMENT_STATE_PARMS.DEVICE_COMPONENT_STATE_NAME.get($foreach.index)) 
+              <img:Device_Component_State>
+                  <img:device_name>${ispDcsNameVal}</img:device_name>
+                  <img:device_state>$ispDcsVal</img:device_state>                     
+              </img:Device_Component_State>
+              #end
+            #end
+            #end
+
+
+          </img:Device_Component_States>
+        
+          #get_Img_DeviceState_DeviceTemps()
+            
+        </img:Instrument_State>
+        
+        
+        <img:Commanded_Parameters>        
+          #set ($obsReqParamsName = "OBSERVATION_REQUEST_PARMS")
+          #set ($obsReqParamsNode = $label.get($obsReqParamsName))   
+          
+          #set ($imgReqParamsName = "IMAGE_REQUEST_PARMS")
+          #set ($imgReqParamsNode = $label.get($imgReqParamsName))   
+          
+          #set ($vidReqParamsName = "VIDEO_REQUEST_PARMS")
+          #set ($vidReqParamsNode = $label.get($vidReqParamsName))   
+
+   
+          #set ($thmReqParamsName = "THUMBNAIL_REQUEST_PARMS")
+          #set ($thmReqParamsNode = $label.get($thmReqParamsName))
+          #set ($rsmReqParamsName = "ROW_SUM_REQUEST_PARMS")
+          #set ($rsmReqParamsNode = $label.get($rsmReqParamsName))
+          #set ($csmReqParamsName = "COLUMN_SUM_REQUEST_PARMS")
+          #set ($csmReqParamsNode = $label.get($csmReqParamsName))
+          #set ($rpxReqParamsName = "REFERENCE_PIXEL_REQUEST_PARMS")
+          #set ($rpxReqParamsNode = $label.get($rpxReqParamsName))
+          #set ($hstReqParamsName = "HISTOGRAM_REQUEST_PARMS")
+          #set ($hstReqParamsNode = $label.get($hstReqParamsName))
+
+
+          <img:Col_Sum>
+            <img:download_priority>$!csmReqParamsNode.DOWNLOAD_PRIORITY</img:download_priority>
+            <img:product_flag>$!csmReqParamsNode.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:product_flag>              
+          </img:Col_Sum>
+          
+          ## Added as part of Git Issue #24
+          <img:Dark_Current_Correction>
+            <img:striping_count>$!TELEM.STRIPING_COUNT</img:striping_count>
+            <img:striping_overlap_rows>$!TELEM.STRIPING_OVERLAP_ROWS</img:striping_overlap_rows>
+          </img:Dark_Current_Correction>
+
+          <img:Detector>
+
+            #generateDetectorEraseCount($obsReqParamsNode $obsReqParamsName)   
+
+            #debug("OBSERVATION_REQUEST_PARMS.GAIN_NUMBER")
+            <img:gain_number>$!obsReqParamsNode.GAIN_NUMBER</img:gain_number>
+
+            <img:bad_pixel_replacement_flag>$!obsReqParamsNode.BAD_PIXEL_REPLACEMENT_FLAG.toString().toLowerCase()</img:bad_pixel_replacement_flag>
+
+            <img:bad_pixel_replacement_table_id>$!label.INSTRUMENT_STATE_PARMS.BAD_PIXEL_REPLACEMENT_ID</img:bad_pixel_replacement_table_id>
+                      
+            <img:instrument_idle_timeout  #getUnitAttrOrDefault($!obsReqParamsNode "INSTRUMENT_IDLE_TIMEOUT"  ''  's')>$!obsReqParamsNode.INSTRUMENT_IDLE_TIMEOUT</img:instrument_idle_timeout>
+
+            #debug("OBSERVATION_REQUEST_PARMS.EARLY_IMAGE_RETURN_FLAG")
+            <img:early_image_return>$!obsReqParamsNode.EARLY_IMAGE_RETURN_FLAG.toString().toLowerCase()</img:early_image_return>
+
+            <img:parameter_table_id>$!obsReqParamsNode.PARAMETER_TABLE_ID</img:parameter_table_id>
+
+            ## Placeholder: The intent is that it can be used to point at the bad 
+            ## pixel replacement table, using as the reference type 
+            ## data_to_calibration_product or perhaps something more specific, 
+            ## like data_to_bad_pixel_table... (Issue #25)
+            <Internal_Reference></Internal_Reference>
+
+          </img:Detector>
+
+          #generateDownsamplingParameters( $imgReqParamsNode )
+          
+          ##Exposure values can apparently come from either 'OBSERVATION_REQUEST_PARMS' or
+          ##'IMAGE_REQUEST_PARMS', so we need to select at most one of those.          
+          #if ( $!obsReqParamsNode.EXPOSURE_TYPE  )
+            #generateExposureParameters( $obsReqParamsNode $obsReqParamsName '' )
+          #elseif ( $!imgReqParamsNode.EXPOSURE_TYPE )
+            #generateExposureParameters( $imgReqParamsNode $imgReqParamsName '' )            
+          #end
+          
+          #generateFlatFieldCorrection( $imgReqParamsNode $imgReqParamsName )
+
+          ## Focus labels can appear either in IMAGE_REQUEST_PARMS or OBSERVATION_REQUEST_PARMS
+          ## Until there is a clear way to determine which to use, we will just call This
+          ## macro once each per node.      
+          #set($commanded_focus_nodes = [])
+          #set($silencer = $commanded_focus_nodes.add( $imgReqParamsNode ) )
+          #set($silencer = $commanded_focus_nodes.add( $obsReqParamsNode ) )
+          #generateFocusParameters( $commanded_focus_nodes 'img' )
+
+          ###generateFocusParameters($imgReqParamsNode $imgReqParamsName)
+          ###generateFocusParameters($obsReqParamsNode $obsReqParamsName)
+
+
+          ## Non-generic Focus_Stack pulling info from ImageReqParms and ZstackReqparms ##
+          <img:Focus_Stack>
+          
+             #debug("ZSTACK_REQUEST_PARMS.GROUP_APPLICABILITY_FLAG")
+             <img:active_flag>$!label.ZSTACK_REQUEST_PARMS.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:active_flag>
+             
+             #if ( $!label.IMAGE_REQUEST_PARMS.AUTO_FOCUS_ZSTACK_FLAG.toString().toUpperCase() != $CONST_NULL )
+               #debug("IMAGE_REQUEST_PARMS.AUTO_FOCUS_ZSTACK_FLAG")
+               <img:focus_stack_flag>$!label.IMAGE_REQUEST_PARMS.AUTO_FOCUS_ZSTACK_FLAG.toString().toLowerCase()</img:focus_stack_flag>
+             #end
+             
+             #debug("ZSTACK_REQUEST_PARMS.ZSTACK_IMAGE_DEPTH")
+             <img:frame_count>#checkNA( $!label.ZSTACK_REQUEST_PARMS.ZSTACK_IMAGE_DEPTH '' )</img:frame_count>
+
+            <img:frame_index>#checkNA( $!label.ZSTACK_REQUEST_PARMS.START_IMAGE_ID  '' )</img:frame_index>
+
+             #if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue($label.ZSTACK_REQUEST_PARMS 'IMAGE_BLENDING_FLAG')") )
+               <img:focus_merge_blending_flag>$!label.ZSTACK_REQUEST_PARMS.IMAGE_BLENDING_FLAG.toString().toLowerCase()</img:focus_merge_blending_flag>
+             #end
+             #if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue($label.ZSTACK_REQUEST_PARMS 'IMAGE_REGISTRATION_FLAG')") )
+               <img:focus_merge_registration_flag>$!label.ZSTACK_REQUEST_PARMS.IMAGE_REGISTRATION_FLAG.toString().toLowerCase()</img:focus_merge_registration_flag>
+             #end
+
+             #debug("ZSTACK_REQUEST_PARMS.ZSTACK_DELTA_FOCUS_COUNT")
+             <img:delta_focus_count>#checkNA( $!label.ZSTACK_REQUEST_PARMS.ZSTACK_DELTA_FOCUS_COUNT '' )</img:delta_focus_count>
+
+          </img:Focus_Stack>
+          
+          <img:Histogram>
+            <img:download_priority>$!hstReqParamsNode.DOWNLOAD_PRIORITY</img:download_priority>
+            <img:product_flag>$!hstReqParamsNode.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:product_flag>                     
+          </img:Histogram>
+          
+          #generateOnboardCompressionParameters($imgReqParamsNode $imgReqParamsName 'img' )
+          
+          #set($optical_filter_nodes = [])
+          #set($silencer = $optical_filter_nodes.add( $imgReqParamsNode ) )
+          #set($silencer = $optical_filter_nodes.add( $obsReqParamsNode ) )
+          #generateOpticalFilterParameters( $optical_filter_nodes )
+          
+          <img:Reference_Pixel>
+            <img:download_priority>$!rpxReqParamsNode.DOWNLOAD_PRIORITY</img:download_priority>
+            <img:product_flag>$!rpxReqParamsNode.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:product_flag>
+            #generateOnboardCompressionParameters( $rpxReqParamsNode $rpxReqParamsName 'img' )
+          </img:Reference_Pixel>
+
+          <img:Row_Sum>
+            <img:download_priority>$!rsmReqParamsNode.DOWNLOAD_PRIORITY</img:download_priority>
+            <img:product_flag>$!rsmReqParamsNode.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:product_flag>
+          </img:Row_Sum>
+
+          <img:Sampling>
+
+            ## Adding this per Git Issue 32 but not sure its right?  (nttoole,06.03.2020)
+            #getCompandingParameters( $imgReqParamsNode $imgReqParamsName $derivedImageType $CONST_FALSE )
+
+          </img:Sampling>
+
+          #generateShutterSubtraction($obsReqParamsNode $obsReqParamsName)   
+
+          #if ( $CREATE_SUBFRAME_NODE == $CONST_TRUE )
+           <img:Subframe>
+          
+              #generateSubframeLineSampParameters($imgReqParamsNode $imgReqParamsName '' )
+              
+           </img:Subframe>
+          #end    
+ 
+          <img:Thumbnail>
+
+            <img:download_priority>$!thmReqParamsNode.DOWNLOAD_PRIORITY</img:download_priority>
+            <img:product_flag>$!thmReqParamsNode.GROUP_APPLICABILITY_FLAG.toString().toLowerCase()</img:product_flag>
+            
+            #generateOnboardCompressionParameters( $thmReqParamsNode $thmReqParamsName 'img' )
+            
+            <img:Sampling>
+              #getCompandingParameters( $thmReqParamsNode $imgReqParamsName $derivedImageType $CONST_FALSE )
+            </img:Sampling>
+
+            <img:Subframe>          
+              #generateSubframeLineSampParameters($thmReqParamsNode $thmReqParamsName '' )
+            </img:Subframe>
+            
+          </img:Thumbnail>
+
+          #generateVideoParameters( $vidReqParamsNode  $vidReqParamsName  $CONST_FALSE )
+
+
+        </img:Commanded_Parameters>
+        
+        
+      </img:Imaging>
+      
+      ######################################
+      ## Image Surface Discipline Area
+      ######################################
+        
+      <img_surface:Surface_Imaging>
+          
+        <img_surface:Image_Identifiers>
+          #debug("IDENTIFICATION.IMAGE_ID")
+          <img_surface:image_id>$!IDENT.IMAGE_ID</img_surface:image_id>
+          #debug("IDENTIFICATION.IMAGE_ID_2")
+          <img_surface:image_id_2>$!IDENT.IMAGE_ID_2</img_surface:image_id_2>
+          #debug("IDENTIFICATION.MOSAIC_ID")
+          <img_surface:mosaic_id>$!IDENT.MOSAIC_ID</img_surface:mosaic_id>
+          #debug("IDENTIFICATION.MESH_ID")
+          <img_surface:mesh_id>$!IDENT.MESH_ID</img_surface:mesh_id>
+          #debug("IDENTIFICATION.STEREO_MATCH_ID")
+          <img_surface:stereo_match_id>$!IDENT.STEREO_MATCH_ID</img_surface:stereo_match_id>
+
+          <img_surface:tracking_id>$!IDENT.TRACKING_ID</img_surface:tracking_id>
+          
+        </img_surface:Image_Identifiers>
+        
+        <img_surface:Instrument_Information>
+          #debug("IDENTIFICATION.IMAGE_TYPE")
+          <img_surface:image_type>$!IDENT.IMAGE_TYPE</img_surface:image_type>
+          #debug("IDENTIFICATION.IMAGE_ACQUIRE_MODE")
+          <img_surface:image_acquire_mode>$!IDENT.IMAGE_ACQUIRE_MODE</img_surface:image_acquire_mode>
+          #debug("IDENTIFICATION.INSTRUMENT_TYPE")
+          <img_surface:instrument_type>$!IDENT.INSTRUMENT_TYPE</img_surface:instrument_type>
+          #debug("INSTRUMENT_STATE_PARMS.INSTRUMENT_MODE_ID")
+          <img_surface:instrument_mode_id>$!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_MODE_ID</img_surface:instrument_mode_id>
+          #debug("IDENTIFICATION.INSTRUMENT_SERIAL_NUMBER")
+          <img_surface:instrument_serial_number>$!IDENT.INSTRUMENT_SERIAL_NUMBER</img_surface:instrument_serial_number>
+          #debug("IDENTIFICATION.INSTRUMENT_VERSION_ID")          
+          <img_surface:instrument_version_number>$!IDENT.INSTRUMENT_VERSION_ID</img_surface:instrument_version_number>
+          
+          #if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue( $IDENT 'INSTRUMENT_ID')"))
+            #debug("IDENTIFICATION.INSTRUMENT_ID")
+            #set ( $ident_instr_id_list = "#joinStrList( $!IDENT.INSTRUMENT_ID ';' )" ) 
+            #set ( $ident_instr_id_list = $ident_instr_id_list.split(';') )
+            #set ( $ident_instr_id_list_is_empty = "#isSplitListFromJoinStrListEmpty($ident_instr_id_list)" )  
+            #if ( $ident_instr_id_list_is_empty == $CONST_FALSE )
+              #foreach ( $ident_instr_id_item in $ident_instr_id_list ) 
+                <img_surface:ops_instrument_key>$ident_instr_id_item</img_surface:ops_instrument_key>
+              #end       
+            #end
+          #else
+                <img_surface:ops_instrument_key>$!INSTRUMENT_ID</img_surface:ops_instrument_key>
+          #end
+        
+          #debug("GEO_CAM_MODEL.CAMERA_SERIAL_NUMBER")
+          <img_surface:camera_model_serial_number>$!GEO_CAM_MODEL.CAMERA_SERIAL_NUMBER</img_surface:camera_model_serial_number>
+
+          #debug("IDENTIFICATION.CAMERA_PRODUCT_ID")
+          <img_surface:camera_product_id>$!IDENT.CAMERA_PRODUCT_ID</img_surface:camera_product_id>
+          #debug("IDENTIFICATION.CAMERA_PRODUCT_ID_COUNT")
+          <img_surface:camera_product_id_count>$!IDENT.CAMERA_PRODUCT_ID_COUNT</img_surface:camera_product_id_count>
+          
+        </img_surface:Instrument_Information>
+           
+         #if ($derivedImageType)
+         <img_surface:Derived_Product_Parameters>
+           #debug ( "DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE" )
+           <img_surface:derived_image_type_name>$!label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE</img_surface:derived_image_type_name>
+             
+           #debug ( "DERIVED_IMAGE_PARMS.HORIZON_MASK_ELEVATION" )
+           <img_surface:horizon_mask_elevation>$!label.HORIZON_MASK_ELEVATION</img_surface:horizon_mask_elevation>
+           
+           <img_surface:Placement_Target_Instrument>
+             #debug("DERIVED_IMAGE_PARMS.TARGET_INSTRUMENT")
+             <img_surface:name>$!label.DERIVED_IMAGE_PARMS.TARGET_INSTRUMENT</img_surface:name>            
+             #set ($derivedImageParamsTargetInstr = $label.DERIVED_IMAGE_PARMS.TARGET_INSTRUMENT.toString())
+             #if ( $derivedImageParamsTargetInstr )
+             #set ($derivedImageParamsTargetInstr = $derivedImageParamsTargetInstr.toLowerCase())
+             #set ($derivedImageParamsTargetInstrUrn = "#msn_getInstrumentContextURN($derivedImageParamsTargetInstr)" )
+             <Internal_Reference>
+               <lid_reference>$derivedImageParamsTargetInstrUrn.toLowerCase()</lid_reference>
+               <reference_type>data_to_placement_instrument</reference_type>
+             </Internal_Reference>
+             #end
+           </img_surface:Placement_Target_Instrument>
+             
+           #debug("DERIVED_IMAGE_PARMS.RANGE_ORIGIN_VECTOR")
+           <img_surface:Vector_Range_Origin>
+             <img_surface:x_position unit="m">$!label.DERIVED_IMAGE_PARMS.RANGE_ORIGIN_VECTOR[0]</img_surface:x_position>
+             <img_surface:y_position unit="m">$!label.DERIVED_IMAGE_PARMS.RANGE_ORIGIN_VECTOR[1]</img_surface:y_position>
+             <img_surface:z_position unit="m">$!label.DERIVED_IMAGE_PARMS.RANGE_ORIGIN_VECTOR[2]</img_surface:z_position>
+           </img_surface:Vector_Range_Origin>
+             
+
+             
+           #if ($label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME)
+             #debug("DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME")
+             #debug("DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_INDEX")
+             #set ( $coordSystemName  = "" )
+             #set ( $coordSystemIndex = "" )
+             #set ( $coordSystemName  = $label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME ) 
+             #set ( $coordSystemIndex = $label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_INDEX )               
+             #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "geom" "DERIVED_IMAGE_PARMS" )
+           #end
+             
+         </img_surface:Derived_Product_Parameters>
+         #end
+           
+         <img_surface:Error_Model>
+           <img_surface:error_model_name>$!label.DERIVED_IMAGE_PARMS.ERROR_MODEL_NAME</img_surface:error_model_name>
+           #if ( $label.DERIVED_IMAGE_PARMS.ERROR_MODEL_PARMS )
+           #set($length = $label.DERIVED_IMAGE_PARMS.ERROR_MODEL_PARMS.size())
+           #foreach ( $i in [1..$length] )
+           <img_surface:Error_Model_Parameter>
+             <img_surface:name>$!label.DERIVED_IMAGE_PARMS.ERROR_MODEL_PARMS_NAME.get($foreach.index)</img_surface:name>
+             <img_surface:value>$!label.DERIVED_IMAGE_PARMS.ERROR_MODEL_PARMS.get($foreach.index)</img_surface:value>
+           </img_surface:Error_Model_Parameter>
+           #end  ##EndFor
+           #end ##EndIf
+         </img_surface:Error_Model>
+           
+         <img_surface:Geometry_Projection>
+
+           #set ($geoproj_linmode = '')
+           #set ($geoproj_linmodefov = '')
+
+           ##Jan'22: Trancoder bug is sticking LINEARIZATION_MODE node and value at end of
+           ##SUPPLEMENTAL_MASK_FILE value.  So we have to handle that case here (and for mask area)
+           ##by checking that situation 
+
+           #if ( $label.DERIVED_IMAGE_PARMS.LINEARIZATION_MODE )
+             #set ($geoproj_linmode     = $!label.DERIVED_IMAGE_PARMS.LINEARIZATION_MODE[0].toString() )
+             #set ($geoproj_linmode_fov = $!label.DERIVED_IMAGE_PARMS.LINEARIZATION_MODE[1].toString() )
+           #elseif ( $label.DERIVED_IMAGE_PARMS.SUPPLEMENTAL_MASK_FILE && 
+                     $!label.DERIVED_IMAGE_PARMS.SUPPLEMENTAL_MASK_FILE.toString().contains("LINEARIZATION_MODE"))
+              #set ( $hack_values = "#hackSeparateLabelValues($label.DERIVED_IMAGE_PARMS.SUPPLEMENTAL_MASK_FILE 'LINEARIZATION_MODE')")
+              #if ( ! $CONST_FALSE.equals($hack_values) )
+                #set ( $hack_values_list = $hack_values.split(";"))
+                #if ( $CONST_FALSE.equals("#isSplitListFromJoinStrListEmpty($hack_values_list)") )
+                  #set ( $linmodevalues = $hack_values_list.get(1) )
+                  #if ($linmodevalues.contains(','))
+                    #set ( $linmodevalues = $linmodevalues.replace('(', '') )
+                    #set ( $linmodevalues = $linmodevalues.replace(')', '') )
+                    #set ( $linmodevalues = $linmodevalues.trim() )
+                    #set ( $linmodevalues_list = $linmodevalues.split(","))
+                    #if ( $linmodevalues_list.size() == 2 )
+                      #set ($geoproj_linmode     = $linmodevalues_list.get(0) )
+                      #set ($geoproj_linmode_fov = $linmodevalues_list.get(1) )
+                      #set ($geoproj_linmode     = $geoproj_linmode.trim() )
+                      #set ($geoproj_linmode_fov = $geoproj_linmode_fov.trim() )
+                    #end
+                  #end
+                #end
+              #end
+           #end
+
+           #set ($geoproj_linmode     = $!text.capitalize($geoproj_linmode) )
+           #set ($geoproj_linmode_fov = $!text.capitalize($geoproj_linmode_fov) )
+           <img_surface:linearization_mode>$!geoproj_linmode</img_surface:linearization_mode>
+           <img_surface:linearization_mode_fov>$!geoproj_linmode_fov</img_surface:linearization_mode_fov>
+
+           #debug ( "IDENTIFICATION.GEOMETRY_PROJECTION_TYPE" )
+           <img_surface:geometry_projection_type>$!text.capitalize($!IDENT.GEOMETRY_PROJECTION_TYPE.toString())</img_surface:geometry_projection_type>
+                        
+           #if ( $label.DERIVED_IMAGE_PARMS.LINEARIZATION_PRODUCT_ID )
+           <Internal_Reference>
+             #set ( $lblDipLpid = $label.DERIVED_IMAGE_PARMS.LINEARIZATION_PRODUCT_ID.toString() )
+             #set ( $lblDipLpid = "#getPidFullnameNoVersion($lblDipLpid)" )
+             #set ( $lblDipLcol = "#msn_getProductLidCollection($lblDipLpid)" )
+
+             #set ( $lblDipLpid_lid = "#generateLID( $LID_PREFIX $lblDipLcol $lblDipLpid )" )
+             #set ( $lblDipLpid_lid = $lblDipLpid_lid.toLowerCase() )
+             <lid_reference>$lblDipLpid_lid</lid_reference>
+             <reference_type>data_to_linearization_partner</reference_type>
+           </Internal_Reference>
+           #end
+         </img_surface:Geometry_Projection>
+           
+
+        #if ( $label.DERIVED_IMAGE_PARMS.CONFIGURATION_BIT_ID && 
+            ( $label.DERIVED_IMAGE_PARMS.INSTRUMENT_BAND_ID ||
+              $label.DERIVED_IMAGE_PARMS.INSTRUMENT_LIST_ID ))
+        <img_surface:Reachability>
+
+          ## Instruments Section
+          #set ( $instrs_device = "ARM" )
+          #if ( $label.DERIVED_IMAGE_PARMS.INSTRUMENT_BAND_ID )
+            #set ( $instrs_node = $label.DERIVED_IMAGE_PARMS.get('INSTRUMENT_BAND_ID') )
+          #else
+            #set ( $instrs_node = $label.DERIVED_IMAGE_PARMS.get('INSTRUMENT_LIST_ID') )
+          #end
+          <img_surface:device_id>${instrs_device}</img_surface:device_id>          
+          <img_surface:Reach_Instruments>
+            #set ( $instrs_node_len = $instrs_node.size() - 1 )
+            #foreach ( $i in [ 0..$instrs_node_len ] )
+              #set ( $instr_name = $instrs_node.get($foreach.index) )
+              #set ( $instr_indx = $math.add( $foreach.index, 1))
+              <img_surface:Reach_Instrument>
+                <img_surface:instrument_id>${instr_name}</img_surface:instrument_id>
+                <img_surface:band>${instr_indx}</img_surface:band>
+              </img_surface:Reach_Instrument>
+            #end
+          </img_surface:Reach_Instruments>
+
+          ## Configurations Section          
+          #set ( $cfg_bits_total_size = '16' ) 
+          #set ( $cfg_bit_size = '2' )  ## default to 2 for consistency
+          #if ( $label.DERIVED_IMAGE_PARMS.CONFIGURATION_BITS )
+            #set ( $cfg_bit_size = $label.DERIVED_IMAGE_PARMS.CONFIGURATION_BITS.toString() )
+          #end
+          #set ( $cfg_bit_size_minus1 = $math.sub($cfg_bit_size, 1) )
+          #set ( $cfg_bits_total_size_minus1 = $math.sub($cfg_bits_total_size, 1) )
+
+          #set ( $configs_node = $label.DERIVED_IMAGE_PARMS.CONFIGURATION_BIT_ID )
+          <img_surface:Configurations>
+            <img_surface:band>$!label.DERIVED_IMAGE_PARMS.CONFIGURATION_BAND</img_surface:band>
+            #set ( $configs_node_end_idx = $configs_node.size() - 1 )
+            #foreach ( $i in [ 0..$configs_node_end_idx ] )
+              #set ( $config_name = $configs_node.get($foreach.index) )
+              #set ( $config_bit_offset = $math.mul( $foreach.index, $cfg_bit_size))
+              #set ( $config_start_bit  = $math.sub( $cfg_bits_total_size_minus1, $config_bit_offset ))
+              #set ( $config_end_bit    = $math.sub( $config_start_bit, $cfg_bit_size_minus1 ))
+              <img_surface:Configuration>
+                <img_surface:device_config>$config_name</img_surface:device_config>
+                <img_surface:start_bit>$config_start_bit</img_surface:start_bit>
+                <img_surface:stop_bit>$config_end_bit</img_surface:stop_bit>
+              </img_surface:Configuration>
+            #end
+          </img_surface:Configurations>
+ 
+        </img_surface:Reachability>
+        #end
+
+
+         <img_surface:Stereo_Product_Parameters>
+
+           <img_surface:correlation_average_scale>$!label.DERIVED_IMAGE_PARMS.CORRELATION_AVERAGE_SCALE</img_surface:correlation_average_scale>
+           <img_surface:correlation_overlap_percentage>$!label.DERIVED_IMAGE_PARMS.CORRELATION_OVERLAP_PERCENTAGE</img_surface:correlation_overlap_percentage>
+           <img_surface:correlation_pixel_count>$!label.DERIVED_IMAGE_PARMS.CORRELATION_PIXEL_COUNT</img_surface:correlation_pixel_count>
+
+           <img_surface:correlation_pyramid_level>$!label.DERIVED_IMAGE_PARMS.CORRELATION_PYRAMID_LEVEL</img_surface:correlation_pyramid_level>
+
+           <img_surface:stereo_baseline_length unit="m">$!label.DERIVED_IMAGE_PARMS.STEREO_BASELINE</img_surface:stereo_baseline_length>
+
+           #if ( $label.DERIVED_IMAGE_PARMS.STEREO_PRODUCT_ID )
+           <Internal_Reference>
+             #set ( $lblDipSpid = $label.DERIVED_IMAGE_PARMS.STEREO_PRODUCT_ID.toString() )
+             #set ( $lblDipSpid = "#getPidFullnameNoVersion($lblDipSpid)" )
+             #set ( $lblDipScol = "#msn_getProductLidCollection($lblDipSpid)" )
+             #set ( $lblDipSpid_lid = "#generateLID( $LID_PREFIX $lblDipScol $lblDipSpid )" )
+             #set ( $lblDipSpid_lid = $lblDipSpid_lid.toLowerCase() )
+             <lid_reference>$lblDipSpid_lid</lid_reference>
+             <reference_type>data_to_stereo_partner</reference_type>
+           </Internal_Reference>
+           #end
+        </img_surface:Stereo_Product_Parameters>
+          
+        #set ( $overloadedCoordSpaceRef = "#checkCoordSpaceOverloading($label.DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE)" )
+        #if ( $overloadedCoordSpaceRef eq $CONST_TRUE )
+          #if ($label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME)
+            #debug("DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME")
+            #debug("DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_INDEX")
+            #set ( $coordSystemName  = "" )
+            #set ( $coordSystemIndex = "" )
+            #set ( $coordSystemName  = $label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME ) 
+            #set ( $coordSystemIndex = $label.DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_INDEX )
+            #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "img_surface" "DERIVED_IMAGE_PARMS" )
+          #end
+        #end
+          
+        #if ( $IDENT.ERROR_PIXEL_LINE )
+            #set($length = $IDENT.ERROR_PIXEL_LINE.size())
+            #foreach ( $i in [1..$length] )
+              #if ( ! ($IDENT.ERROR_PIXEL_LINE.get($foreach.index).equals($CONST_NA)) && !( $IDENT.ERROR_PIXEL_SAMPLE.get($foreach.index).equals($CONST_NA)) )
+              <img_surface:Error_Pixel>
+                #debug( "TELEMETRY.ERROR_PIXEL_LINE" )
+                <img_surface:line>$!IDENT.ERROR_PIXEL_LINE.get($foreach.index)</img_surface:line>
+                #debug( "TELEMETRY.ERROR_PIXEL_SAMPLE" )
+                <img_surface:sample>$!IDENT.ERROR_PIXEL_SAMPLE.get($foreach.index)</img_surface:sample>
+              </img_surface:Error_Pixel>
+              #end
+            #end
+        #end
+
+        <img_surface:Commanded_Parameters>
+
+          <img_surface:Instrument_Information>
+            #if ( $!label.OBSERVATION_REQUEST_PARMS.COMMAND_INSTRUMENT_ID )
+              #debug("OBSERVATION_REQUEST_PARMS.COMMAND_INSTRUMENT_ID")
+              #set ( $orp_cmd_instr_id_list = "#joinStrList( $label.OBSERVATION_REQUEST_PARMS.COMMAND_INSTRUMENT_ID ';' )" ) 
+              #set ( $orp_cmd_instr_id_list = $orp_cmd_instr_id_list.split(';') )
+              #set ( $orp_cmd_instr_id_list_is_empty = "#isSplitListFromJoinStrListEmpty($orp_cmd_instr_id_list)" )  
+              #if ( $orp_cmd_instr_id_list_is_empty == $CONST_FALSE )
+                #foreach ( $orp_cmd_instr_id_item in $orp_cmd_instr_id_list ) 
+                  <img_surface:ops_instrument_key>$orp_cmd_instr_id_item</img_surface:ops_instrument_key>
+                #end   
+              #end
+            #end
+          </img_surface:Instrument_Information>
+
+
+          <img_surface:Image_Identifiers>
+            #debug("IMAGE_REQUEST_PARMS.IMAGE_ID")
+            <img_surface:image_id>$!label.IMAGE_REQUEST_PARMS.IMAGE_ID</img_surface:image_id>
+            #debug("IMAGE_REQUEST_PARMS.IMAGE_ID_2")
+            <img_surface:image_id_2>$!label.IMAGE_REQUEST_PARMS.IMAGE_ID_2</img_surface:image_id_2>
+
+            <img_surface:start_image_id>$!label.OBSERVATION_REQUEST_PARMS.START_IMAGE_ID</img_surface:start_image_id>
+            <img_surface:observation_number>$!label.OBSERVATION_REQUEST_PARMS.OBSERVATION_NUMBER</img_surface:observation_number>
+            <img_surface:parameter_table_number>$!label.OBSERVATION_REQUEST_PARMS.PARAMETER_TABLE_NUMBER</img_surface:parameter_table_number>
+          </img_surface:Image_Identifiers>
+
+        </img_surface:Commanded_Parameters>
+
+      </img_surface:Surface_Imaging>
+     
+
+      ######################################
+      ## Mission Discipline Area
+      ######################################
+
+      <msn:Mission_Information>
+
+        ## Mission phase name is now part of MM API
+        #set ( $mis_phase_name = "" )
+        #set ( $mis_phase_name = "#msn_getMissionPhaseName()" )
+        #debug("IDENTIFICATION.MISSION_PHASE_NAME")
+        <msn:mission_phase_name>$!mis_phase_name</msn:mission_phase_name>
+        
+        ##<msn:release_number>1</msn:release_number>##removed from Insight macro file Nov 29, 2018 (IDS-7821)
+        <msn:product_type_name>$PRODUCT_TYPE</msn:product_type_name>
+        #debug("IDENTIFICATION.SPACECRAFT_CLOCK_START_COUNT")
+        <msn:spacecraft_clock_start>$!IDENT.SPACECRAFT_CLOCK_START_COUNT</msn:spacecraft_clock_start>
+        #debug("IDENTIFICATION.SPACECRAFT_CLOCK_STOP_COUNT")
+        <msn:spacecraft_clock_stop>$!IDENT.SPACECRAFT_CLOCK_STOP_COUNT</msn:spacecraft_clock_stop>
+        #debug("IDENTIFICATION.SPACECRAFT_CLOCK_CNT_PARTITION")
+        <msn:spacecraft_clock_partition>$!IDENT.SPACECRAFT_CLOCK_CNT_PARTITION</msn:spacecraft_clock_partition>
+        #debug("INSTRUMENT_STATE_PARMS.INSTRUMENT_CLOCK_START_COUNT")
+        <msn:instrument_clock_start>$!label.INSTRUMENT_STATE_PARMS.INSTRUMENT_CLOCK_START_COUNT</msn:instrument_clock_start>
+        #if ( $!IDENT.IMAGE_TIME ) 
+          #debug("IDENTIFICATION.IMAGE_TIME")
+          <msn:instrument_start_time>#getZuluTime( $!IDENT.IMAGE_TIME )</msn:instrument_start_time>
+        #end
+        
+        <msn:Surface_Mission>
+          ## check if PLANET_DAY_NUMBER exists. If not, fall back to extract from filename
+          #if ($IDENT.PLANET_DAY_NUMBER)
+          #debug("IDENTIFICATION.PLANET_DAY_NUMBER")
+          <msn:start_sol_number>$!IDENT.PLANET_DAY_NUMBER</msn:start_sol_number>
+          #else
+          <msn:start_sol_number>${PLANET_DAY_NUMBER}</msn:start_sol_number>
+          #end
+          
+          #if ( $IDENT.START_LOCAL_MEAN_SOLAR_TIME )
+            #debug("IDENTIFICATION.START_LOCAL_MEAN_SOLAR_TIME")
+            #set ( $startLocalMeanSolar = $IDENT.START_LOCAL_MEAN_SOLAR_TIME )
+          #else
+            #debug("IDENTIFICATION.LOCAL_MEAN_SOLAR_TIME")
+            #set ( $startLocalMeanSolar = $IDENT.LOCAL_MEAN_SOLAR_TIME )
+          #end
+          <msn:start_local_mean_solar_time>#splitSolarTimeSol( $!startLocalMeanSolar.toString() $CONST_TIME )</msn:start_local_mean_solar_time>
+          
+          #debug("IDENTIFICATION.STOP_LOCAL_MEAN_SOLAR_TIME")
+          <msn:stop_local_mean_solar_time>#splitSolarTimeSol( $!IDENT.STOP_LOCAL_MEAN_SOLAR_TIME.toString() $CONST_TIME )</msn:stop_local_mean_solar_time>
+
+          #debug("IDENTIFICATION.LOCAL_MEAN_SOLAR_TIME")
+          <msn:start_local_mean_solar_time_sol>#splitSolarTimeSol( $!startLocalMeanSolar.toString() $CONST_SOL )</msn:start_local_mean_solar_time_sol>
+         
+          #debug("IDENTIFICATION.STOP_LOCAL_MEAN_SOLAR_TIME")
+          <msn:stop_local_mean_solar_time_sol>#splitSolarTimeSol( $!IDENT.STOP_LOCAL_MEAN_SOLAR_TIME.toString() $CONST_SOL )</msn:stop_local_mean_solar_time_sol>
+          
+          
+          #if ( $IDENT.START_LOCAL_TRUE_SOLAR_TIME )
+          #debug("IDENTIFICATION.START_LOCAL_TRUE_SOLAR_TIME")
+          #set ( $startLocalTrueSolar = $IDENT.START_LOCAL_TRUE_SOLAR_TIME )
+          #else
+          #debug("IDENTIFICATION.LOCAL_TRUE_SOLAR_TIME")
+          #set ( $startLocalTrueSolar = $IDENT.LOCAL_TRUE_SOLAR_TIME )
+          #end
+          <msn:start_local_true_solar_time>$!startLocalTrueSolar</msn:start_local_true_solar_time>
+          
+          #debug("IDENTIFICATION.STOP_LOCAL_TRUE_SOLAR_TIME")
+          <msn:stop_local_true_solar_time>$!IDENT.STOP_LOCAL_TRUE_SOLAR_TIME</msn:stop_local_true_solar_time>
+          
+          #if ( $IDENT.START_LOCAL_TRUE_SOLAR_TIME_SOL )
+          #debug("IDENTIFICATION.START_LOCAL_TRUE_SOLAR_TIME_SOL")
+          #set ( $startLocalTrueSolarSol = $IDENT.START_LOCAL_TRUE_SOLAR_TIME_SOL )
+          #else
+          #debug("IDENTIFICATION.LOCAL_TRUE_SOLAR_TIME_SOL")
+          #set ( $startLocalTrueSolarSol = $IDENT.LOCAL_TRUE_SOLAR_TIME_SOL )
+          #end
+          <msn:start_local_true_solar_time_sol>$!startLocalTrueSolarSol</msn:start_local_true_solar_time_sol>
+          
+          #debug("IDENTIFICATION.STOP_LOCAL_TRUE_SOLAR_TIME_SOL")
+          <msn:stop_local_true_solar_time_sol>$!IDENT.STOP_LOCAL_TRUE_SOLAR_TIME_SOL</msn:stop_local_true_solar_time_sol>
+          
+          #debug("IDENTIFICATION.SOLAR_LONGITUDE")
+          <msn:solar_longitude unit="deg">$!IDENT.SOLAR_LONGITUDE</msn:solar_longitude>
+
+          #if ( $IDENT.MARS_YEAR )
+            <msn:year_number>$!IDENT.MARS_YEAR</msn:year_number>
+            <msn:year_number_reference>Mars Year</msn:year_number_reference>
+          #end
+
+        </msn:Surface_Mission>
+
+        ## Per issue 101: ACTIVE_FLIGHT_STRING_ID is moved to this new section
+        <msn:Observation_Context>
+          <msn:active_flight_computer>$!IDENT.ACTIVE_FLIGHT_STRING_ID</msn:active_flight_computer>
+          <msn:active_flight_imu>$!IDENT.ACTIVE_FLIGHT_IMU</msn:active_flight_imu>
+        </msn:Observation_Context>
+
+      </msn:Mission_Information>
+      
+      ######################################
+      ## Mission Surface Discipline Area
+      ######################################
+
+      <msn_surface:Surface_Mission_Information>
+
+        #getMissionSurfaceCommandExecution()
+
+        #getMissionSurfaceTelemetry()
+        
+
+
+        
+        #debug("ARM_ARTICULATION_STATE.GRAVITY_ACCELERATION")
+        <msn_surface:surface_gravity unit="m/s**2">$!label.ARM_ARTICULATION_STATE.GRAVITY_ACCELERATION</msn_surface:surface_gravity>
+        
+ 
+        <msn_surface:Observational_Intent> 
+            <msn_surface:activity_notes>$!label.OBSERVATION_REQUEST_PARMS.RATIONALE_DESC</msn_surface:activity_notes>
+            <msn_surface:activity_id>$!IDENT.ACTIVITY_ID</msn_surface:activity_id>
+            <msn_surface:target_id>$!IDENT.TARGET_ID</msn_surface:target_id>
+        </msn_surface:Observational_Intent>
+        
+        <msn_surface:Commanded_Parameters>
+          <msn_surface:download_priority>$!IDENT.IMAGE_REQUEST_PARMS.DOWNLOAD_PRIORITY</msn_surface:download_priority>
+        </msn_surface:Commanded_Parameters>
+        
+      </msn_surface:Surface_Mission_Information>
+        
+
+      
+      ######################################
+      ## Processing Discipline Area
+      ######################################
+      
+      #generateProcessingInformation($PID)
+      
+
+      ######################################
+      ## MiniHeader Area
+      ######################################
+      
+      #generateMiniHeaderSection()
+      
+    </Discipline_Area>
+
+  </Observation_Area>
+  
+  <Reference_List>   
+    
+    ## Either get browse filename from label; or check if conditions to generate
+    ## a browse filename are met.
+    #set ( $datatobrowse_lidvid = '' )
+    #if ( $IDENT.BROWSE_FILENAME )      
+      #set ( $browse_pid = $!IDENT.BROWSE_FILENAME.toString().toLowerCase() )
+      #if ( ! $browse_pid.equals("none") )  ##Check for None 
+        #set ( $browse_pid_ver = '1' )
+        #if ( $IDENT.BROWSE_VERSION )
+            #set ( $browse_pid_ver = $!IDENT.BROWSE_VERSION.toString() )
+        #end
+        #set ( $datatobrowse_lidvid = "#generateLIDVIDWithVersion($LID_PREFIX $LID_BROWSE_COLLECTION  $browse_pid  $browse_pid_ver)" )
+      #end
+    #elseif ( $CONST_TRUE.equals("#isStandardMissionFilename()") && 
+              $CONST_TRUE.equals("#msn_includeBrowseSection($PRODUCT_TYPE $derivedImageType $INPUT_FILE_NAME)") )
+      ## Force the png extension for the browse lidvid 
+      #set ( $browse_pid = "#getBasenameNoExten($PID_FULL)" )
+      #set ( $browse_pid = $browse_pid + "." + $BROWSE_EXT )
+      #set ( $browse_pid = $browse_pid.toLowerCase() )
+      #set ( $datatobrowse_lidvid = "#generateLIDVIDext( $LID_PREFIX  $LID_BROWSE_COLLECTION  $browse_pid )" )
+    #end
+    #if ( ! $datatobrowse_lidvid.isEmpty() )
+      <Internal_Reference>
+        <lidvid_reference>$datatobrowse_lidvid</lidvid_reference>
+        <reference_type>data_to_browse</reference_type>
+        <comment>Reference pointer to browse version of this image.</comment>
+      </Internal_Reference>
+    #end
+    
+    #if ( $IDENT.SOURCE_PRODUCT_ID )
+      ##SOURCE_PRODUCT_ID can be a single string or a list of strings,
+      #set ( $ident_srcProdId_list = "#joinStrList( $!IDENT.SOURCE_PRODUCT_ID ';' )" )
+      #set ( $ident_srcProdId_list = $ident_srcProdId_list.split(';') )
+      #set ( $ident_srcProdId_list_is_empty = "#isSplitListFromJoinStrListEmpty($ident_srcProdId_list)" )        
+      #if ( $ident_srcProdId_list_is_empty == $CONST_FALSE )
+       #foreach ( $ident_srcProdId_item in $ident_srcProdId_list ) 
+
+        ##October '21: Do not include 'Source_Product_Internal' when prodid "matches" label PID
+        #if ( ! $ident_srcProdId_item.toLowerCase().startsWith( $PID.toLowerCase() ) )
+
+            #set ($sourceProductType      = "#getProductType($ident_srcProdId_item)" )
+            #set ($sourceProductProcLevel = "#msn_getProcessingLevel($sourceProductType $IS_MOSAIC)" )
+            #set ($sourceProductProcLevel = $sourceProductProcLevel.toLowerCase() )      
+            #set ($sourceProductLidColl   = "#msn_getProductLidCollection($ident_srcProdId_item)" )
+            <Source_Product_Internal>
+                <lidvid_reference>#generateLIDVID( $LID_PREFIX $sourceProductLidColl $ident_srcProdId_item.toLowerCase() )</lidvid_reference>
+                <reference_type>data_to_$sourceProductProcLevel.replace(' ','_')_source_product</reference_type>
+                <comment>Reference pointer to the $sourceProductProcLevel source product.</comment>
+            </Source_Product_Internal>
+        #end
+       #end
+      #end    
+    #end
+    
+    #if ( $!IDENT.PDS4_SOURCE_PRODUCT_LIDVID )
+      #set ( $spi_p4spl_prodlidvid = $IDENT.PDS4_SOURCE_PRODUCT_LIDVID.toString().toLowerCase() )
+      #set ( $spi_p4spl_prodtype = "Raw" )
+      #if ( $!IDENT.PDS4_SOURCE_PRODUCT_TYPE )
+        #set ( $spi_p4spl_prodtype = $IDENT.PDS4_SOURCE_PRODUCT_TYPE )
+      #end    
+
+      ##October '21: Do not include 'Source_Product_Internal' when prodid "matches" label PID
+      #if ( ! $spi_p4spl_prodlidvid.toLowerCase().startsWith( $PID.toLowerCase() ) )
+
+        <Source_Product_Internal>
+            <lidvid_reference>$spi_p4spl_prodlidvid</lidvid_reference>
+            <reference_type>data_to_${spi_p4spl_prodtype}_source_product</reference_type>
+            <comment>Pointer to the PDS4 source data product.</comment>
+        </Source_Product_Internal>
+
+      #end
+    #end
+    
+   
+    #if ( $!IDENT.PDS_SOURCE_PRODUCT_ID )
+    <Source_Product_External>      
+      #set ( $spe_espi_val = $IDENT.PDS_SOURCE_PRODUCT_ID )
+      #if ( $IDENT.PDS_SOURCE_PRODUCT_DATA_SET )  
+        #set ( $spe_espi_val = "${IDENT.PDS_SOURCE_PRODUCT_DATA_SET}:$IDENT.PDS_SOURCE_PRODUCT_ID" )
+      #end
+      <external_source_product_identifier>$spe_espi_val</external_source_product_identifier>
+      <reference_type>data_to_raw_source_product</reference_type>
+      #if ( $!IDENT.PDS_SOURCE_PRODUCT_NODE )
+      <curating_facility>$IDENT.PDS_SOURCE_PRODUCT_NODE</curating_facility>
+      #else
+      <curating_facility>IMG</curating_facility>
+      #end
+      #if ( $!IDENT.PDS_SOURCE_PRODUCT_DESCRIPTION ) 
+      <description>$IDENT.PDS_SOURCE_PRODUCT_DESCRIPTION</description>
+      #else
+      <description>Pointer to PDS3 source data product</description>
+      #end
+    </Source_Product_External>
+    #end
+    
+  </Reference_List>
+  <File_Area_Observational>
+    <File>
+      #debug("IDENTIFICATION.PRODUCT_ID")
+      <file_name>${IDENT.PRODUCT_ID.toString()}.${LEGAL_FILE_EXTEN}</file_name>
+      #debug("IDENTIFICATION.PRODUCT_CREATION_TIME")
+      <creation_date_time>#getZuluTime( $IDENT.PRODUCT_CREATION_TIME.toString() )</creation_date_time>
+    </File>
+    
+
+    #if ( $label.PDS4_IMAGE.input_label_type)
+    #set ( $input_label_type = $label.PDS4_IMAGE.input_label_type)
+    ###<input_label_type>${input_label_type}</input_label_type>
+    <Header>
+      <local_identifier>ODL3_Header</local_identifier>
+      <offset unit="byte">0</offset>
+      #set ( $pds3_object_length = $math.toInteger($IDENT.RECORD_BYTES)  * $math.toInteger($IDENT.LABEL_RECORDS))
+      <object_length unit="byte">$pds3_object_length</object_length>
+      <parsing_standard_id>PDS ODL 2</parsing_standard_id>
+      <description>${input_label_type} Header</description>
+    </Header>
+    #end
+    
+    #if ( $label.IMAGE_HEADER.HEADER_TYPE)
+    ###<image_header_header_type>$label.IMAGE_HEADER.HEADER_TYPE</image_header_header_type>
+    #set ($header_type = $label.IMAGE_HEADER.HEADER_TYPE.toString() )
+    ### <header_type>$header_type</header_type>
+    #if ( $header_type.equals("VICAR2") )
+    <Header>
+      <local_identifier>VICAR_Header</local_identifier>
+      #set ($vicarOffset = $math.toInteger($IDENT.RECORD_BYTES) * ($math.toInteger($IDENT.PTR_IMAGE_HEADER) - 1))
+      <offset unit="byte">$vicarOffset</offset>
+      ###debug("SYSTEM.LBLSIZE") 
+      <object_length unit="byte">$label.IMAGE_HEADER.BYTES</object_length>
+      <parsing_standard_id>VICAR2</parsing_standard_id>      
+      <description>VICAR Header</description>
+    </Header>
+    #end
+    #end
+    
+    #getArrayDefinition( $PID $label $derivedImageType )
+    
+  </File_Area_Observational>
+  
+  
+  #if ( $CONST_TRUE.equals("#msn_hasEjpJpegs()")        && $CONST_FALSE.equals($IS_THUMBNAIL) && 
+        $PROCESSING_LEVEL.equals($PROCESSING_LEVEL_RAW) && $COMPRESSION_NAME.equals($COMPRESSION_TYPE_JPEG)) 
+
+   ## New condition below added on June 20, 2019 per email request of Bob: Supress file pointer if (isEDR() && SpecFlag != '_')
+   #if ( $SPECIAL_PROC_FLAG_DEFAULT.equals($SPECIAL_PROC_FLAG) )
+
+    ## ##Hack-alert: IDS isnt sure whats going on with EJPs, so this hack-check was added (2021.07.20)
+    ## ##"If ECV product type && TELEMETRY_SOURCE_NAME contains 'recovered'; then skip faosBasename"
+    ## #if ( ! ($PRODUCT_TYPE.equalsIgnoreCase("ECV") && $TELEM.TELEMETRY_SOURCE_NAME && 
+    ##         $!TELEM.TELEMETRY_SOURCE_NAME.toString().toLowerCase().contains("recovered")) )
+
+    <File_Area_Observational_Supplemental>
+      <File>
+        #set ($faosBasename = $IDENT.PRODUCT_ID.toString().replace($PRODUCT_TYPE, $PRODUCT_TYPE_EJP))
+        <file_name>${faosBasename}.JPG</file_name>
+      </File>
+      <Encoded_Image>
+        <offset unit="byte">0</offset>
+        <encoding_standard_id>JPEG</encoding_standard_id>
+      </Encoded_Image>
+    
+    </File_Area_Observational_Supplemental>
+    
+    ## #end ##End-of-ifNOT(ECV && telemSrcName.contains(recovered))  ##Hack for delivery 1
+
+   #end ##End of inner-if
+  #end
+
+
+  ## Should we include an associated MASK file? 
+  #if ( $CONST_TRUE.equals("#msn_hasAssociatedMaskFile($PID)") && $!derivedImageType.equalsIgnoreCase("MASK")  )
+    #set ( $dit_mask_file = "")
+     #if ( $label.DERIVED_IMAGE_PARMS.SUPPLEMENTAL_MASK_FILE )
+      #set ( $dit_mask_file = $label.DERIVED_IMAGE_PARMS.SUPPLEMENTAL_MASK_FILE.toString())      
+    #elseif ( $label.DERIVED_IMAGE_PARMS.MASK_DESC_FILE_NAME && $label.DERIVED_IMAGE_PARMS.MASK_DESC_FILE_NAME.get(1))
+      #set ( $dit_mask_file = $label.DERIVED_IMAGE_PARMS.MASK_DESC_FILE_NAME.get(1).toString())
+    #end
+  
+    #if ( ! $dit_mask_file.equals("") ) 
+        <File_Area_Observational_Supplemental>
+          <File>
+            <file_name>$dit_mask_file</file_name>
+          </File>
+          <Stream_Text>
+            <offset unit="byte">0</offset>
+            <parsing_standard_id>7-Bit ASCII Text</parsing_standard_id>
+            <record_delimiter>Carriage-Return Line-Feed</record_delimiter>  
+          </Stream_Text>
+        </File_Area_Observational_Supplemental>
+    #end   
+  #end
+  
+
+  ## Should we include an associated FITS file? 
+  #set ( $includeFitsFile = $CONST_FALSE )
+  #set ( $includeFitsFile = "#msn_hasAssociatedFitsFile($PID)" )  
+  ## Also check if is Raw processing level and default special flag 
+  #if ( $CONST_TRUE.equals($includeFitsFile) && $PROCESSING_LEVEL.equals($PROCESSING_LEVEL_RAW) && $SPECIAL_PROC_FLAG_DEFAULT.equals($SPECIAL_PROC_FLAG) )
+
+
+    ##HACK-alert: For PDS delivery of M20, Sols 0-4 of SupercamRmi dont have FITS files, so skip in that condition
+    #if ( ! ( $PID.toUpperCase().startsWith("LR") && 
+              $CONST_TRUE.equals("#nodeExistsWithNonNilValue($IDENT 'PLANET_DAY_NUMBER')") && 
+              $math.toInteger( $!IDENT.PLANET_DAY_NUMBER ) < 5 ) )
+
+    <File_Area_Observational_Supplemental>
+      <File>           
+        #set ($faosBasename = $IDENT.PRODUCT_ID.toString())
+        <file_name>${faosBasename}.fits</file_name>
+      </File>
+      <Header>
+        <name>Primary FITS Header</name>
+        <offset unit="byte">0</offset>
+        <object_length unit="byte">43200</object_length>
+        <parsing_standard_id>FITS 4.0</parsing_standard_id>
+      </Header>
+    </File_Area_Observational_Supplemental>
+
+    #end ##IF-hack-for-SuperCam
+
+  #end
+
+</Product_Observational>

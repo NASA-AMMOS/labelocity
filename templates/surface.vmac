@@ -1,0 +1,2164 @@
+## This template is made up of usable macros for PDS4 Velocity Templates,
+## focusing on the SURFACE MISSION details.
+##
+## This file must be placed in the same directory as the Velocity Templates
+## to be used, otherwise the VelocityEngine will not be able to find it.
+##
+## To include this file in your template and use the macros, add the following
+## at the top of your Velocity template:
+##
+##      #parse ( "surface.vmac" )
+##
+## this test code. 
+
+
+
+#set ($CONST_CSDEF_LIST_DELIMITER         = "&")
+#set ($CONST_CSDEF_ENTRY_DELIMITER        = ":")
+#set ($CONST_CSDEF_VALUE_ENTRY_DELIMITER  = ",")
+#set ($CONST_CSDEF_VALUE_KEYVAL_DELIMITER = "=")
+
+
+#set ( $ART_STATE_CHILD_LIST  = ["ARTICULATION_DEVICE_ANGLE", "ART_DEV_COMPONENT_STATE",
+                                 "CONTACT_SENSOR_STATE",      "DEVICE_POSE_QUATERNION",
+                                 "DEVICE_POSE_OFFSET",        "ARTICULATION_DEVICE_TEMP",
+                                 "ARTICULATION_DEV_VECTOR"] )
+## ------------------------------------------------------------------------
+
+##TODO: Needs to be expanded to handle more compression types.
+##STATUS: Open
+##################################
+## Set image Onboard Compression Parameters
+##
+##
+#macro(generateOnboardCompressionParameters $node $name $ns )
+
+    #if ( ! $ns || "$ns" == "")
+      #set ($ns = 'img')
+    #end
+
+    ## List of compression names that indicate no/lossless compression
+    ## note: There are some duplicates but keeping in case we change check-logic
+    #set ( $CMPRS_NAMES_WITH_NO_COMPRESSION_SUBSTR_LIST_NO_WS = [
+        'Uncompressed',
+        'LOCO',
+        'LOCO_DEFERRED',
+        'None',
+        'Lossless',
+        'MSSS_LOSSLESS',
+        'LZO_compressed',
+        'GZIP_compressed'
+    ])
+
+
+    ##Set defaults to empty string values
+    #set ($compressionName = '')
+    #set ($colorMode        = '')
+    #set ($compressionClass = '')
+    
+    
+    #if ( $node.INST_CMPRS_NAME && $CONST_FALSE.equals("#valueIsNilValue($node.INST_CMPRS_NAME)") )
+       #set ($compressionName = $!node.INST_CMPRS_NAME.toString() )
+    #end
+    
+
+    ##---------------
+    ## Pre-processing for: colorMode, compressionClass, compressionName
+
+    ##Check passed in compression type and set above values
+    #if ( "$compressionName" != "" )
+        #if ( $compressionName.contains("JPEG") )
+            #set ($COLOR_MODE_MAP = {
+                "COLOR_MODE_422" : "4:2:2",
+                "COLOR_MODE_444" : "4:4:4",
+                "GRAYSCALE" : "Grayscale",
+                "COLOR_MODE_GRAY" : "Grayscale"
+            })
+            #if ( $node.INST_CMPRS_COLOR_MODE )
+              #set ($colorModeKey = $node.INST_CMPRS_COLOR_MODE[0] )
+              #set ($colorModeKey = $colorModeKey.toString() )
+              #if ( $COLOR_MODE_MAP.containsKey( $colorModeKey ) )
+                #set ($colorMode = $COLOR_MODE_MAP.get($colorModeKey))
+              #else
+                #set ( $colorMode = $colorModeKey )
+              #end
+            #end
+            #set ($compressionClass = "Lossy")
+
+            ## Force "JPEG ...." to be either 'JPEG' or 'JPEG Progressive'
+            #if ( $compressionName.toUpperCase().contains("PROGRESSIVE") )
+              #set ($compressionName = "JPEG Progressive" )
+            #else
+              #set ($compressionName = "JPEG" )
+            #end
+
+        #elseif ( $compressionName.equals("INTEGER COSINE TRANSFORM") )
+            #set ($compressionName = $compressionName.replace("INTEGER COSINE TRANSFORM", "ICT"))
+            #set ($compressionClass = "Lossy")
+        #elseif ( $compressionName.equals("NONE") )
+            #set ($compressionName = "None" )
+        #end
+    #end
+    
+    ##---------------
+    ## Pre-processing for: quality    
+    ## Print quality only, dependent on compression name
+    #set ($quality = "Null")
+
+    #if ( $compressionName.contains("JPEG") ) 
+        #set ($quality = $!node.INST_CMPRS_QUALITY)
+        #set ($quality = $math.div($quality, "100.0") )
+        #set ($quality = $math.abs($quality) )
+    #elseif ( $compressionName.contains("ICER") ) 
+        #set ($quality = $!node.INST_CMPRS_QUALITY)
+        #set ($quality = $math.toNumber($quality) )
+        #if ( $quality < 0 )
+          #set ($quality = "0" )
+        #else
+          #set ($icer_magic_num = "18" )
+          #set ($quality = $math.sub($icer_magic_num, $quality) )
+          #set ($quality = $math.div($quality, $icer_magic_num) )
+          #set ($quality = $math.abs($quality) )
+        #end
+    #else
+        ## Check if compressionName contains any entry from the non-compressed value list
+        #set ($cmprsNameNoWs = $compressionName.replace(' ','_') )
+        #set ($compressionNameLossless = $CONST_FALSE )
+        #set ($compressionNameLossless = "#stringContainsSubstringList( $cmprsNameNoWs $CMPRS_NAMES_WITH_NO_COMPRESSION_SUBSTR_LIST_NO_WS )" )
+        #if ( $compressionNameLossless == $CONST_TRUE )
+          #set ($quality = "1.0" )
+        #end
+    #end
+
+    ## Special cases where we specifically want to format 'MSSS Lossless' 
+    #if ( $!compressionName.equalsIgnoreCase('MSSS_LOSSLESS') ||
+          $!compressionName.equalsIgnoreCase("PREDICTIVE LOSSLESS BAYER HUFFMAN ENCODING") )
+      #set ($compressionName = "MSSS Lossless" )
+    #end
+    ## Special case to handle label value 'RAW RASTER' 
+    #if ( $!compressionName.equalsIgnoreCase('RAW RASTER') )
+      #set ($compressionName = "None" )
+    #end
+
+    ## At this point, quality could be a string like UNK or other, so just
+    ## check if not a number and clear it out
+    #if ($CONST_FALSE.equals("#looksLikeANumber($quality)") )
+        #set ($quality = "" )
+    #end
+
+    ##---------------
+
+    <$ns:Onboard_Compression>
+
+        <$ns:onboard_compression_class>$!compressionClass</$ns:onboard_compression_class>
+        
+        ## <$ns:onboard_compression_mode>$!node.INST_CMPRS_MODE</$ns:onboard_compression_mode>
+        #getNodeValueNotNil( $node   'INST_CMPRS_MODE'   "$ns:onboard_compression_mode"   '' )
+        
+        <$ns:onboard_compression_type>$!compressionName</$ns:onboard_compression_type>        
+        
+        ## Hack alerts: M20 Delivery 4 found Navcam ECRs with '-nan.0' as values for
+        ## INST_CMPRS_RATE and INST_CMPRS_RATIO.  So now we have to check for those and
+        ## skip if found (05.12.22)
+        #if ( $node.INST_CMPRS_RATE && !$node.INST_CMPRS_RATE.toString().toLowerCase().contains('nan') )
+          #getNodeValueNotNil( $node   'INST_CMPRS_RATE'   "${ns}:onboard_compression_rate"   '' )
+        #end
+
+        #if ( $node.INST_CMPRS_RATIO && !$node.INST_CMPRS_RATIO.toString().toLowerCase().contains('nan') )
+          #getNodeValueNotNil( $node   'INST_CMPRS_RATIO'   "${ns}:onboard_compression_ratio"   '' )
+        #end
+
+        #if ( ! $quality.equals("Null") )
+          <$ns:onboard_compression_quality>$!quality</$ns:onboard_compression_quality>
+        #end  
+        
+        <$ns:onboard_compression_venue>$!node.INST_CMPRS_VENUE</$ns:onboard_compression_venue>
+
+        <$ns:deferred_flag>$!node.INST_CMPRS_DEFERRED_FLAG.toString().toLowerCase()</$ns:deferred_flag>
+
+        <$ns:error_pixel_count>$!node.ERROR_PIXELS</$ns:error_pixel_count>
+        
+        #if ( $compressionName.contains("JPEG") ) 
+          <$ns:JPEG_Parameters>        
+              #debug("$name.INST_CMPRS_COLOR_MODE")
+              <$ns:color_subsampling_mode>$!colorMode</$ns:color_subsampling_mode>
+              #if ( $node.INST_CMPRS_QUALITY )
+                #set ( $gocp_jpeg_quality = $!node.INST_CMPRS_QUALITY.toString() )
+                #set ( $gocp_jpeg_quality = $math.abs( $!gocp_jpeg_quality ) )
+                <$ns:jpeg_quality>$!gocp_jpeg_quality</$ns:jpeg_quality>
+              #end
+
+              #generateOnboardCompressionSegments( $node $name $ns )
+
+          </$ns:JPEG_Parameters>
+
+        #elseif ( $compressionName.contains("ICER") ) 
+
+          <$ns:ICER_Parameters>
+            <$ns:wavelet_filter>$!node.INST_CMPRS_FILTER</$ns:wavelet_filter>
+            #getNodeValueNotNil( $node   'INST_CMPRS_QUALITY'   "${ns}:icer_quality"   '' )
+            <$ns:decomposition_stages>$!node.INST_DECOMP_STAGES</$ns:decomposition_stages>
+            <$ns:segment_count>$!node.INST_CMPRS_SEGMENTS</$ns:segment_count>
+
+            #generateOnboardCompressionSegments( $node $name $ns )
+
+          </$ns:ICER_Parameters>
+
+        #elseif ( $compressionName.contains("LOCO") ) 
+
+          <$ns:LOCO_Parameters>
+            <$ns:wavelet_filter>$!node.INST_CMPRS_FILTER</$ns:wavelet_filter>
+            ## <$ns:missing_pixel_count>$!node.INST_CMPRS_SEG_MISSING_PIXELS</$ns:missing_pixel_count>
+
+            #generateOnboardCompressionSegments( $node $name $ns )
+            
+          </$ns:LOCO_Parameters>
+
+        #end
+        
+     </$ns:Onboard_Compression>
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+#macro(generateOnboardCompressionSegments $node $name $ns )
+
+            ##Only do stuff if 'INST_CMPRS_SEGMENTS' exists under the node and not a NIL value
+
+            #if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue( $node 'INST_CMPRS_SEGMENTS')"))
+              
+                #set( $gobc_icer_seg_len = $node.INST_CMPRS_SEGMENTS )
+                #set( $gobc_icer_seg_len = $math.toInteger($gobc_icer_seg_len))
+
+                ##So Phoenix labels have label entries that should have lists
+                ##but are either a single value or a shorter list.  So we have
+                ##to use a new conditionalListIndexValue() macro to perform
+                ##this check.              
+
+                #foreach ( $i in [1..$gobc_icer_seg_len] )
+
+                  ## Per git issue 130: we only print ICS group if it contains data inside...
+
+                  ## Clear all variables
+                  #set ($srf_goccs_fl = "" )
+                  #set ($srf_goccs_fs = "" )
+                  #set ($srf_goccs_ln = "" )
+                  #set ($srf_goccs_sm = "" )
+                  #set ($srf_goccs_sq = "" )
+                  #set ($srf_goccs_ss = "" )
+                  #set ($srf_goccs_mp = "" )
+
+                  ##Assign values for current index
+                  #set ($srf_goccs_fl = "#conditionalListIndexValue( $node.INST_CMPRS_SEG_FIRST_LINE $foreach.index )" )
+                  #set ($srf_goccs_fs = "#conditionalListIndexValue( $node.INST_CMPRS_SEG_FIRST_LINE_SAMP $foreach.index )" )
+                  #set ($srf_goccs_ln = "#conditionalListIndexValue( $node.INST_CMPRS_SEG_LINES $foreach.index )" )
+                  #set ($srf_goccs_sm = "#conditionalListIndexValue( $node.INST_CMPRS_SEG_SAMPLES $foreach.index )" )
+                  #set ($srf_goccs_sq = "#conditionalListIndexValue( $node.INST_CMPRS_SEGMENT_QUALITY $foreach.index )" )
+                  #set ($srf_goccs_ss = "#conditionalListIndexValue( $node.INST_CMPRS_SEGMENT_STATUS $foreach.index )" )
+                  #set ($srf_goccs_ss = "#conditionalListIndexValue( $node.INST_CMPRS_SEGMENT_STATUS $foreach.index )" )
+                  #if ( $node.INST_CMPRS_SEG_MISSING_PIXELS.toString().toUpperCase() != $CONST_NA )
+                    #set ($srf_goccs_mp = "#conditionalListIndexValue( $node.INST_CMPRS_SEG_MISSING_PIXELS $foreach.index )" )
+                  #end
+
+                  ## Check that at least has a value....
+                  #if ( $!srf_goccs_fl != "" || $!srf_goccs_fs != "" || $!srf_goccs_ln != "" || 
+                        $!srf_goccs_sm != "" || $!srf_goccs_sq != "" || $!srf_goccs_ss != "" ||
+                        $!srf_goccs_mp != "" )
+
+
+                    <$ns:Image_Compression_Segment>
+
+                      <$ns:segment_number>$foreach.index</$ns:segment_number>
+                      
+                      <$ns:first_line>$!srf_goccs_fl</$ns:first_line>                  
+                      <$ns:first_sample>$!srf_goccs_fs</$ns:first_sample>
+                      <$ns:lines>$!srf_goccs_ln</$ns:lines>
+                      <$ns:samples>$!srf_goccs_sm</$ns:samples>
+                      #if ( $srf_goccs_sq != '' && $CONST_FALSE.equals("#valueIsNilValue($srf_goccs_sq)") )
+                          <$ns:segment_quality>$!srf_goccs_sq</$ns:segment_quality>
+                      #end
+                      <$ns:segment_status>$!srf_goccs_ss</$ns:segment_status>
+                      <$ns:missing_pixel_count>$!srf_goccs_mp</$ns:missing_pixel_count>
+                      
+                    </$ns:Image_Compression_Segment>
+
+                  #end ##If_set_value     
+                #end ##End-For-each
+
+            #end  ##IF-node.INST_CMPRS_SEGMENTS-and-not-Nil
+
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro(generateDataProductOnboardCompressionParameters)
+
+  #if ( $TELEM && ( $!TELEM.DP_CMPRS_MODE ||  $!TELEM.DATA_PRODUCT_COMPRESSION_TYPE ) )
+    #set ( $gdpocp_val = "" )
+    
+    #if ( $!TELEM.DP_CMPRS_MODE )
+      #set ( $gdpocp_val = $!TELEM.DP_CMPRS_MODE.toString() )
+    #elseif ( $!TELEM.DATA_PRODUCT_COMPRESSION_TYPE )
+      #set ( $gdpocp_val = $!TELEM.DATA_PRODUCT_COMPRESSION_TYPE.toString() )
+    #end
+
+    #if ( $!gdpocp_val )
+
+      ## If DATA_PRODUCT_COMPRESSION_TYPE exists and is not "Uncompressed" nor '0', 
+      ## then create an additional <Onboard_Compression> class
+      #if ( ! ( $gdpocp_val.equalsIgnoreCase("Uncompressed") ||
+                $gdpocp_val.equalsIgnoreCase("0") ) )
+
+        ## ...where XXX is based on DATA_PRODUCT_COMPRESSION_TYPE:
+        ## "LZO compressed" -> LZO
+        ## "GZIP compressed" -> GZIP
+        ## "MSSS_LOSSLESS" -> MSSS Lossless
+        ## "PREDICTIVE LOSSLESS BAYER HUFFMAN ENCODING" -> MSSS Lossless
+        ##  else -> as-is.
+
+        #set ( $gdpocp_type_name = $gdpocp_val )
+        #if ( $gdpocp_type_name.equalsIgnoreCase("LZO compressed") )
+          #set ( $gdpocp_type_name = "LZO" )
+        #elseif ( $gdpocp_type_name.equalsIgnoreCase("GZIP compressed") )
+          #set ( $gdpocp_type_name = "GZIP" )
+        #elseif ( $gdpocp_type_name.equalsIgnoreCase("MSSS_LOSSLESS") ||
+                  $gdpocp_type_name.equalsIgnoreCase("PREDICTIVE LOSSLESS BAYER HUFFMAN ENCODING") )
+          #set ( $gdpocp_type_name = "MSSS Lossless" )
+        #elseif ( $gdpocp_type_name.equalsIgnoreCase("RAW RASTER") )
+          #set ( $gdpocp_type_name = "None" )
+        #end
+        
+        <img:Onboard_Compression>
+            <img:onboard_compression_class>Lossless</img:onboard_compression_class>
+            <img:onboard_compression_quality>1.0</img:onboard_compression_quality>
+            <img:onboard_compression_type>$gdpocp_type_name</img:onboard_compression_type>
+        </img:Onboard_Compression>
+
+      #end
+    #end
+  #end
+#end
+
+
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Dynamically populate Coordinate Space Present class
+##
+#macro(getCoordinateSpacePresent $coordSystemObjectName)
+
+    <geom:Coordinate_Space_Present>
+      
+      #set ( $coordSystemNode = $label.get(${coordSystemObjectName}) )
+      
+      #set ( $gcsp_coordSystemName = '' )
+      #if ( $coordSystemNode.COORDINATE_SYSTEM_NAME ) 
+        #set ( $gcsp_coordSystemName = $!coordSystemNode.COORDINATE_SYSTEM_NAME.toString() )
+        #set ( $gcsp_coordSystemName = "#maybeMapCoordSysFrameType($gcsp_coordSystemName)" )
+      #end      
+
+      <geom:Coordinate_Space_Indexed>
+        <geom:coordinate_space_frame_type>$!gcsp_coordSystemName</geom:coordinate_space_frame_type>
+
+        ##Hack for PDS delivery: Sherloc's ROVER_COORDINATE_SYSTEM is using the WRONG label for COORDINATE_SYSTEM_INDEX!!
+        #set ( $coordSysIndexNode = '')
+        #if ( $coordSystemNode.COORDINATE_SYSTEM_INDEX )
+            #set ( $coordSysIndexNode = $coordSystemNode.COORDINATE_SYSTEM_INDEX )
+        #elseif ( $coordSystemNode.ROVER_MOTION_COUNTER )
+            #set ( $coordSysIndexNode = $coordSystemNode.ROVER_MOTION_COUNTER )
+        #end
+
+        #if ( $coordSystemNode.COORDINATE_SYSTEM_INDEX_NAME )
+          #set($count = $coordSystemNode.COORDINATE_SYSTEM_INDEX_NAME.size() - 1)
+          #foreach ( $i in [ 0..$count ] )
+          <geom:Coordinate_Space_Index>
+            <geom:index_id>$coordSystemNode.COORDINATE_SYSTEM_INDEX_NAME.get($foreach.index)</geom:index_id>
+
+            ##HACK: Thanks a lot SHERLOC!
+            #if ( $coordSysIndexNode != '')
+              #set ( $gcsp_cur_idx_val = $coordSysIndexNode.get($foreach.index) )
+              #set ( $gcsp_cur_idx_val = "#getIndexValueCheckNil($gcsp_cur_idx_val)" )
+              <geom:index_value_number>$gcsp_cur_idx_val</geom:index_value_number>
+            #end
+
+          </geom:Coordinate_Space_Index>
+          #end
+        #end
+
+        ## SOLUTION_ID is optional
+        #if ( $coordSystemNode.SOLUTION_ID )
+            <geom:solution_id>$coordSystemNode.SOLUTION_ID</geom:solution_id>
+        #end
+      </geom:Coordinate_Space_Indexed>
+
+    </geom:Coordinate_Space_Present>
+
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## generate the <geom:Derived_Geometry> section for 
+## a passed-in node and name associated with a 
+## *_DERIVED_GEOMETRY_PARMS
+##
+## Hack Alert: MEDA products were found with extremely large values for 
+##             SOLAR_ELEVATION, so we need bounds check. (05.12.22)
+##
+##
+#macro(generateDerivedGeometry $node $name )
+    #if ( $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'SOLAR_INCIDENCE_TARGET_ANG')") ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'PHASE_ANGLE')")                ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'INSTRUMENT_AZIMUTH')")         ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'INSTRUMENT_ELEVATION')")       ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'SOLAR_AZIMUTH')")              ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'START_AZIMUTH')")              ||
+          $CONST_TRUE.equals("#nodeExistsWithNonNilValue($node 'STOP_AZIMUTH')")               ||
+          $CONST_TRUE.equals("#nodeExistsAndHasValueInRange($node 'SOLAR_ELEVATION' '-90.0'  '90.0')") )
+
+        <geom:Derived_Geometry>
+
+            #getNodeValueNotNil( $node   'SOLAR_INCIDENCE_TARGET_ANG_NAME'  'geom:target_name'            '' )
+
+            #getNodeValueNotNil( $node   'SOLAR_INCIDENCE_TARGET_ANG'       'geom:incidence_angle'        'deg' )
+
+            #getNodeValueNotNil( $node   'PHASE_ANGLE'                      'geom:phase_angle'            'deg' )
+
+            #getNodeValueNotNil( $node   'INSTRUMENT_AZIMUTH'               'geom:instrument_azimuth'     'deg' )
+
+            #getNodeValueNotNil( $node   'INSTRUMENT_ELEVATION'             'geom:instrument_elevation'   'deg' )
+
+            #if ( $!node.SOLAR_AZIMUTH )
+              #set ( $dg_solar_az_value = $node.SOLAR_AZIMUTH.toString() )
+              #if ( $CONST_FALSE.equals("#valueIsNilValue($dg_solar_az_value)") )
+                ## Hack warning: Per Git Issue 51: negate the SOLAR_AZIMUTH value iff the mission is MSL 
+                ## and the POSITIVE_AZIMUTH_DIRECTION keyword does NOT exist.  Also only for SITE 
+                ## (seems not worth a new multimission macro, just a hacky-check here...)
+                #if ( $name.equalsIgnoreCase('SITE_DERIVED_GEOMETRY_PARMS') && 
+                      $MSN_INVESTIGATION_NAME == "Mars_Science_Laboratory" && 
+                      $!node.POSITIVE_AZIMUTH_DIRECTION.toString().isEmpty() )
+                  #set ( $dg_solar_az_value = $math.mul( $dg_solar_az_value, '-1' ) )
+                #end
+                <geom:solar_azimuth #getUnitAttrOrDefault( $!node  'SOLAR_AZIMUTH'  ''  'deg')>$dg_solar_az_value</geom:solar_azimuth>
+              #end
+            #end
+
+            ## Hack Alert: MEDA products were found with extremely large values for 
+            ## SOLAR_ELEVATION, so we need bounds check.... (05.12.22)
+            #if ( $CONST_TRUE.equals("#nodeExistsAndHasValueInRange($node 'SOLAR_ELEVATION' '-90.0'  '90.0')" ) )
+              #getNodeValueNotNil( $node   'SOLAR_ELEVATION'   'geom:solar_elevation'   'deg' )
+            #end
+
+            #if ( $!node.SUN_VIEW_DIRECTION )
+              ##Guard against UNK values in label
+              #if ( $CONST_FALSE.equals("#doesNodeValueListContainNilValue($node.SUN_VIEW_DIRECTION)") )
+                <geom:Vector_Solar_Direction>
+                  <geom:x_unit>$node.SUN_VIEW_DIRECTION.get(0)</geom:x_unit>
+                  <geom:y_unit>$node.SUN_VIEW_DIRECTION.get(1)</geom:y_unit>
+                  <geom:z_unit>$node.SUN_VIEW_DIRECTION.get(2)</geom:z_unit>
+                </geom:Vector_Solar_Direction>
+              #end
+            #end
+
+            #getNodeValueNotNil( $node   'START_AZIMUTH'   'geom:start_azimuth'   'deg' )
+
+            #getNodeValueNotNil( $node   'STOP_AZIMUTH'    'geom:stop_azimuth'    'deg' )
+
+            #set ( $coordSystemName  = "" )
+            #set ( $coordSystemIndex = "" )
+            #set ( $coordSystemName  = $node.REFERENCE_COORD_SYSTEM_NAME ) 
+            #set ( $coordSystemIndex = $node.REFERENCE_COORD_SYSTEM_INDEX )
+            #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "geom" $name )
+
+        </geom:Derived_Geometry>
+
+    #end
+
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## Derived Geometry entries based on SPICE entries in the label.
+## Initial motivation is to support SCAM products (Git Issue 88)
+##
+#macro(generateSpiceDerivedGeometry)
+
+  #if ( $IDENT.PHASE_ANGLE )
+    <geom:Derived_Geometry>
+      <geom:target_name>Boresight</geom:target_name>
+      <geom:phase_angle #getUnitAttr( $!IDENT  'PHASE_ANGLE'   '' ) >$!IDENT.PHASE_ANGLE</geom:phase_angle>
+    </geom:Derived_Geometry>
+  #end
+
+  #if ( $IDENT.SOLAR_INCIDENCE_TARGET_ANG && $IDENT.SOLAR_INCIDENCE_TARGET_ANG_NAME )
+    <geom:Derived_Geometry>
+      <geom:target_name>$!IDENT.SOLAR_INCIDENCE_TARGET_ANG_NAME</geom:target_name>
+      <geom:incidence_angle  #getUnitAttr( $!IDENT  'SOLAR_INCIDENCE_TARGET_ANG'   '' ) >$!IDENT.SOLAR_INCIDENCE_TARGET_ANG</geom:incidence_angle>
+    </geom:Derived_Geometry>
+  #end
+
+  #if ( $IDENT.MARS_HELIOCENTRIC_DISTANCE )
+    <geom:Derived_Geometry>
+      <geom:target_name>Mars</geom:target_name>
+      <geom:target_heliocentric_distance #getUnitAttr( $!IDENT  'MARS_HELIOCENTRIC_DISTANCE'   '' ) >$!IDENT.MARS_HELIOCENTRIC_DISTANCE</geom:target_heliocentric_distance>
+    </geom:Derived_Geometry>
+  #end
+
+#end
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## The namespace component of the Coordinate Space Reference nodes
+## and children has been recently bouncing from 'geom' to 
+## 'let the caller specify it' and then to 'geom'.  
+## This macro puts the decision in one place.
+## Currently, 'geom' is returned by default. (we ignore caller's desire)
+##
+#macro(getCoordinateSpaceReferenceNS $dictName)
+${CONST_CSR_DEF_NS}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## Dynamically populate Coordinate Space Reference class
+##
+#macro(getCoordinateSpaceReference $name $index $dictName $labelSection)
+
+    ## Jan'22: Question, do we need to consider adding a call to maybeMapCoordSysFrameType()?
+    ## Doing so would potentially mess up lookup of coord sys definitions, but maybe that's ok?
+    ## Will leave as un-called for now, but if issue pops up, you might know why.
+
+    ## Step 0: Do we honor the dictName parameter? People keep changing minds. 
+    ## So, let us ask the macro:
+    #set ($dictName            = "#getCoordinateSpaceReferenceNS($dictName)")
+
+    ## Step 1: Collect all defined coordinate systems, parse and place in map
+    #set ($csDefMap            = {})
+    #set ($allCSDefsListStr    = "#getCoordinateSystemDefinitionsAsList($IS_MOSAIC)")
+    #set ($allCSDefsArray      = $allCSDefsListStr.split("${CONST_CSDEF_LIST_DELIMITER}"))
+    #set ($allCSDefsArray_len  = $allCSDefsArray.size())
+    #foreach ( $dummy_idx in [1..$allCSDefsArray_len])
+        #set ($curCSDefsEntry = $allCSDefsArray.get($foreach.index))
+        #set ($curCSDefsEntry = $curCSDefsEntry.trim())        
+         ## <!-- DEBUG_LIST_ENTRY |$curCSDefsEntry| -->
+        #if ( (! $curCSDefsEntry.isEmpty()) && ! $curCSDefsEntry.toString().equalsIgnoreCase($CONST_NULL) )
+            #set ($dummyBool = $csDefMap.put($curCSDefsEntry.toString(), $CONST_TRUE))
+        #end ##_ifEntryNonNull
+    #end   ##_endForEach
+
+    ## Step 2: Lookup if our name index key is in the CS def map
+    #set ($csDefMap_value = "")
+    #set ($csDefMap_lookupKey = "#getCoordSysId( $name $index )")
+    #if ($csDefMap.containsKey($csDefMap_lookupKey))
+        #set ($csDefMap_value = $csDefMap.get($csDefMap_lookupKey))
+    #end ##_ifContainsKey
+
+    ## Adding switch for debug situations (vs always commenting in and out....)
+    #if ( $CONST_TRUE.equals($CONST_FALSE) )
+        <!-- DEBUG Input: name  = $name  --> 
+        <!-- DEBUG Input: index = $index  --> 
+        <!-- DEBUG Known CS: ${allCSDefsListStr} --> 
+        <!-- DEBUG The Map: $csDefMap -->
+        <!-- DEBUG The Map size: $csDefMap.size() --> 
+        <!-- DEBUG Value from map for key $csDefMap_lookupKey = $csDefMap_value  -->
+    #end
+
+    ## Step 3: If value returned from map, decompose it and use its entries, else default ref
+    #if ( $CONST_TRUE.equals($csDefMap_value) )
+
+      #if ( $CONST_FALSE.equals("#doesNodeValueListContainAllNilValues($index)" ) )
+        <$dictName:Coordinate_Space_Reference>
+          <Local_Internal_Reference>
+            <local_identifier_reference>#getCoordSysId( $name $index )</local_identifier_reference>
+            <local_reference_type>to_reference_coordinate_space</local_reference_type>
+          </Local_Internal_Reference>
+        </$dictName:Coordinate_Space_Reference>
+      #end
+
+    ## Step 3b: Special check if label section says which name to use, assumes NO FOR-loop
+    #elseif ( $label.get($labelSection).REFERENCE_COORD_SYS_INDEX_NAME )
+
+        #set ( $lcl_idx_id = $label.get($labelSection).REFERENCE_COORD_SYS_INDEX_NAME.toString() )        
+
+        <$dictName:Coordinate_Space_Reference>
+          <$dictName:Coordinate_Space_Indexed>
+            <$dictName:coordinate_space_frame_type>${name}</$dictName:coordinate_space_frame_type>
+            <$dictName:Coordinate_Space_Index>
+               <$dictName:index_id>${lcl_idx_id}</$dictName:index_id>
+               <$dictName:index_value_number>${index}</$dictName:index_value_number>
+            </$dictName:Coordinate_Space_Index>    
+          </$dictName:Coordinate_Space_Indexed>
+        </$dictName:Coordinate_Space_Reference>
+
+    ## Step 3c: default ref using mission RMC names
+    #else
+
+        #set ($rmcNamesList      = "#msn_getRMCNames()" )
+        #set ($rmcNamesList      = $rmcNamesList.trim() )
+        #set ($rmcNamesList      = $rmcNamesList.replace("[", "").replace("]", ""))
+        #set ($rmcNamesList      = $rmcNamesList.replaceAll("'", "") )   ## remove quotes
+        #set ($rmcNamesList      = "#removeWhitespace($rmcNamesList)")   ## remove whitespace
+        #set ($rmcNamesParts     = $rmcNamesList.split(","))             ## split using ',' delim
+        #set ($rmcNamesParts_len = $rmcNamesParts.size())
+        #set ($index_len         = $index.size())
+
+        <$dictName:Coordinate_Space_Reference>
+          <$dictName:Coordinate_Space_Indexed>
+            <$dictName:coordinate_space_frame_type>${name}</$dictName:coordinate_space_frame_type>
+            #foreach ( $index_idx in [1..$index_len])
+              <$dictName:Coordinate_Space_Index>
+                <$dictName:index_id>$rmcNamesParts.get($foreach.index)</$dictName:index_id>
+                #set ( $gcsr_cur_idx_val = $index.get($foreach.index) )
+                #set ( $gcsr_cur_idx_val = "#getIndexValueCheckNil($gcsr_cur_idx_val)" )
+                <$dictName:index_value_number>$gcsr_cur_idx_val</$dictName:index_value_number>
+              </$dictName:Coordinate_Space_Index>
+            #end##_endForEach     
+          </$dictName:Coordinate_Space_Indexed>
+        </$dictName:Coordinate_Space_Reference>
+
+    #end ##_endifElse
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## Builds the local identifier based on the COORDINATE_SYSTEM_NAME and COORDINATE_SYSTEM_INDEX
+##
+#macro(getCoordSysId $name $index)
+#if ($!name && $!index)
+#set ( $refindex = "" )
+#foreach ( $i in $index )
+#if ( $CONST_FALSE.equals("#valueIsNilValue($i)") )
+#set ( $refindex = $refindex + $i + "_" )
+#end
+#end
+#if ( $refindex != "" )##Remove last underscore
+#set ( $refindexLength = $refindex.length() - 1 )
+#set ( $refindex = $refindex.substring(0, $refindexLength) )
+#end
+${name}_${refindex}##
+#end
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## Builds the local identifier based on the COORDINATE_SYSTEM_NAME, COORDINATE_SYSTEM_INDEX,
+## and SOLUTION_ID.
+##
+#macro(getCoordSysIdWithSolutionId $name $index $solnId)
+#getCoordSysId( $name $index )_${solnId}##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## TODO: However, there's also a specific component.  I think there should be two arrays... PROCESSING_LEVEL that has all the basics, and PROCESSING_LEVEL_MISSION that has ones specific to that mission.  Then the getProcessingLevel macro first calls getProcessingLevelMission (thus allowing the mission to override)... but if there's no answer, it does what it does now with the generic array.
+
+##################################
+## getProcessingLevel from the product type
+##
+#set ($CORE_PROCESSING_LEVEL_MAP = {
+"EDR" : "Raw",
+"EJP" : "Raw",
+"ERP" : "Raw",
+"LIN" : "Partially Processed",
+"BAY" : "Partially Processed",
+"ILC" : "Partially Processed",
+"ILM" : "Partially Processed",
+"ILP" : "Partially Processed",
+"ILT" : "Partially Processed",
+"MSK" : "Derived",
+"IOF" : "Calibrated",
+"IOI" : "Calibrated",
+"RAD" : "Calibrated",
+"RAF" : "Calibrated",
+"RAS" : "Calibrated",
+"RDM" : "Calibrated",
+"RIE" : "Calibrated",
+"RIF" : "Calibrated",
+"RSM" : "Calibrated",
+"DDD" : "Derived",
+"DDL" : "Derived",
+"DDS" : "Derived",
+"DSE" : "Derived",
+"DSG" : "Derived",
+"DSL" : "Derived",
+"DSP" : "Derived",
+"DSR" : "Derived",
+"DSS" : "Derived",
+"MDS" : "Derived",
+"RUF" : "Derived",
+"DFF" : "Derived",
+"DFL" : "Derived",
+"DFS" : "Derived",
+"MXY" : "Calibrated",
+"XYE" : "Calibrated",
+"XYR" : "Calibrated",
+"XYZ" : "Calibrated",
+"XRZ" : "Calibrated",
+"XRR" : "Calibrated",
+"XRM" : "Calibrated",
+"XYM" : "Calibrated",
+"XYF" : "Derived",
+"XYO" : "Derived",
+"DEM" : "Calibrated",
+"XXX" : "Calibrated",
+"YYY" : "Calibrated",
+"ZZZ" : "Calibrated",
+"XXF" : "Derived",
+"YYF" : "Derived",
+"ZZF" : "Derived",
+"UVF" : "Derived",
+"UVO" : "Derived",
+"UVP" : "Derived",
+"UVS" : "Calibrated",
+"UVT" : "Derived",
+"UVW" : "Calibrated",
+"UUU" : "Calibrated",
+"VVV" : "Calibrated",
+"WWW" : "Calibrated",
+"UUF" : "Derived",
+"VVF" : "Derived",
+"WWF" : "Derived",
+"RNE" : "Calibrated",
+"RNF" : "Derived",
+"RNG" : "Calibrated",
+"RNM" : "Calibrated",
+"RNO" : "Derived",
+"RNR" : "Calibrated",
+"ARK" : "Derived",
+"ARM" : "Derived",
+"ARO" : "Derived",
+"MAR" : "Derived",
+"SEN" : "Derived",
+"SHD" : "Derived",
+"SHO" : "Derived",
+"SLO" : "Derived",
+"SLP" : "Derived",
+"SMG" : "Derived",
+"SMO" : "Derived",
+"SNO" : "Derived",
+"SNT" : "Derived",
+"SRD" : "Derived",
+"IEF" : "Derived",
+"IEP" : "Derived",
+"GUH" : "Derived",
+"GUS" : "Derived",
+"RUH" : "Derived",
+"RUS" : "Derived",
+"RUW" : "Derived",
+"RUK" : "Derived",
+"TDS" : "Derived",
+"TFH" : "Derived",
+"TFS" : "Derived",
+"TFW" : "Derived",
+"WSH" : "Derived",
+"WSS" : "Derived",
+"UIH" : "Derived",
+"UIS" : "Derived",
+"UIW" : "Derived",
+"UPH" : "Derived",
+"UPS" : "Derived",
+"UPW" : "Derived",
+"ZIH" : "Derived",
+"ZIS" : "Derived",
+"ZIW" : "Derived",
+"XIH" : "Derived",
+"XIS" : "Derived",
+"XIW" : "Derived",
+"TAU" : "Derived",
+"TEN" : "Derived",
+"TER" : "Derived",
+"CNR" : "Derived",
+"CNS" : "Derived",
+"CNF" : "Derived",
+"CNB" : "Derived",
+"CNG" : "Derived",
+"CSR" : "Derived",
+"CSS" : "Derived",
+"CSF" : "Derived",
+"CSB" : "Derived",
+"CSG" : "Derived",
+"CPR" : "Derived",
+"CPS" : "Derived",
+"CPF" : "Derived",
+"CPB" : "Derived",
+"CPG" : "Derived",
+"CWR" : "Derived",
+"CWS" : "Derived",
+"CWF" : "Derived",
+"CWB" : "Derived",
+"CWG" : "Derived",
+"MNR" : "Derived",
+"MNS" : "Derived",
+"MNF" : "Derived",
+"MNB" : "Derived",
+"MNG" : "Derived",
+"MSR" : "Derived",
+"MSS" : "Derived",
+"MSF" : "Derived",
+"MSB" : "Derived",
+"MSG" : "Derived",
+"MPR" : "Derived",
+"MPS" : "Derived",
+"MPF" : "Derived",
+"MPB" : "Derived",
+"MPG" : "Derived",
+"MWR" : "Derived",
+"MWS" : "Derived",
+"MWF" : "Derived",
+"MWB" : "Derived",
+"MWG" : "Derived",
+"EVD" : "Raw",
+"EZS" : "Raw",
+"ERD" : "Raw",
+"EDM" : "Raw"
+})
+###macro(getProcessingLevel $ptype $isMosaic)
+###if ($isMosaic eq $CONST_TRUE)
+##Derived##
+###elseif ( $PROCESSING_LEVEL.containsKey($ptype) )
+##$PROCESSING_LEVEL.get($ptype)##
+###else
+##Derived##
+###end
+###end
+##################################
+
+## ------------------------------------------------------------------------
+
+
+## TODO: Cristina, do you recall what the CSR in SIP is used for, vs. the CSR in DPP? 
+## What the hell are you talking about?? (11.01.18 nttoole)
+
+##################################
+## checkCoordSpaceOverloading
+##
+##
+## InSight overloads the DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_NAME
+## and DERIVED_IMAGE_PARMS.REFERENCE_COORD_SYSTEM_INDEX keywords. These 
+## keywords are always used to populate the <Coordinate_Space_Reference>
+## in <img_surface:Derived_Product_Parameters>, but sometimes must also be
+## copied to the <Coordinate_Space_Reference> in <img_surface:Surface_Imaging>.
+## This macro checks the value of DERIVED_IMAGE_PARMS.DERIVED_IMAGE_TYPE
+## to determine which instances of <Coordinate_Space_Reference> to populate.
+##
+##
+
+#set ($DERIVED_IMAGE_TYPES = [
+    "XYZ_MAP",
+    "UVW_MAP",
+    "XYZ_ERROR_MAP",
+    "RANGE_ERROR_MAP",
+    "RANGE_MAP",
+    "SLOPE_MAP",
+    "ROUGHNESS_MAP",
+    "X_MAP",
+    "Y_MAP",
+    "Z_MAP",
+    "ELEVATION_MAP",
+    "U_MAP",
+    "V_MAP",
+    "W_MAP",
+    "DOWNRANGE_ERROR_MAP",
+    "CROSSRANGE1_ERROR_MAP",
+    "CROSSRANGE2_ERROR_MAP",
+    "X_ERROR_MAP",
+    "Y_ERROR_MAP",
+    "Z_ERROR_MAP",
+    "INST_ROUGHNESS_MAP",
+    "INST_DELTA_TILT_MAP",
+    "INST_TILT_MAP",
+    "INST_UVS_MAP",
+    "INST_Z_MAP"
+])
+#macro (checkCoordSpaceOverloading $derivedImageType) 
+#if ( $DERIVED_IMAGE_TYPES.contains($derivedImageType) )
+$CONST_TRUE##
+#else
+$CONST_FALSE##
+#end 
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getCoordinateSystemDefinitions
+##
+#macro(getCoordinateSystemDefinitions $isMosaic )
+    ###if ( $isMosaic eq $CONST_FALSE )    
+        #set($csList = $!$label.get("\w*_COORDINATE_SYSTEM") )    
+        #set($csListLen = $csList.size())
+        #if ( $csListLen > 0)     
+          #foreach ( $i in [1..$csListLen] )        
+            #set ($curCoordName = $csList.get($foreach.index))
+            
+
+            ##HACK ALERT - for PDS delivery....
+            ##Bob said that labels contain duplicate CoordSys's with name=ARM_TURRET_FRAME TOOL
+            ##between TURRET_COORDINATE_SYSTEM and TOOL_COORDINATE_SYSTEM.
+            ##So we need to prevent TOOL from being processed if TURRET exists with same name
+            ##HACK ALERT 2 - same for ARM_COORDINATE_SYSTEM and TOOL_COORDINATE_SYSTEM (drop latter if same)
+            ##HACK ALERT 3 - same for TURRENT_COORDINATE_SYSTEM and ARM_COORDINATE_SYSTEM and (drop latter if same)
+
+            #if ( $curCoordName.equalsIgnoreCase("TOOL_COORDINATE_SYSTEM") &&
+                  $label.TURRET_COORDINATE_SYSTEM &&  $label.TOOL_COORDINATE_SYSTEM && 
+                  $label.TURRET_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME.equals($label.TOOL_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME))
+
+                ##Drop the duplicate TOOL_COORDINATE_SYSTEM...
+                 
+            #elseif ( $curCoordName.equalsIgnoreCase("TOOL_COORDINATE_SYSTEM") &&
+                      $label.ARM_COORDINATE_SYSTEM &&  $label.TOOL_COORDINATE_SYSTEM && 
+                      $label.ARM_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME.equals($label.TOOL_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME))
+
+                ##Drop the duplicate TOOL_COORDINATE_SYSTEM...
+
+            #elseif ( $curCoordName.equalsIgnoreCase("ARM_COORDINATE_SYSTEM") &&
+                      $label.TURRET_COORDINATE_SYSTEM &&  $label.ARM_COORDINATE_SYSTEM && 
+                      $label.TURRET_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME.equals($label.ARM_COORDINATE_SYSTEM.COORDINATE_SYSTEM_NAME))
+
+                ##Drop the duplicate ARM_COORDINATE_SYSTEM...
+
+            #else
+
+              #getCoordinateSystemDefinition($curCoordName)
+
+            #end
+          #end
+        #end
+    ###end
+#end
+
+
+## ------------------------------------------------------------------------
+
+## 02/21/20: under Coordinate_Space_Definition add: <measurement_method> .  IntialCaps, and translate "Fine" -> "Sun_Find"
+
+##################################
+## Dynamically populate Coordinate_System_Definition class
+##
+#macro(getCoordinateSystemDefinition $coordSys)
+    #if ($label.get($coordSys))
+
+      #set ($srf_gcs_cs_node = $label.get($coordSys) )
+
+      ## Work-around for cruise-products that have part of the definition 
+      ## but missing the offset and/or orientation.  Check that both
+      ## are defined and not NIL-valued      
+      #if ( $srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR       && 
+            $srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION && 
+            $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_OFFSET_VECTOR')") &&
+            $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_ROTATION_QUATERNION')") &&
+            $srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR && 
+            $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR)") &&
+            $srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION && 
+            $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION)") &&
+            ( ( $srf_gcs_cs_node.COORDINATE_SYSTEM_INDEX && 
+                $CONST_FALSE.equals("#doesNodeValueListContainAllNilValues($srf_gcs_cs_node.COORDINATE_SYSTEM_INDEX)") ) || 
+              ( $srf_gcs_cs_node.ROVER_MOTION_COUNTER && 
+                $CONST_FALSE.equals("#doesNodeValueListContainAllNilValues($srf_gcs_cs_node.ROVER_MOTION_COUNTER)") ) ) )
+                
+        #debug($coordSys)
+        <geom:Coordinate_Space_Definition>
+            #debug($coordSys.concat(".COORDINATE_SYSTEM_NAME"))
+            #debug($coordSys.concat(".COORDINATE_SYSTEM_INDEX"))
+
+            ##HACK ALERT: Sherloc RMC
+            #set ( $srf_gcs_cs_node_CSINode = '')
+            #if ( $srf_gcs_cs_node.COORDINATE_SYSTEM_INDEX )
+                #set ( $srf_gcs_cs_node_CSINode = $srf_gcs_cs_node.COORDINATE_SYSTEM_INDEX )
+            #elseif ( $srf_gcs_cs_node.ROVER_MOTION_COUNTER )
+                #set ( $srf_gcs_cs_node_CSINode = $srf_gcs_cs_node.ROVER_MOTION_COUNTER )
+            #end
+
+            #if ( $srf_gcs_cs_node_CSINode != '')
+                <local_identifier>#getCoordSysId( $!srf_gcs_cs_node.COORDINATE_SYSTEM_NAME $!srf_gcs_cs_node_CSINode)</local_identifier>
+
+                ## SOLUTION_ID is optional
+                #if ( $srf_gcs_cs_node.SOLUTION_ID )
+                    #debug($coordSys.concat(".SOLUTION_ID"))
+                    <local_identifier>#getCoordSysIdWithSolutionId( $!srf_gcs_cs_node.COORDINATE_SYSTEM_NAME  $!srf_gcs_cs_node_CSINode  $!srf_gcs_cs_node.SOLUTION_ID )</local_identifier>
+                #end
+
+            #end
+
+            
+            #if ( $srf_gcs_cs_node.POSITIVE_AZIMUTH_DIRECTION )
+              #debug ($coordSys.concat(".POSITIVE_AZIMUTH_DIRECTION"))
+              <geom:positive_azimuth_direction>$text.capitalize($!srf_gcs_cs_node.POSITIVE_AZIMUTH_DIRECTION[0])</geom:positive_azimuth_direction>
+            #end
+            #if ( $srf_gcs_cs_node.POSITIVE_ELEVATION_DIRECTION )
+              #debug ($coordSys.concat(".POSITIVE_ELEVATION_DIRECTION"))
+              <geom:positive_elevation_direction>$text.capitalize($!srf_gcs_cs_node.POSITIVE_ELEVATION_DIRECTION[0])</geom:positive_elevation_direction>
+            #end
+
+           
+            #getCoordinateSpacePresent( $coordSys )
+
+            #if ( $srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR && 
+                  $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_OFFSET_VECTOR')") &&
+                  $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR)") )
+              <geom:Vector_Origin_Offset>
+                #debug ($coordSys.concat(".ORIGIN_OFFSET_VECTOR"))
+                <geom:x_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[0]</geom:x_position>
+                <geom:y_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[1]</geom:y_position>
+                <geom:z_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[2]</geom:z_position>
+              </geom:Vector_Origin_Offset>
+            #end
+
+            #if ( $srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION && 
+                  $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_ROTATION_QUATERNION')") &&
+                  $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION)"))
+              <geom:Quaternion_Plus_Direction>
+                #debug ($coordSys.concat("ORIGIN_ROTATION_QUATERNION"))
+                <geom:qcos>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[0]</geom:qcos>
+                <geom:qsin1>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[1]</geom:qsin1>
+                <geom:qsin2>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[2]</geom:qsin2>
+                <geom:qsin3>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[3]</geom:qsin3>
+                <geom:rotation_direction>Forward</geom:rotation_direction>
+              </geom:Quaternion_Plus_Direction>
+            #end
+
+            #set ( $coordSystemName = $!srf_gcs_cs_node.REFERENCE_COORD_SYSTEM_NAME )
+            #set ( $coordSystemIndex = $!srf_gcs_cs_node.REFERENCE_COORD_SYSTEM_INDEX )
+            #getCoordinateSpaceReference( $coordSystemName $coordSystemIndex "geom" $coordSys )
+
+            <geom:Coordinate_Space_Quality>
+
+              ## quaternion_measurement_method is required for CSQ
+              #set ( $gcsd_cs_qmm = 'Unknown' )
+              #if ($!srf_gcs_cs_node.QUATERNION_MEASUREMENT_METHOD)
+                #set ( $gcsd_cs_qmm = $!srf_gcs_cs_node.QUATERNION_MEASUREMENT_METHOD.toString() )
+                ##Need to capitalize but keep underscores, so gotta do this...
+                #set ( $gcsd_cs_qmm = $gcsd_cs_qmm.replace('_',' ') )
+                #set ( $gcsd_cs_qmm = $text.capitalize($gcsd_cs_qmm) )
+                #set ( $gcsd_cs_qmm = $gcsd_cs_qmm.replace(' ','_') )
+                #if ( $gcsd_cs_qmm.equalsIgnoreCase('Fine') )
+                  #set ( $gcsd_cs_qmm = "Sun_Find")
+                #elseif ( $gcsd_cs_qmm.equalsIgnoreCase('UNK')  )
+                  #set ( $gcsd_cs_qmm = "Unknown")
+                #end
+              #end
+              <geom:quaternion_measurement_method>$gcsd_cs_qmm</geom:quaternion_measurement_method>
+            
+              ## Thanks RIMFAX for these UNK checks....                          
+              #getNodeValueNotNil( $srf_gcs_cs_node 'ATTITUDE_PROPAGATION_COUNTER'  'geom:attitude_propagation_counter'       '' )
+
+              #getNodeValueNotNil( $srf_gcs_cs_node 'ARTICULATION_DEVICE_ANGLE'     'geom:attitude_propagation_duration'     's' )
+
+            </geom:Coordinate_Space_Quality>
+            
+
+        </geom:Coordinate_Space_Definition>
+      #end
+
+    #end
+#end
+##################################
+
+
+
+##################################
+## Somewhat similar to getCoordinateSystemDefinition()
+## but applied to the INITIAL_STATE_PARMS node.
+## So it has some hardcoded stuff and special logic, thus gets
+## it gets its own macro.  Yep, likely to cause problems
+## later?
+
+#macro(getCoordinateSystemDefinitionForInitialState $node  $coordIndexNode $coordIndexNameNode )
+    
+        #set ($srf_gcs_cs_node = $node )
+
+        #set ($srf_gcs_cs_coord_sys_name    = 'ROVER_NAV_FRAME'  )
+        #set ($srf_gcs_cs_coord_sys_idx     = $coordIndexNode  )
+        
+        
+        ## Ref coord index is the site-only, but as a list
+        #set ($srf_gcs_cs_ref_coord_sys_name = 'SITE_FRAME'  )
+        #set($srf_gcs_cs_ref_coord_sys_idx = [])        
+        #set($silencer = $srf_gcs_cs_ref_coord_sys_idx.add( $coordIndexNode.get(0) ) )         
+                
+        ## Work-around for cruise-products that have part of the definition 
+        ## but missing the offset and/or orientation.  Check that both
+        ## are defined and not 'UNK'
+       #if ( $srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR       && 
+             $srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION && 
+             $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_OFFSET_VECTOR')") &&
+             $CONST_FALSE.equals("#nodeHasNilValue( $srf_gcs_cs_node 'ORIGIN_ROTATION_QUATERNION')") )
+             
+          <geom:Coordinate_Space_Definition>
+
+            <local_identifier>#getCoordSysId( $srf_gcs_cs_coord_sys_name $srf_gcs_cs_coord_sys_idx )</local_identifier>
+
+            <geom:Coordinate_Space_Present>
+                <geom:Coordinate_Space_Indexed>
+                
+                  <geom:coordinate_space_frame_type>$srf_gcs_cs_coord_sys_name</geom:coordinate_space_frame_type>
+
+                  #set($count = $coordIndexNode.size() - 1)
+                  #foreach ( $i in [ 0..$count ] )
+                    <geom:Coordinate_Space_Index>
+                      #if ( $coordIndexNameNode.size() > $foreach.index )
+                        <geom:index_id>$coordIndexNameNode.get($foreach.index)</geom:index_id>
+                      #end
+                      <geom:index_value_number>$coordIndexNode.get($foreach.index)</geom:index_value_number>
+                    </geom:Coordinate_Space_Index>
+                  #end
+
+                </geom:Coordinate_Space_Indexed>
+            </geom:Coordinate_Space_Present>                      
+
+            #if ( $srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR && 
+                  $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR)"))
+              #debug ($coordSys.concat(".ORIGIN_OFFSET_VECTOR"))
+              <geom:Vector_Origin_Offset>
+                <geom:x_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[0]</geom:x_position>
+                <geom:y_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[1]</geom:y_position>
+                <geom:z_position unit="m">$!srf_gcs_cs_node.ORIGIN_OFFSET_VECTOR[2]</geom:z_position>
+              </geom:Vector_Origin_Offset>
+            #end
+
+             #if ( $srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION && 
+                  $CONST_FALSE.equals("#doesNodeValueListContainNilValue($srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION)"))
+              #debug ($coordSys.concat("ORIGIN_ROTATION_QUATERNION"))
+              <geom:Quaternion_Plus_Direction>
+                <geom:qcos>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[0]</geom:qcos>
+                <geom:qsin1>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[1]</geom:qsin1>
+                <geom:qsin2>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[2]</geom:qsin2>
+                <geom:qsin3>$!srf_gcs_cs_node.ORIGIN_ROTATION_QUATERNION[3]</geom:qsin3>
+                <geom:rotation_direction>Forward</geom:rotation_direction>
+              </geom:Quaternion_Plus_Direction>
+            #end
+
+            #getCoordinateSpaceReference( $srf_gcs_cs_ref_coord_sys_name $srf_gcs_cs_ref_coord_sys_idx "geom" "INITIAL_STATE_PARMS" )
+
+            <geom:Coordinate_Space_Quality>
+
+              #if ($!srf_gcs_cs_node.QUATERNION_MEASUREMENT_METHOD)
+                #set ( $gcsd_cs_qmm = $!srf_gcs_cs_node.QUATERNION_MEASUREMENT_METHOD.toString() )                
+                #if ( $gcsd_cs_qmm.equalsIgnoreCase('Fine') )
+                  #set ( $gcsd_cs_qmm = "Sun_Find")
+                #end                
+                ## #set ( $gcsd_cs_qmm = $gcsd_cs_qmm.replace(' ','_') )
+                #debug ($coordSys.concat(".QUATERNION_MEASUREMENT_METHOD"))
+                <geom:quaternion_measurement_method>$gcsd_cs_qmm</geom:quaternion_measurement_method>
+              #end
+            
+            </geom:Coordinate_Space_Quality>
+            
+          </geom:Coordinate_Space_Definition>
+
+        #end##IfOffsetandOrientationDefined
+
+#end
+##################################
+
+## ------------------------------------------------------------------------
+## ------------------------------------------------------------------------
+
+
+##################################
+## generateArticulationDeviceParams
+##
+#macro(generateArticulationDeviceParams $isMosaic )
+    #if ( $isMosaic eq $CONST_FALSE )
+        #set($asList = $!$label.get("\w*_ARTICULATION_STATE") )
+        #set($asListLen = $asList.size())
+        #if ($asListLen > 0)
+            #foreach ( $i in [1..$asListLen] )
+                #set ($artDeviceName = $asList.get($foreach.index))
+                #if ( $CONST_TRUE.equals("#isArticulationStateWellFormed($artDeviceName)") )
+                  #set ( $artDeviceNode = $label.get($artDeviceName) )
+                  #generateGenericArticulationDeviceParams( $artDeviceNode $artDeviceName )
+                #end
+            #end
+        #end 
+    #end
+#end
+
+## ------------------------------------------------------------------------
+
+## Checks for well-formed Articulation State.
+## Basically it needs to have at least one required child node
+## that is not consider a nil list (value is either nil or list of all nils)
+## List of required children are in ART_STATE_CHILD_LIST
+
+#macro(isArticulationStateWellFormed $artStateName)
+#set ( $iwfas_rval = $CONST_TRUE )
+#set ( $iwfas_node = $label.get($artDeviceName) )
+#set ( $iwfas_child_found = $CONST_FALSE )
+#foreach ( $as_childname in $ART_STATE_CHILD_LIST )
+#if ( $iwfas_node.get($as_childname) )
+#set ( $iwfas_child_found = $CONST_TRUE )
+#end
+#end##Foreach1
+#if ( $CONST_FALSE.equals($iwfas_child_found) )
+#set ( $iwfas_rval = $CONST_FALSE )
+#else
+#set ( $iwfas_exists_child_well_defined = $CONST_FALSE )
+#foreach ( $as_childname in $ART_STATE_CHILD_LIST )
+#if ( $iwfas_node.get($as_childname) )
+#if ( $CONST_FALSE.equals("#isNodeChildValueEitherNilOrNilList($iwfas_node $as_childname)") )
+#set ( $iwfas_exists_child_well_defined = $CONST_TRUE )
+#end
+#end
+#end##Foreach2
+#end##EndIfiwfas_child_foundFalse_Else
+#if ( $CONST_FALSE.equals($iwfas_exists_child_well_defined) )
+#set ( $iwfas_rval = $CONST_FALSE )
+#end
+${iwfas_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+##################################
+## generateGenericArticulationDeviceParams
+##
+#macro(generateGenericArticulationDeviceParams $artDevice $artDeviceName )
+
+          #debug( $artDeviceName )
+          <geom:Articulation_Device_Parameters>
+          
+            ##ALWAYS
+            <geom:device_id>$!artDevice.ARTICULATION_DEVICE_ID</geom:device_id>
+            <geom:device_name>$!artDevice.ARTICULATION_DEVICE_NAME[0]</geom:device_name>
+            
+            #if ( $artDevice.ARTICULATION_DEVICE_MODE )
+              <geom:device_mode>$!artDevice.ARTICULATION_DEVICE_MODE[0]</geom:device_mode>
+            #end
+
+            #if ( $artDevice.ARTICULATION_DEV_INSTRUMENT_ID )
+              <geom:selected_instrument_id>$!artDevice.ARTICULATION_DEV_INSTRUMENT_ID</geom:selected_instrument_id>
+            #end 
+
+            #if ( $artDevice.ARTICULATION_DEVICE_PHASE )
+              <geom:device_phase>$!artDevice.ARTICULATION_DEVICE_PHASE[0]</geom:device_phase>
+            #end
+
+
+            #if ( $artDevice.ARTICULATION_DEVICE_ANGLE_NAME )
+             #set($length = $!artDevice.ARTICULATION_DEVICE_ANGLE_NAME.size())
+             #if ( $length > 0)
+                <geom:Device_Angle>
+                  #foreach ( $i in [1..$length] )
+                    ## Sigh...some nonimg label had '-nan' as a value, which we have to handle since EdrGen wont do anything for months
+                    #debug("${artDeviceName}.ARTICULATION_DEVICE_ANGLE")
+                    #set ( $ggadp_ada_value = $artDevice.ARTICULATION_DEVICE_ANGLE.get($foreach.index) )
+                    #set ( $ggadp_ada_value = "#translateNanMaybe($ggadp_ada_value)" )
+                    #if ( $CONST_FALSE.equals("#valueIsNilValue($ggadp_ada_value)" ) )
+                      <geom:Device_Angle_Index>
+                        <geom:index_id>$artDevice.ARTICULATION_DEVICE_ANGLE_NAME.get($foreach.index)</geom:index_id>
+                        <geom:index_value_angle #getUnitAttrOrDefault($!artDevice "ARTICULATION_DEVICE_ANGLE" $foreach.index 'rad')>$!ggadp_ada_value</geom:index_value_angle>                                
+                      </geom:Device_Angle_Index>
+                    #end
+                  #end
+                </geom:Device_Angle>
+             #end ##if_length_gt_0
+            #end ##if_ARTICULATION_DEVICE_ANGLE_NAME
+
+
+            #if ( $artDevice.ART_DEV_COMPONENT_STATE )
+              #set($length = $!artDevice.ART_DEV_COMPONENT_STATE.size())
+              #if ( $length > 0)
+                <geom:Device_Component_State>
+                  #foreach ( $i in [1..$length] )
+                    #set ( $ggadp_adcs_value = $artDevice.ART_DEV_COMPONENT_STATE.get($foreach.index) )
+                    #if ( $CONST_FALSE.equals("#valueIsNilValue($ggadp_adcs_value)" ) )
+                      <geom:Device_Component_State_Index>
+                        <geom:index_id>$artDevice.ART_DEV_COMPONENT_STATE_NAME.get($foreach.index)</geom:index_id>
+                        <geom:index_value_string>$ggadp_adcs_value</geom:index_value_string>
+                      </geom:Device_Component_State_Index>
+                    #end
+                  #end
+                </geom:Device_Component_State>
+              #end ##if_length_gt_0
+            #end ##ART_DEV_COMPONENT_STATE  
+
+
+            #if ( $artDevice.CONTACT_SENSOR_STATE )
+              #set($length = $!artDevice.CONTACT_SENSOR_STATE.size())
+              #if ( $length > 0)
+                <geom:Device_Component_State>            
+                  #foreach ( $i in [1..$length] )
+                    #set ( $ggadp_css_value = $artDevice.CONTACT_SENSOR_STATE.get($foreach.index) )
+                    #if ( $CONST_FALSE.equals("#valueIsNilValue($ggadp_css_value)" ) )
+                      <geom:Device_Component_State_Index>
+                        <geom:index_id>$artDevice.CONTACT_SENSOR_STATE_NAME.get($foreach.index)</geom:index_id>
+                        <geom:index_value_string>$ggadp_css_value</geom:index_value_string>
+                      </geom:Device_Component_State_Index>
+                    #end
+                  #end
+              </geom:Device_Component_State>               
+              #end ##if_length_gt_0
+            #end ##CONTACT_SENSOR_STATE
+
+
+            #if ( $artDevice.DEVICE_POSE_NAME )
+              <geom:Device_Pose>  
+                <geom:name>$!artDevice.DEVICE_POSE_NAME</geom:name>
+                #if ( $artDevice.DEVICE_POSE_QUATERNION && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($artDevice.DEVICE_POSE_QUATERNION)"))
+                  <geom:Quaternion_Plus_Direction>
+                    <geom:qcos>$!artDevice.DEVICE_POSE_QUATERNION.get(0)</geom:qcos>
+                    <geom:qsin1>$!artDevice.DEVICE_POSE_QUATERNION.get(1)</geom:qsin1>
+                    <geom:qsin2>$!artDevice.DEVICE_POSE_QUATERNION.get(2)</geom:qsin2>
+                    <geom:qsin3>$!artDevice.DEVICE_POSE_QUATERNION.get(3)</geom:qsin3>
+                    <geom:rotation_direction>Forward</geom:rotation_direction>
+                  </geom:Quaternion_Plus_Direction>
+                #end
+
+                #if ( $artDevice.DEVICE_POSE_OFFSET && 
+                      $CONST_FALSE.equals("#doesNodeValueListContainNilValue($artDevice.DEVICE_POSE_OFFSET)"))
+                  <geom:Vector_Origin_Offset>
+                    <geom:x_position>$!artDevice.DEVICE_POSE_OFFSET.get(0)</geom:x_position>
+                    <geom:y_position>$!artDevice.DEVICE_POSE_OFFSET.get(1)</geom:y_position>
+                    <geom:z_position>$!artDevice.DEVICE_POSE_OFFSET.get(2)</geom:z_position>
+                  </geom:Vector_Origin_Offset>
+                #end
+              </geom:Device_Pose>
+            #end
+           
+
+
+            #if ( $artDevice.ARTICULATION_DEVICE_TEMP_NAME )
+             #set($length = $artDevice.ARTICULATION_DEVICE_TEMP_NAME.size())
+             #if ( $length > 0)
+               #if ( $CONST_FALSE.equals("#doesNodeValueListContainNilValue($artDevice.ARTICULATION_DEVICE_TEMP)") )
+                <geom:Device_Temperature>            
+                  #foreach ( $i in [1..$length] )
+                    <geom:Device_Temperature_Index>
+                        #if ( $artDevice.ARTICULATION_DEVICE_TEMP_NAME )
+                          #debug("${artDeviceName}.ARTICULATION_DEVICE_TEMP_NAME")
+                          <geom:index_id>$artDevice.ARTICULATION_DEVICE_TEMP_NAME.get($foreach.index)</geom:index_id>
+                        #end 
+                        
+                        #if ( $artDevice.ARTICULATION_DEVICE_TEMP )
+                          #debug("${artDeviceName}.ARTICULATION_DEVICE_TEMP")
+                          <geom:index_value_temperature #getUnitAttr( $!artDevice    'ARTICULATION_DEVICE_TEMP'   $foreach.index)>$artDevice.ARTICULATION_DEVICE_TEMP.get($foreach.index)</geom:index_value_temperature>   
+                        #end 
+                    
+                    #if ( $artDevice.ARTICULATION_DEVICE_TEMP_COUNT )
+                      #debug("${artDeviceName}.ARTICULATION_DEVICE_TEMP_COUNT")
+                      <geom:index_value_number>$artDevice.ARTICULATION_DEVICE_TEMP_COUNT</geom:index_value_number>
+                    #end
+                    
+                    </geom:Device_Temperature_Index>
+                  #end
+                </geom:Device_Temperature>
+              #end
+             #end ##if_length_gt_0
+            #end ##if_ARTICULATION_DEVICE_TEMP_NAME
+
+            ## We used to use element 'Vector_Device_Gravity', but Bob got nervous
+            ## that it may not be gravity. So build element name based on the _NAME
+            ## provided in label.  (if no name, use 'UNKNOWN' to indicate something is amiss)
+            ## Note tho, only Gravity is allowed per the current PDS Data Dictionary. (jan'19)
+            #if ( $artDevice.ARTICULATION_DEV_VECTOR )
+
+             ##Ensure there are no nil-values in the list
+             #if ( $CONST_FALSE.equals("#doesNodeValueListContainNilValue($artDevice.ARTICULATION_DEV_VECTOR)") )
+
+              #set ( $ggadp_advName = $CONST_UNKNOWN )
+              #if ( $artDevice.ARTICULATION_DEV_VECTOR_NAME )
+                  #set ( $ggadp_advName = $artDevice.ARTICULATION_DEV_VECTOR_NAME.toString() )
+                  #set ( $ggadp_advName = $text.capitalize($ggadp_advName) )
+              #end
+              
+
+              ## Normalized values go in 'Vector_Device_?'
+              ## Raw values go in 'Vector_Device_?_Magnitude' 
+
+              #set ( $ggadp_adv_x = ""  )
+              #set ( $ggadp_adv_y = ""  )
+              #set ( $ggadp_adv_z = ""  )
+              #set ( $ggadp_adv_x_norm = ""  )
+              #set ( $ggadp_adv_y_norm = ""  )
+              #set ( $ggadp_adv_z_norm = ""  )
+
+              #if ( $list_class.isAssignableFrom( $artDevice.ARTICULATION_DEV_VECTOR.class ) &&
+                    $artDevice.ARTICULATION_DEV_VECTOR.size() == 3)
+                #set ( $ggadp_adv_x = $!artDevice.ARTICULATION_DEV_VECTOR[0] )
+                #set ( $ggadp_adv_y = $!artDevice.ARTICULATION_DEV_VECTOR[1] )
+                #set ( $ggadp_adv_z = $!artDevice.ARTICULATION_DEV_VECTOR[2] )
+              #end 
+
+              #set ( $ggadp_adv_x = "#translateNanMaybe($ggadp_adv_x)" )
+              #set ( $ggadp_adv_y = "#translateNanMaybe($ggadp_adv_y)" )
+              #set ( $ggadp_adv_z = "#translateNanMaybe($ggadp_adv_z)" )
+
+              ## Normalize the values for Vector_Device_?:
+              #if ( $!ggadp_adv_x != ""     && $!ggadp_adv_y != ""    && $!ggadp_adv_z != ""    &&
+                    $!ggadp_adv_x != "UNK"  && $!ggadp_adv_y != "UNK" && $!ggadp_adv_z != "UNK" && 
+                    $CONST_FALSE.equals("#isNanValue($!ggadp_adv_x)") &&
+                    $CONST_FALSE.equals("#isNanValue($!ggadp_adv_y)") &&
+                    $CONST_FALSE.equals("#isNanValue($!ggadp_adv_z)") )
+
+                #set ( $ggadp_adv_x_2   = $math.pow($ggadp_adv_x, 2) )
+                #set ( $ggadp_adv_y_2   = $math.pow($ggadp_adv_y, 2) )
+                #set ( $ggadp_adv_z_2   = $math.pow($ggadp_adv_z, 2) )                
+                #set ( $ggadp_adv_sum_2 = $math.add($ggadp_adv_x_2, $ggadp_adv_y_2) )
+                #set ( $ggadp_adv_sum_2 = $math.add($ggadp_adv_sum_2, $ggadp_adv_z_2) )
+                #set ( $ggadp_adv_sum_sqrt = $math.pow($ggadp_adv_sum_2, 0.5) )
+                
+                #if ( $ggadp_adv_sum_sqrt > 0.00001 ) 
+                  #set ( $ggadp_adv_x_norm = $math.div($ggadp_adv_x,  $ggadp_adv_sum_sqrt) )
+                  #set ( $ggadp_adv_y_norm = $math.div($ggadp_adv_y,  $ggadp_adv_sum_sqrt) )
+                  #set ( $ggadp_adv_z_norm = $math.div($ggadp_adv_z,  $ggadp_adv_sum_sqrt) )
+                #end  
+
+                <geom:Vector_Device_${ggadp_advName}>
+                  <geom:x_unit>$!ggadp_adv_x_norm</geom:x_unit>
+                  <geom:y_unit>$!ggadp_adv_y_norm</geom:y_unit>
+                  <geom:z_unit>$!ggadp_adv_z_norm</geom:z_unit>
+                </geom:Vector_Device_${ggadp_advName}>
+              #end  ##If-x,y,z non-empty str
+
+              #debug("${artDeviceName}.ARTICULATION_DEV_VECTOR")
+              <geom:Vector_Device_${ggadp_advName}_Magnitude>
+                <geom:x_acceleration #getUnitAttrOrDefault( $!artDevice  'ARTICULATION_DEV_VECTOR'  '0'  'm/s**2')>$!ggadp_adv_x</geom:x_acceleration>
+                <geom:y_acceleration #getUnitAttrOrDefault( $!artDevice  'ARTICULATION_DEV_VECTOR'  '1'  'm/s**2')>$!ggadp_adv_y</geom:y_acceleration>
+                <geom:z_acceleration #getUnitAttrOrDefault( $!artDevice  'ARTICULATION_DEV_VECTOR'  '2'  'm/s**2')>$!ggadp_adv_z</geom:z_acceleration>
+              </geom:Vector_Device_${ggadp_advName}_Magnitude>
+
+             #end ##if_ARTICULATION_DEV_VECTOR_contains_no_nilvalues
+            #end ##if_ARTICULATION_DEV_VECTOR
+
+            ## We want to include commanded-geom data that resides in OBS_REQ_PARMS
+            ## only if the msn specific device name is declared and the current
+            ## ART_DEVICE name starts with it.  Its a bit convolutated as usual
+            #if ( $label.OBSERVATION_REQUEST_PARMS.INSTRUMENT_COORDINATE_TYPE )
+              #set ( $msn_cmd_geo_name = "" )
+              #set ( $msn_cmd_geo_name = "#msn_getDeviceForCommandedGeometry()" )
+              #if ( $!msn_cmd_geo_name != "" )
+                #set ( $msn_cmd_geo_name = $msn_cmd_geo_name.concat("_") )
+                #if ( $artDeviceName.toString().startsWith( $msn_cmd_geo_name ))
+                  #generateArtCommandedGeometryParms( $label.OBSERVATION_REQUEST_PARMS "OBSERVATION_REQUEST_PARMS" )
+                #end
+              #end
+            #end  
+            
+          </geom:Articulation_Device_Parameters>
+
+#end
+##################################
+## ------------------------------------------------------------------------
+
+##################################
+
+## Witness one of the more onerous macros of all time, and with a Peer Review in days...
+
+#set ( $SurfInstrCoordTypeMap = {
+  'AZEL_ABS'         : 'Angle_Absolute',
+  'AZEL_REL'         : 'Angle_Relative',
+  'AZ_ABS'           : 'Angle_Absolute',
+  'EL_ABS'           : 'Angle_Absolute',
+  'JOINTS_AZEL_ABS'  : 'Joint_Absolute',
+  'JOINTS_AZEL_REL'  : 'Joint_Relative',
+  'JOINTS_AZ_ABS'    : 'Joint_Absolute',
+  'JOINTS_EL_ABS'    : 'Joint_Absolute',
+  'XYZ'              : 'XYZ',
+  'NO_MOTION'        : 'No_Motion',
+  'NO_MOTION_NO_ARB' : 'No_Motion_No_Arb'
+})
+
+#set ( $SurfInstrFrameNameMap = {
+  'SITE'           : 'SITE_FRAME',
+  'SITE_SAVED'     : 'SITE_FRAME',
+  'RNAV'           : 'ROVER_NAV_FRAME',
+  'RNAV_SAVED'     : 'ROVER_NAV_FRAME',
+  'ROVER_MECH'     : 'ROVER_MECH_FRAME',
+  'RMECH'          : 'ROVER_MECH_FRAME',
+  'LL'             : 'LOCAL_LEVEL_FRAME',
+  'LL_SAVED'       : 'LOCAL_LEVEL_FRAME',
+  'DRILL'          : 'ARM_DRILL_FRAME',
+  'ARM_APXS_FRAME' : 'APXS_Frame',
+  'PIXL_BASE'      : 'PIXL_BASE_FRAME',
+  'SHERLOC'        : 'ARM_SHERLOC_FRAME',
+  'WATSON'         : 'ARM_WATSON_FRAME'
+})
+
+
+#macro (generateArtCommandedGeometryParms $node $name )
+
+    #set ( $srf_gacgp_type = "None")
+    #set ( $srf_gacgp_type_key = $!node.INSTRUMENT_COORDINATE_TYPE.toString() )
+    #if ( $SurfInstrCoordTypeMap.containsKey( $srf_gacgp_type_key ) )
+      #set ( $srf_gacgp_type = $SurfInstrCoordTypeMap.get( $srf_gacgp_type_key ) )
+    #end
+
+    <geom:Commanded_Geometry>
+      <geom:command_type>$srf_gacgp_type</geom:command_type>
+
+      #if ( $node.INSTRUMENT_COORDINATE )
+
+        #if ($node.INSTRUMENT_COORDINATE.size() == 2)  ## Two joints
+
+          <geom:Device_Angle>
+            <geom:Device_Angle_Index>
+              <geom:index_name>Azimuth</geom:index_name>              
+              <geom:index_value_angle #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  0  'rad')>$node.INSTRUMENT_COORDINATE[0]</geom:index_value_angle>
+            </geom:Device_Angle_Index>
+            <geom:Device_Angle_Index>
+              <geom:index_name>Elevation</geom:index_name>
+              <geom:index_value_angle #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  1  'rad')>$node.INSTRUMENT_COORDINATE[1]</geom:index_value_angle>
+            </geom:Device_Angle_Index>
+          </geom:Device_Angle>
+
+        #elseif ($node.INSTRUMENT_COORDINATE.size() == 1 && $srf_gacgp_type != "None" )  ## Single joint and not "None"
+
+          #set ( $srf_gacgp_joint_name = "Unknown" )
+          #if ( $srf_gacgp_type_key.toUpperCase().contains("AZ") )
+            #set ( $srf_gacgp_joint_name = "Azimuth" )
+          #elseif ( $srf_gacgp_type_key.toUpperCase().contains("EL") )
+            #set ( $srf_gacgp_joint_name = "Elevation" )
+          #end
+
+          <geom:Device_Angle>
+            <geom:Device_Angle_Index>
+              <geom:index_name>$!srf_gacgp_joint_name</geom:index_name>
+              <geom:index_value_angle #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  0  'rad')>$node.INSTRUMENT_COORDINATE[0]</geom:index_value_angle>
+            </geom:Device_Angle_Index>            
+          </geom:Device_Angle>
+
+        #elseif ($node.INSTRUMENT_COORDINATE.size() == 3 )  ## XYZ
+
+          #if ( $node.INSTRUMENT_COORDINATE && 
+                $CONST_FALSE.equals("#doesNodeValueListContainNilValue($node.INSTRUMENT_COORDINATE)"))
+            <geom:Commanded_Position>
+              <geom:x_position #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  0  'm')>$node.INSTRUMENT_COORDINATE[0]</geom:x_position>
+              <geom:y_position #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  1  'm')>$node.INSTRUMENT_COORDINATE[1]</geom:y_position>
+              <geom:z_position #getUnitAttrOrDefault( $node  'INSTRUMENT_COORDINATE'  2  'm')>$node.INSTRUMENT_COORDINATE[2]</geom:z_position>
+            </geom:Commanded_Position>
+          #end
+
+        #end
+
+         
+
+        #if ( $node.INSTRUMENT_COORD_FRAME_ID && $node.INSTRUMENT_COORD_FRAME_INDEX) 
+          #set ( $srf_gacgp_coord_frame = $node.INSTRUMENT_COORD_FRAME_ID.toString() )
+          #set ( $srf_gacgp_coord_index = $node.INSTRUMENT_COORD_FRAME_INDEX.toString() )
+
+          ## Might need to map name to something....
+          #set ( $srf_gacgp_coord_frame = "#maybeMapCoordSysFrameType($srf_gacgp_coord_frame)" )
+
+          ## Yay again, INSTRUMENT_COORD_FRAME_INDEX, is not formatted as an actual index....
+          ## So wrap it to make it look like it ought to....ONLY if not '0'
+          ## If it IS 0, then grab RMC from the IDENT.ROVER_MOTION_COUNTER...hahahahahaha
+          #if ( $!srf_gacgp_coord_index.toString() == "0" )
+            #if ( $IDENT.ROVER_MOTION_COUNTER )
+              #set ( $srf_gacgp_coord_index = $IDENT.ROVER_MOTION_COUNTER )
+
+              ## Additionally, if you pull the index from the RMC (cuz the index is 0), 
+              ## and the name is SITE_FRAME, then pull only the first index from the RMC, 
+              ## otherwise the whole thing.
+              #if ( $srf_gacgp_coord_frame == 'SITE_FRAME' && $srf_gacgp_coord_index.size() > 0 )
+                #set($srf_gacgp_coord_index_list = [])
+                #set($silencer = $srf_gacgp_coord_index_list.add( $srf_gacgp_coord_index[0] ))
+                #set( $srf_gacgp_coord_index = $srf_gacgp_coord_index_list )            
+              #end
+            #else
+              #set ( $srf_gacgp_coord_index = "" )
+            #end
+          #else
+            #set($srf_gacgp_coord_index_list = [])
+            #set($silencer = $srf_gacgp_coord_index_list.add( $srf_gacgp_coord_index ) )
+            #set( $srf_gacgp_coord_index = $srf_gacgp_coord_index_list )            
+          #end
+          
+          
+          #if ( ! $srf_gacgp_coord_frame.toUpperCase().equals("NONE") )
+            #getCoordinateSpaceReference( $srf_gacgp_coord_frame $srf_gacgp_coord_index "geom" $name )
+          #end
+
+        #end
+      #end
+
+    </geom:Commanded_Geometry>
+
+#end
+##################################
+
+## ------------------------------------------------------------------------
+
+##################################
+## getValueOfNodeViaAppend
+##
+## Return string value of a node based on combining 
+## Format entry1|entry2....|entryN
+##
+#macro(getValueOfNodeViaAppend $isMosaic )
+#if ( $isMosaic eq $CONST_FALSE )
+#set($csListString = "")##init empty string
+#set($gCSDAL_csList = $!$label.get("\w*_COORDINATE_SYSTEM"))
+#set($gCSDAL_csListLen = $gCSDAL_csList.size())
+#foreach ( $i in [1..$gCSDAL_csListLen] )
+#set ($gCSDAL_curCoordName = $gCSDAL_csList.get($foreach.index))
+#set ($csEntryStr = "#getCoordinateSystemDefinitionAsListEntry($gCSDAL_curCoordName)")
+#if (! $csEntryStr.isEmpty() )##if entry non-empty
+#if (! $csListString.isEmpty())##if not first entry, append a delimiter
+#set ($csListString = "${csListString}${CONST_CSDEF_LIST_DELIMITER}")
+#end
+#set ($csListString = "${csListString}${csEntryStr}")
+#end
+#end
+${csListString}##
+#end
+#end
+
+## ------------------------------------------------------------------------
+
+
+##################################
+## getCoordinateSystemDefinitionsAsList
+##
+## Return string form of a list of coordinate system entries.
+## Format entry1|entry2....|entryN
+##
+#macro(getCoordinateSystemDefinitionsAsList $isMosaic )
+#if ( $isMosaic eq $CONST_FALSE )
+#set($csListString = "")##init empty string
+#set($gCSDAL_csList = $!$label.get("\w*_COORDINATE_SYSTEM"))
+#set($gCSDAL_csListLen = $gCSDAL_csList.size())
+#if ( $gCSDAL_csListLen > 0)
+#foreach ( $i in [1..$gCSDAL_csListLen] )
+#set ($gCSDAL_curCoordName = $gCSDAL_csList.get($foreach.index))
+#if ( $CONST_TRUE.equals("#isCoordSystemWellFormed($gCSDAL_curCoordName)") )
+#set ($csEntryStr = "#getCoordinateSystemDefinitionAsListEntry($gCSDAL_curCoordName)")
+#if (! $csEntryStr.isEmpty() )##if entry non-empty
+#if (! $csListString.isEmpty())##if not first entry, append a delimiter
+#set ($csListString = "${csListString}${CONST_CSDEF_LIST_DELIMITER}")
+#end
+#set ($csListString = "${csListString}${csEntryStr}")
+#end
+#end ##ifCoordSysWellformed
+#end ##For-each
+#end ##If-size-gt-0
+${csListString}##
+#end
+#end
+
+
+## ------------------------------------------------------------------------
+
+#macro (isCoordSystemWellFormed $coordSysName )
+#set ($icswd_rval = $CONST_FALSE )
+#set ($icswd_node = $label.get($coordSysName))
+#if ( $icswd_node.ORIGIN_OFFSET_VECTOR &&
+$icswd_node.ORIGIN_ROTATION_QUATERNION &&
+$CONST_FALSE.equals("#nodeHasNilValue( $icswd_node 'ORIGIN_OFFSET_VECTOR')") &&
+$CONST_FALSE.equals("#nodeHasNilValue( $icswd_node 'ORIGIN_ROTATION_QUATERNION')") &&
+$CONST_FALSE.equals("#doesNodeValueListContainNilValue($icswd_node.ORIGIN_OFFSET_VECTOR)") &&
+$CONST_FALSE.equals("#doesNodeValueListContainNilValue($icswd_node.ORIGIN_ROTATION_QUATERNION)") &&
+( ( $icswd_node.COORDINATE_SYSTEM_INDEX && $CONST_FALSE.equals("#doesNodeValueListContainAllNilValues($icswd_node.COORDINATE_SYSTEM_INDEX)") ) ||
+( $icswd_node.ROVER_MOTION_COUNTER    && $CONST_FALSE.equals("#doesNodeValueListContainAllNilValues($icswd_node.ROVER_MOTION_COUNTER)") ) ) )
+#set ($icswd_rval = $CONST_TRUE )
+#end
+${icswd_rval}##
+#end
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## Return string form of a coordinate system entry.
+## Format: csNamecsIndices:index1name=index1value[...]indexNname=indexNvalue
+##
+#macro(getCoordinateSystemDefinitionAsListEntryWrongAttempt1 $coordSys)
+#if ($label.get($coordSys))##
+#set ($entry_partA = $label.get($coordSys).COORDINATE_SYSTEM_NAME.toString())##
+###set ($entry_partA = "${curEntry}:" )##
+#set ($gCSDALE_ValList  = $!label.get($coordSys).COORDINATE_SYSTEM_INDEX)##
+#set ($gCSDALE_NameList = $!label.get($coordSys).COORDINATE_SYSTEM_INDEX_NAME)##
+#set ($gCSDALE_ListsLen = $gCSDALE_ValList.size())##
+#set ($entry_partB = "")##
+#set ($entry_partC = "")##
+#foreach ( $i in [1..$gCSDALE_ListsLen])##
+#set ($entry_partB = $entry_partB + $gCSDALE_ValList.get($foreach.index).toString()  + $CONST_CSDEF_VALUE_ENTRY_DELIMITER )##
+#set ($entry_partC = $entry_partC + $gCSDALE_NameList.get($foreach.index).toString() + $CONST_CSDEF_VALUE_KEYVAL_DELIMITER + $gCSDALE_ValList.get($foreach.index).toString() + $CONST_CSDEF_VALUE_ENTRY_DELIMITER )##
+#end## _foreach##
+#if ($entry_partB.contains($CONST_CSDEF_VALUE_ENTRY_DELIMITER))##Check if we need to remove last comma
+#set ($entry_partBLen = $entry_partB.length())##
+#set ($entry_partBLen = $entry_partBLen - 1)##
+#set ($entry_partB = $entry_partB.substring(0, $entry_partBLen))##
+#if ($entry_partB.contains($CONST_CSDEF_VALUE_ENTRY_DELIMITER))##Check if we need to wrap with parens
+#set ($entry_partB = "(" + $entry_partB + ")")##
+#end##_if_B_still_has_comma
+#end##_if_B_has_trailing_comma
+#if ($entry_partC.contains($CONST_CSDEF_VALUE_ENTRY_DELIMITER))##Check if we need to remove last comma
+#set ($entry_partCLen = $entry_partC.length())##
+#set ($entry_partCLen = $entry_partCLen - 1)##
+#set ($entry_partC = $entry_partC.substring(0, $entry_partCLen))##
+#end##_if_C_has_trailing_comma
+#if ($entry_partA.isEmpty() || $entry_partB.isEmpty() || $entry_partC.isEmpty())
+$CONST_NULL##
+#else
+${entry_partA}${entry_partB}${CONST_CSDEF_ENTRY_DELIMITER}${entry_partC}#####
+#end## _ifPartIsEmpty
+#end##_ifLabelGetCoordSys
+#end##_macro
+##################################
+          
+## ------------------------------------------------------------------------
+          
+##################################
+## Return string form of a coordinate system entry.
+## Format: csNamecsIndices:index1name=index1value[...]indexNname=indexNvalue
+##
+#macro(getCoordinateSystemDefinitionAsListEntry $coordSys)
+#if ($label.get($coordSys))
+#set ( $entryParent = $label.get($coordSys) )
+#set ( $entryName   = $entryParent.COORDINATE_SYSTEM_NAME )
+#set ( $entryIndexNode  = $entryParent.COORDINATE_SYSTEM_INDEX )
+##HACK: Sherloc COORDINATE_SYSTEM_INDEX
+#if ( (! $entryParent.COORDINATE_SYSTEM_INDEX ) && $entryParent.ROVER_MOTION_COUNTER )
+#set ( $entryIndexNode = $entryParent.ROVER_MOTION_COUNTER )
+#end
+#set ( $entryId = "#getCoordSysId( $entryName $entryIndexNode )")
+$entryId##
+#else
+$CONST_NULL##
+#end
+#end
+##################################
+
+
+
+## ------------------------------------------------------------------------
+
+
+
+##################################
+## generateMiniHeaderSection
+## Returns the MINI_HEADER part of the label
+#macro(generateMiniHeaderSection)
+#if ( $label.MINI_HEADER )    
+
+
+#set ($MINI_HEADER    = $label.MINI_HEADER )
+#set ($MINI_HEADER_NS = 'msss_cam_mh')
+
+    <msss_cam_mh:MSSS_Camera_Mini_Header>
+
+        #debug("MINI_HEADER.IMAGE_ID")
+        <msss_cam_mh:camera_product_id>$!MINI_HEADER.IMAGE_ID</msss_cam_mh:camera_product_id>
+        
+        
+        #if ( $MINI_HEADER.MAGIC_NUMBERS )
+          #debug("MINI_HEADER.MAGIC_NUMBERS")
+          <msss_cam_mh:magic_initial>$!MINI_HEADER.MAGIC_NUMBERS[0]</msss_cam_mh:magic_initial>       
+          <msss_cam_mh:magic_final>$!MINI_HEADER.MAGIC_NUMBERS[1]</msss_cam_mh:magic_final>
+        #end
+        
+        #debug("MINI_HEADER.SPACECRAFT_CLOCK_START_COUNT")
+        <msss_cam_mh:spacecraft_clock_start>$!MINI_HEADER.SPACECRAFT_CLOCK_START_COUNT</msss_cam_mh:spacecraft_clock_start>
+        
+        #debug("MINI_HEADER.INSTRUMENT_MODE_ID")
+        <msss_cam_mh:instrument_mode_id>$!MINI_HEADER.INSTRUMENT_MODE_ID</msss_cam_mh:instrument_mode_id>
+        
+        #debug("MINI_HEADER.INSTRUMENT_SERIAL_NUMBER") 
+        <msss_cam_mh:instrument_serial_number>$!MINI_HEADER.INSTRUMENT_SERIAL_NUMBER</msss_cam_mh:instrument_serial_number>        
+               
+        #debug("MINI_HEADER.INITIAL_SIZE")
+        <msss_cam_mh:initial_size>$!MINI_HEADER.INITIAL_SIZE</msss_cam_mh:initial_size>
+        
+        #debug("MINI_HEADER.OFFSET_MODE_ID")
+        <msss_cam_mh:analog_offset>$!MINI_HEADER.OFFSET_MODE_ID</msss_cam_mh:analog_offset>
+        <msss_cam_mh:analog_offset>$!MINI_HEADER.DC_OFFSET</msss_cam_mh:analog_offset>
+
+        <msss_cam_mh:start_camera_product_id>$!MINI_HEADER.START_IMAGE_ID</msss_cam_mh:start_camera_product_id>
+
+        <msss_cam_mh:exposure_count>$!MINI_HEADER.EXPOSURE_COUNT</msss_cam_mh:exposure_count>
+
+        <msss_cam_mh:focus_merge_blending_flag>$!MINI_HEADER.IMAGE_BLENDING_FLAG.toString().toLowerCase()</msss_cam_mh:focus_merge_blending_flag>
+
+        <msss_cam_mh:focus_merge_registration_flag>$!MINI_HEADER.IMAGE_REGISTRATION_FLAG.toString().toLowerCase()</msss_cam_mh:focus_merge_registration_flag>
+
+        <img:Detector>
+            #debug("MINI_HEADER.DETECTOR_ERASE_COUNT")
+            <img:erase_count>$!MINI_HEADER.DETECTOR_ERASE_COUNT</img:erase_count>        
+        </img:Detector>
+        
+        #generateExposureParameters( $MINI_HEADER 'MINI_HEADER' 'img' )
+
+        #generateFocusParameters( $MINI_HEADER  'img' )
+        
+        #generateOnboardCompressionParameters( $MINI_HEADER 'MINI_HEADER' 'img' )
+        
+        <img:Optical_Filter>
+            #debug("MINI_HEADER.FILTER_NUMBER")
+            <img:filter_number>$!MINI_HEADER.FILTER_NUMBER</img:filter_number>
+        </img:Optical_Filter>
+
+       
+                
+        <img:Sampling>
+          <img:Companding>
+            #debug("MINI_HEADER.SAMPLE_BIT_MODE_ID")
+            <img:processing_algorithm>$!MINI_HEADER.SAMPLE_BIT_MODE_ID</img:processing_algorithm>
+          </img:Companding>
+        </img:Sampling>
+
+        <img:Subframe>
+
+            #debug("MINI_HEADER.FIRST_LINE")
+            <img:first_line>$!MINI_HEADER.FIRST_LINE</img:first_line>  
+
+            #debug("MINI_HEADER.FIRST_LINE_SAMPLE")
+            <img:first_sample>$!MINI_HEADER.FIRST_LINE_SAMPLE</img:first_sample>
+
+            #debug("MINI_HEADER.LINES")
+            <img:lines>$!MINI_HEADER.LINES</img:lines>
+
+            #debug("MINI_HEADER.LINE_SAMPLES")
+            <img:samples>$!MINI_HEADER.LINE_SAMPLES</img:samples>
+
+        </img:Subframe>
+                    
+
+        <img:Instrument_State>     
+          
+          <img:Device_Component_States>
+            
+            #if ( $!MINI_HEADER.INSTRUMENT_STATE )
+              #debug("MINI_HEADER.INSTRUMENT_STATE")
+              #set($length = $MINI_HEADER.INSTRUMENT_STATE.size())
+              #if ( $length > 0)
+                #foreach ( $i in [1..$length] )
+                  <img:Device_Component_State>
+                      #debug("$MINI_HEADER.INSTRUMENT_STATE_NAME")
+                      <img:device_name>$MINI_HEADER.INSTRUMENT_STATE_NAME.get($foreach.index)</img:device_name>
+                      #debug("$MINI_HEADER.INSTRUMENT_STATE")
+                      <img:device_state>$MINI_HEADER.INSTRUMENT_STATE.get($foreach.index)</img:device_state>
+                  </img:Device_Component_State>
+                #end
+              #end ##if_length_gt_0
+            #end ##if INSTRUMENT_STATE
+
+        
+            #if ( $!MINI_HEADER.INSTRUMENT_MODE )
+              #debug("MINI_HEADER.INSTRUMENT_MODE")
+              #set($length = $MINI_HEADER.INSTRUMENT_MODE.size())
+              #if ( $length > 0)
+                #foreach ( $i in [1..$length] )
+                  <img:Device_Component_State>
+                    #debug("$MINI_HEADER.INSTRUMENT_MODE_NAME")
+                    <img:device_name>$MINI_HEADER.INSTRUMENT_MODE_NAME.get($foreach.index)</img:device_name>
+                    #debug("$MINI_HEADER.INSTRUMENT_MODE")
+                    <img:device_state>$MINI_HEADER.INSTRUMENT_MODE.get($foreach.index)</img:device_state>                                
+                  </img:Device_Component_State>
+                #end
+              #end ##if_length_gt_0
+            #end ##if INSTRUMENT_MODE
+
+          </img:Device_Component_States>
+
+
+          <img:Device_Motor_Counts>
+            
+            #if ( $!MINI_HEADER.ARTICULATION_DEV_POSITION )
+              #debug("MINI_HEADER.ARTICULATION_DEV_POSITION")
+              #set($length = $MINI_HEADER.ARTICULATION_DEV_POSITION.size())
+              #if ( $length > 0)
+                #foreach ( $i in [1..$length] )
+                  <img:Device_Motor_Count>
+                      #debug("$MINI_HEADER.ARTICULATION_DEV_POSITION_NAME")
+                      <img:device_name>$MINI_HEADER.ARTICULATION_DEV_POSITION_NAME.get($foreach.index)</img:device_name>
+                      #debug("$MINI_HEADER.ARTICULATION_DEV_POSITION")
+                      <img:motor_count>$MINI_HEADER.ARTICULATION_DEV_POSITION.get($foreach.index)</img:motor_count>    
+                  </img:Device_Motor_Count>
+                #end ##foreach                
+              #end ##if_length_gt_0
+            #end ##if ARTICULATION_DEV_POSITION 
+
+          </img:Device_Motor_Counts>
+
+        </img:Instrument_State>
+            
+    </msss_cam_mh:MSSS_Camera_Mini_Header>
+    
+#end
+#end 
+##################################
+
+
+## ------------------------------------------------------------------------
+
+## ------------------------------------------------------------------------
+
+#macro (generateGeomInterpolation)
+
+##Only do something if both interpolation method and value are found
+#if ( $GEO_CAM_MODEL && 
+      $!GEO_CAM_MODEL.INTERPOLATION_METHOD &&
+      $!GEO_CAM_MODEL.INTERPOLATION_VALUE )
+
+    ## Handle single and list values for filename and file description  
+    #set ( $srf_ggi_iv_list = "#joinStrList( $GEO_CAM_MODEL.INTERPOLATION_VALUE ';' )" )
+    #set ( $srf_ggi_iv_list = $srf_ggi_iv_list.split(';') )
+    #set ( $srf_ggi_im_list = "#joinStrList( $GEO_CAM_MODEL.INTERPOLATION_METHOD ';' )" )
+    #set ( $srf_ggi_im_list = $srf_ggi_im_list.split(';') )
+    
+        
+    #set($srf_ggi_iv_count = $srf_ggi_iv_list.size() - 1)
+    #set($srf_ggi_im_count = $srf_ggi_im_list.size() - 1)
+    
+    #foreach ( $i in [ 0..$srf_ggi_iv_count ] )      
+      #set ( $srf_ggi_iv_list_cur = $srf_ggi_iv_list.get($foreach.index) )
+      
+      ## Would like to assume lists are same size but we know what that leads to...
+      #set ( $srf_ggi_im_list_cur = $srf_ggi_im_list.get(0) )
+      #if ( $foreach.index <= $srf_ggi_im_count )
+        #set ( $srf_ggi_im_list_cur = $srf_ggi_im_list.get($foreach.index) )
+      #end    
+      
+      #set ( $srf_ggi_im_list_cur = $text.capitalize( $srf_ggi_im_list_cur ) )
+
+      ##Per git issue 130
+      #if ( $!srf_ggi_im_list_cur == "Onboard" )
+        #set ( $srf_ggi_im_list_cur = "Temperature" )
+      #end
+    
+      <geom:Interpolation>                            
+          <geom:interpolation_algorithm>Piecewise Bilinear</geom:interpolation_algorithm>               
+                
+          #debug ("GEOMETRIC_CAMERA_MODEL.INTERPOLATION_METHOD")
+          <geom:interpolation_variable>$srf_ggi_im_list_cur</geom:interpolation_variable>
+                
+          #debug ("GEOMETRIC_CAMERA_MODEL.INTERPOLATION_VALUE")
+          <geom:interpolation_value>$srf_ggi_iv_list_cur</geom:interpolation_value>
+                
+          ## Add a sequence element only if one of many entries
+          #if ( $srf_ggi_iv_count > 0)
+          <geom:interpolation_sequence>$foreach.count</geom:interpolation_sequence>
+          #end
+                
+      </geom:Interpolation>
+    #end ##endForEach
+#end ##endIf
+#end             
+            
+
+
+## ------------------------------------------------------------------------
+
+##################################
+## getFlightSoftwareModeName
+## Returns the name associated with the numeric value for 
+## Flight software mode.  The map mission-specific and should
+## be constructed per mission.  If numeric value is not
+## found as a key, then it will be returned.
+
+#macro(getFlightSoftwareModeName $mode_val $modeToNameMap )
+#set ($mgfsmn_val = "$mode_val" )
+#if ( $modeToNameMap && $modeToNameMap.containsKey($mode_val))
+#set ($mgfsmn_val = $modeToNameMap.get($mode_val) )
+#end
+$mgfsmn_val##
+#end
+##################################
+
+
+## ------------------------------------------------------------------------
+
+#macro (getMissionSurfaceCommandExecution)
+        <msn_surface:Command_Execution>
+          #debug("IDENTIFICATION.SEQUENCE_ID")
+          <msn_surface:sequence_id>$!IDENT.SEQUENCE_ID</msn_surface:sequence_id>
+          #debug("IDENTIFICATION.SEQUENCE_VERSION_ID")
+          <msn_surface:sequence_version_id>$!IDENT.SEQUENCE_VERSION_ID</msn_surface:sequence_version_id>
+          #debug("TELEMETRY.SEQUENCE_EXECUTION_COUNT ")
+          <msn_surface:sequence_execution_count>$!TELEM.SEQUENCE_EXECUTION_COUNT</msn_surface:sequence_execution_count>          
+          #debug("IDENTIFICATION.COMMAND_SEQUENCE_NUMBER")
+          #getNodeValueNotNil( $IDENT   'COMMAND_SEQUENCE_NUMBER'   'msn_surface:command_sequence_number'   '' )
+
+          #set ( $msnsurf_src_id = "")
+          #set ( $msnsurf_src_id = $!label.OBSERVATION_REQUEST_PARMS.SOURCE_ID.toString() )
+          #if ( $msnsurf_src_id )
+              #if ( $msnsurf_src_id.equals("GRD") ) ##Special-case for MSL, GRD->GROUND
+                #set ( $msnsurf_src_id = "GROUND" )
+              #end
+              #debug("IDENTIFICATION.SOURCE_ID")
+              <msn_surface:command_source_id>$msnsurf_src_id</msn_surface:command_source_id>
+          #end
+
+          #debug("IDENTIFICATION.COMMAND_DISPATCH_SCLK")
+          ##Value comes from at most one, tho DP_CREATION_TIME will likely be removed at some point
+          #if ( $TELEM.COMMAND_DISPATCH_SCLK )
+            #set ( $tlm_cds = $!TELEM.COMMAND_DISPATCH_SCLK.toString())
+            #set ( $tlm_cds = $tlm_cds.replace('.',':') )
+            <msn_surface:command_dispatch_sclk>$!tlm_cds</msn_surface:command_dispatch_sclk>
+          #else
+            <msn_surface:command_dispatch_sclk>$!TELEM.DP_CREATION_TIME</msn_surface:command_dispatch_sclk>
+          #end
+
+          #debug("IDENTIFICATION.OBSERVATION_ID")
+          <msn_surface:observation_id>$!IDENT.OBSERVATION_ID</msn_surface:observation_id>
+          #debug("IDENTIFICATION.REQUEST_ID")
+          <msn_surface:request_id>$!IDENT.REQUEST_ID</msn_surface:request_id>
+
+
+          
+          #debug("TELEMETRY.BOOT_COUNT")
+          <msn_surface:boot_counter>$!TELEM.BOOT_COUNT</msn_surface:boot_counter>
+          #debug("IDENTIFICATION.RTT_VERSION")
+          <msn_surface:rtt_version>$!IDENT.RTT_VERSION</msn_surface:rtt_version>
+
+        </msn_surface:Command_Execution>
+#end
+
+## ------------------------------------------------------------------------
+
+
+#macro (getMissionSurfaceTelemetry)
+
+        <msn_surface:Telemetry>
+        
+          #debug("TELEMETRY.APPLICATION_PROCESS_ID")         
+          <msn_surface:application_id>$!TELEM.APPLICATION_PROCESS_ID</msn_surface:application_id>
+          #debug("TELEMETRY.APPLICATION_PROCESS_NAME")
+          <msn_surface:application_name>$!TELEM.APPLICATION_PROCESS_NAME</msn_surface:application_name>
+          #debug("TELEMETRY.TELEMETRY_PROVIDER_ID")
+          <msn_surface:provider_id>$!TELEM.TELEMETRY_PROVIDER_ID</msn_surface:provider_id>
+          #debug("TELEMETRY.FLIGHT_SOFTWARE_VERSION_ID")
+          <msn_surface:flight_software_version_id>$!TELEM.FLIGHT_SOFTWARE_VERSION_ID</msn_surface:flight_software_version_id>
+          #debug("TELEMETRY.TELEMETRY_SOURCE_NAME")
+          <msn_surface:telemetry_source_name>$!TELEM.TELEMETRY_SOURCE_NAME</msn_surface:telemetry_source_name>
+          
+          <msn_surface:telemetry_alternate_name>$!IDENT.MOVIE_FILE_NAME</msn_surface:telemetry_alternate_name>
+
+          ## We can't generically call capitalize on the value, because SFDU is a valid 
+          ## so we just have a capitalize-esque special case for 'Data Product'
+          #if ( $!TELEM.TELEMETRY_SOURCE_TYPE )
+            #set ( $msntlm_tlm_src_type = $!TELEM.TELEMETRY_SOURCE_TYPE.toString() )
+            #if ( $msntlm_tlm_src_type.equalsIgnoreCase("DATA PRODUCT"))
+              #set ( $msntlm_tlm_src_type = "Data Product" )
+            #elseif ($msntlm_tlm_src_type.equalsIgnoreCase("TEAM-GENERATED IMAGE") )
+              #set ( $msntlm_tlm_src_type = "Team-generated Image" )
+            #end
+            #debug("TELEMETRY.TELEMETRY_SOURCE_TYPE")
+            <msn_surface:transport_protocol>$!msntlm_tlm_src_type</msn_surface:transport_protocol>
+          #end
+
+          #debug("TELEMETRY.COMMUNICATION_SESSION_HOST")
+          <msn_surface:communication_session_host>$!TELEM.COMMUNICATION_SESSION_HOST</msn_surface:communication_session_host>          
+          #debug("TELEMETRY.COMMUNICATION_SESSION_ID")
+          <msn_surface:communication_session_id>$!TELEM.COMMUNICATION_SESSION_ID</msn_surface:communication_session_id>
+          #if ( $!TELEM.TELEMETRY_SOURCE_START_TIME )
+            #debug("TELEMETRY.TELEMETRY_SOURCE_START_TIME")
+            #set ( $tlm_tlm_src_start_time = $TELEM.TELEMETRY_SOURCE_START_TIME.toString() )
+            #set ( $tlm_tlm_src_start_time = "#getZuluTime( $tlm_tlm_src_start_time )" )
+            #set ( $tlm_tlm_src_start_time = "#getDoyTime(  $tlm_tlm_src_start_time )" )
+            <msn_surface:telemetry_source_start_time>$!tlm_tlm_src_start_time</msn_surface:telemetry_source_start_time>
+          #end
+          #debug("TELEMETRY.TELEMETRY_SOURCE_SCLK_START")          
+          <msn_surface:telemetry_source_sclk_start>$!TELEM.TELEMETRY_SOURCE_SCLK_START</msn_surface:telemetry_source_sclk_start>
+          #debug("TELEMETRY.PRODUCT_COMPLETION_STATUS")
+          <msn_surface:product_completion_status>$!TELEM.PRODUCT_COMPLETION_STATUS</msn_surface:product_completion_status>          
+          #if ( $!TELEM.EARTH_RECEIVED_START_TIME )
+            #debug("TELEMETRY.EARTH_RECEIVED_START_TIME")
+            <msn_surface:earth_received_start_date_time>#getZuluTime( $TELEM.EARTH_RECEIVED_START_TIME.toString() )</msn_surface:earth_received_start_date_time>
+          #end
+          #if ( $!TELEM.EARTH_RECEIVED_STOP_TIME )
+            #debug("TELEMETRY.EARTH_RECEIVED_STOP_TIME")
+            <msn_surface:earth_received_stop_date_time>#getZuluTime( $TELEM.EARTH_RECEIVED_STOP_TIME.toString() )</msn_surface:earth_received_stop_date_time>
+          #end          
+          #debug("TELEMETRY.DOWNLOAD_PRIORITY")          
+          <msn_surface:download_priority>$!TELEM.DOWNLOAD_PRIORITY</msn_surface:download_priority>
+          
+          
+          #if ( $TELEM.IMAGE_DATA_SIZE )
+            #debug("TELEMETRY.IMAGE_DATA_SIZE")
+            <msn_surface:data_size>$!TELEM.IMAGE_DATA_SIZE</msn_surface:data_size>
+          #elseif ( $TELEM.TELEMETRY_SOURCE_SIZE )
+            #debug("TELEMETRY.IMAGE_DATA_SIZE")
+            <msn_surface:data_size>$!TELEM.TELEMETRY_SOURCE_SIZE</msn_surface:data_size>
+          #end
+
+          #debug("TELEMETRY.EXPECTED_PACKETS")
+          <msn_surface:expected_packets>$!TELEM.EXPECTED_PACKETS</msn_surface:expected_packets>
+          #debug("TELEMETRY.RECEIVED_PACKETS")
+          <msn_surface:received_packets>$!TELEM.RECEIVED_PACKETS</msn_surface:received_packets>
+
+
+          #debug("TELEMETRY.TELEMETRY_SOURCE_HOST_NAME")
+          <msn_surface:telemetry_source_host_name>$!TELEM.TELEMETRY_SOURCE_HOST_NAME</msn_surface:telemetry_source_host_name>
+  
+          #debug("TELEMETRY.EXPECTED_TRANSMISSION_PATH")
+          <msn_surface:expected_transmission_path>$!TELEM.EXPECTED_TRANSMISSION_PATH</msn_surface:expected_transmission_path>
+
+          #debug("TELEMETRY.TRANSMISSION_PATH")
+          <msn_surface:transmission_path>$!TELEM.TRANSMISSION_PATH</msn_surface:transmission_path>
+
+          #if ( $TELEM.FLIGHT_SOFTWARE_MODE )
+            #set ( $surf_fswm_name = "#getFlightSoftwareModeName($!TELEM.FLIGHT_SOFTWARE_MODE $MSN_FLIGHT_SOFTWARE_MODE_DICT)" )
+            <msn_surface:flight_software_mode>$surf_fswm_name</msn_surface:flight_software_mode>
+          #end
+
+          ## PLACEHOLDER for: PRODUCT_TAG
+
+          #debug("TELEMETRY.TELEMETRY_SOURCE_SIZE")
+          <msn_surface:telemetry_source_size>$!TELEM.TELEMETRY_SOURCE_SIZE</msn_surface:telemetry_source_size>
+
+          #debug("TELEMETRY.TELEMETRY_SOURCE_HOST_NAME")
+          <msn_surface:telemetry_source_checksum>$!TELEM.TELEMETRY_SOURCE_CHECKSUM</msn_surface:telemetry_source_checksum>
+
+          #debug("TELEMETRY.AUTO_DELETE_FLAG")
+          <msn_surface:auto_delete_flag>$!TELEM.AUTO_DELETE_FLAG.toString().toLowerCase()</msn_surface:auto_delete_flag>
+
+          #debug("TELEMETRY.VIRTUAL_CHANNEL_ID")
+          <msn_surface:virtual_channel_id>$!TELEM.VIRTUAL_CHANNEL_ID</msn_surface:virtual_channel_id>
+
+        </msn_surface:Telemetry>
+#end        
+
+## ------------------------------------------------------------------------
+
+## The GEOM LDD is explicit about legal coordinate system frame types, including case.
+## So this is YAHM (yet-another-hack-macro) to support mapping 'currently' unsupported
+## values to supported values.  
+## We should probably revisit this everytime GEOM updates its coordinate_space_frame_type
+## definition....or at least revisit $SurfInstrFrameNameMap map
+
+#macro (maybeMapCoordSysFrameType $mmcs_ftype )
+#set ( $mmcs_ftype_up = $mmcs_ftype.toUpperCase() )
+#if ( $SurfInstrFrameNameMap.containsKey( $mmcs_ftype_up ) )
+#set ( $mmcs_ftype = $SurfInstrFrameNameMap.get( $mmcs_ftype_up ) )
+#end
+${mmcs_ftype}##
+#end
+
+## ------------------------------------------------------------------------
+
+## Returns the same value if not nil-value, else returns -1
+
+#macro (getIndexValueCheckNil $giv_in )
+#set ($givod_rval = $giv_in )
+#if ( $CONST_TRUE.equals("#valueIsNilValue($giv_in)") )
+#set ( $givod_rval = '-1' )
+#end
+${givod_rval}##
+#end
+
+## ------------------------------------------------------------------------
+
+
+## ------------------------------------------------------------------------

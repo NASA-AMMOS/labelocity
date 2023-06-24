@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  
+
+##
+#parse( "vcore.vmac" )
+#parse( "utils.vmac" )
+#parse( "general.vmac" )
+#parse( "image.vmac" )
+#parse( "surface.vmac" )
+#parse( "mission_factory.vmac" )
+
+## Set some needed variables
+
+
+## We get the PID from the filename since we have no label
+
+#set ($fileName = $label.PDS4_IMAGE.detached_filename.toString())
+#set ($PID_FULL = "#getBasename($fileName.toLowerCase())")
+#set ($PID      = "#createPidFromVersionedNameCheckLabel($PID_FULL)")
+
+#set ($product_type = "#getProductType($PID)")
+#set ($version_id = "#getPIDVersionCheckLabel($PID_FULL)")
+#set ($ext = "#getFileExtension($PID_FULL)")
+
+## #set ($LID_COLLECTION = "browse")
+#set ($LID_PREFIX = "#getProductLidPrefixCheckLabel($PID)" )
+
+#set ($LID_COLLECTION = "#getBrowseLidCollectionCheckLabel($PID_FULL)")
+
+<?xml-model 
+    href="https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.sch"
+    schematypens="http://purl.oclc.org/dsdl/schematron"?>
+
+<Product_Browse xmlns="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:pds="http://pds.nasa.gov/pds4/pds/v1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://pds.nasa.gov/pds4/pds/v1 https://pds.nasa.gov/pds4/pds/v1/PDS4_PDS_${PDS4_VERSION_LATEST}.xsd">
+
+  <Identification_Area>
+    <logical_identifier>#generateLID( $LID_PREFIX $LID_COLLECTION $PID )</logical_identifier>
+    <version_id>${version_id}.0</version_id>
+    <title>$MSN_IDENTIFICATION_AREA_TITLE_PREFIX $product_type Browse Product - $PID</title>
+    <information_model_version>$MSN_MODEL_VERSION</information_model_version>
+    <product_class>Product_Browse</product_class>
+
+## Removed evil Modification_History.... yayyy!!!  Retaining the dead code
+## in case someone squawks.
+##    <Modification_History>
+##      <Modification_Detail>
+##        <modification_date>$date.get("yyyy-MM-dd")</modification_date>
+##        <version_id>1.0</version_id>
+##        <description>Initial version</description>
+##      </Modification_Detail>
+##    </Modification_History>
+  </Identification_Area>
+  <Reference_List>
+    <Internal_Reference>
+      
+      ## October '21: PID should have extension removed:      
+      #set ( $pidLow = "#getBasenameNoExten($PID)" )
+      #set ( $pidLow = $pidLow.toLowerCase() )
+      #set ( $ref_prod_lid_coll = 'data')  ## Default is data
+      #set ( $ref_prod_lid_coll = "#getProductLidCollectionCheckLabel($pidLow)" )
+
+      <lid_reference>#generateLID( $LID_PREFIX $ref_prod_lid_coll $pidLow )</lid_reference>
+      <reference_type>browse_to_data</reference_type>
+      <comment>This is a reference to the full resolution data file corresponding to this browse image.</comment>
+    </Internal_Reference>
+  </Reference_List>
+  <File_Area_Browse>
+    <File>
+      <file_name>#getBasename($fileName)</file_name>
+      <local_identifier>BROWSE_FILE</local_identifier>
+      <creation_date_time>$date.get("yyyy-MM-dd")</creation_date_time>
+    </File>
+    <Encoded_Image>
+      <local_identifier>BROWSE_IMAGE</local_identifier>
+      <offset unit="byte">0</offset>
+      <encoding_standard_id>$ext.toUpperCase()</encoding_standard_id>
+    </Encoded_Image>
+  </File_Area_Browse>
+</Product_Browse>

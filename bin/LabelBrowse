@@ -1,0 +1,111 @@
+#!/bin/csh
+#
+# Create a pds4 label for a browse image.
+#
+# Usage:
+#   LabelBrowse imgfile [-prop label value]*
+#
+# Creates imgfile with .xml after existing extension.  Output goes
+# in same dir as input
+# One or more property pairs can be included via: -prop label value 
+#
+
+set DOC_LEN = 11
+
+if ($# < 1) then
+  head -${DOC_LEN} $0
+  exit
+endif
+
+set img = $1
+set out = ${img}.xml
+
+set prop_list = ()
+
+if ($# > 1) then 
+    set startp = 2
+    while ($startp <= $#)
+      if ("$argv[$startp]" == "-prop") then
+         @ startp = $startp + 1
+         if ($startp <= $#) then
+           set prop_key = $argv[$startp]
+           @ startp = $startp + 1
+           if ($startp <= $#) then
+             set prop_val = $argv[$startp]
+             set prop_line = \""${prop_key}"\"": "\""${prop_val}"\"
+             set prop_list = ( $prop_list:q $prop_line:q )
+           else
+             echo "Error: Missing value for property $prop_key"; exit
+           endif
+         else
+            head -${DOC_LEN} $0; echo "Error: Missing property name"; exit
+         endif
+      else
+        head -${DOC_LEN} $0; echo "Error: Unrecognized option: $argv[$startp]"; exit
+      endif
+      @ startp = $startp + 1
+    end
+endif
+
+set templ = $V2TEMPLATES/mipl_browse.vm
+
+# Oddly, the browse velocity template actually does not use the image itself
+# for anything.  It gets everything it needs from the filename.  It turns out
+# there's a bug where the PNG reader fails if NL*NS*3 (color) is > 2G.  The
+# workaround for that is to simply not use the image: rather, create a dummy
+# one that the transcoder can load (it does have to have a valid image).
+# To do this, we create a temporary directory, make a dummy file with the
+# correct name, copy the resulting label back up, and remove the debris.
+
+# Go to a temp dir
+
+set tmpdir = tmpdir.$$
+mkdir $tmpdir
+pushd $tmpdir
+
+# Make a dummy image
+### set DUMMY_DIM = 128 ## Used to be 10x10 but ImageIo started getting EOF Errors?
+### $R2LIB/gen x.vic nl=${DUMMY_DIM} ns=${DUMMY_DIM} nb=3
+### set dummy = x.vic
+set dummy = $V2JBIN/LabelocityDummyImage.VIC
+
+# Transcode it to the proper name
+java jpl.mipl.io.jConvertIIO inp=$dummy out=${img:t} format=png
+
+## By default, we don't use a JSON file.  
+## But if prop_list is non-empty, create an populate
+## Also fill in the transcoder options
+set json = ''
+set xcoder_json_options = ''
+set prop_list_size = ${#prop_list}
+if ( $prop_list_size > 0) then
+    set json = ${img:t}.json
+    set xcoder_json_options = " extra_file_name=$json extra_file_type=json "
+   
+    ##Populate JSON file with options
+    echo '{' >$json
+    foreach idx (`seq $prop_list_size`)
+        set cur_line = "   $prop_list[$idx]"
+        if ( $idx < $prop_list_size ) then
+           set cur_line = "${cur_line}," # no comma for last line
+        endif
+        echo $cur_line >>$json
+    end
+    echo '}' >>$json 
+endif
+
+#echo "DEBUG: json = $json "
+#echo "DEBUG: xcoder_json_options = $xcoder_json_options "
+#echo "Contents of JSON: "
+#cat $json
+
+# Call the transcoder with the dummy image
+java jpl.mipl.io.jConvertIIO inp=${img:t} out=${out:t:r}.xml ri=true format=pds4 pds_detached_only=true pds_label_type=PDS4 velo_template=$templ $xcoder_json_options
+
+# Pop back up a level and move the result
+popd
+mv ${tmpdir}/${out:t:r}.xml ${out}
+
+# Get rid of the evidence
+rm -fr $tmpdir
+
