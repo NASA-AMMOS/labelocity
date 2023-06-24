@@ -27,13 +27,59 @@
     </properties>
 
     <scm>
-        <connection>scm:git:ssh://git@github.jpl.nasa.gov/MIPL/download_artifacts.git</connection>
-        <developerConnection>scm:git:ssh://git@github.jpl.nasa.gov/MIPL/download_artifacts.git</developerConnection>
-        <url>https://github.jpl.nasa.gov/MIPL/download_artifacts</url>
+        <connection>scm:git:ssh://git@github.jpl.nasa.gov/MIPL/labelocity.git</connection>
+        <developerConnection>scm:git:ssh://git@github.jpl.nasa.gov/MIPL/labelocity.git</developerConnection>
+        <url>https://github.jpl.nasa.gov/MIPL/labelocity</url>
     </scm>
 
      <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}</directory>
+                     <includes>
+                        <include>init.sh</include>
+                        <include>version</include>
+                        <include>README*</include>
+                    </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/bin</directory>
+                     <includes>
+                        <include>**/*</include>
+                    </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/jars</directory>
+                     <includes>
+                        <include>**/*</include>
+                    </includes>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/templates</directory>
+                     <includes>
+                        <include>**/*</include>
+                    </includes>
+            </resource>
+        </resources>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <configuration>
+                    <descriptors>
+                        <descriptor>./labelocity.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
@@ -95,7 +141,7 @@
                                     <packaging>jar</packaging>
                                 </artifactItem>
                             </artifactItems>
-                            <excludeArtifactIds>mm_velocity_templates</excludeArtifactIds>
+                            <excludeClassifiers>scripts,templates</excludeClassifiers>
                             <excludeTransitive>${dependency.excludeTransitive}</excludeTransitive>
                             <outputDirectory>${project.basedir}/jars</outputDirectory> 
                             <overWrite>true</overWrite>
@@ -148,6 +194,10 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.gmaven</groupId>
+                <artifactId>groovy-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
