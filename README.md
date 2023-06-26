@@ -34,7 +34,20 @@ The Labelocity toolset consists of three complementary components separated by d
 - `jars`: Core image labeling functionality is pre-compiled into Java `JAR`s that are invoked by scripts in `bin`.
 - `templates`: Velocity macro templates invoked by the scripts and used by the JARs to produce requested labeling outputs.  
 
-_Executing **Labelocity** always begins by `cd`-ing to its directory and launching `./init.sh` which sets up the environment and launches the correct interpreter._
+### Running the Toolset
+_Executing **Labelocity** may begin by `cd`-ing to its directory and launching `./init.sh` which sets up the environment and launches the correct interpreter._. 
+
+**Note that experienced `tcsh` users** can proceed by setting an environment variable and sourcing the **Labelocity** variable set:
+```
+setenv LABELOCITY_ROOT /path/to/unpacked/labelocity/distributable
+source $LABELOCITY_ROOT/initenv
+```
+Then, scripts may be run from any directory on the system.
+
+# VICAR Discussion Forum
+We have set up a [VICAR Open Source Google group](https://groups.google.com/forum/#!forum/vicar-open-source/), where you can find notifications of new releases, bug reports, and general discussion. Since **Labelocity** originates with VICAR, this group is an ideal place to follow up for this application. You can join the group [here](https://groups.google.com/forum/#!forum/vicar-open-source/join).
+
+Questions:  [vicar_help@jpl.nasa.gov](mailto:vicar_help@jpl.nasa.gov)
 
 # Getting Started and Documentation
 Running **Labelocity** is as quick as cloning this repository (or unpacking one of the above archives) and launching a script:
