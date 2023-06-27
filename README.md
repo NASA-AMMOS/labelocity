@@ -44,19 +44,25 @@ source $LABELOCITY_ROOT/initenv
 ```
 Then, scripts may be run from any directory on the system.
 
-# VICAR Discussion Forum
-We have set up a [VICAR Open Source Google group](https://groups.google.com/forum/#!forum/vicar-open-source/), where you can find notifications of new releases, bug reports, and general discussion. Since **Labelocity** originates with VICAR, this group is an ideal place to follow up for this application. You can join the group [here](https://groups.google.com/forum/#!forum/vicar-open-source/join).
-
-Questions:  [vicar_help@jpl.nasa.gov](mailto:vicar_help@jpl.nasa.gov)
-
 # Getting Started and Documentation
 Running **Labelocity** is as quick as cloning this repository (or unpacking one of the above archives) and launching a script:
 - Executing `./init.sh` launches a `tcsh` shell with properly sourced environment variables
+- Experienced `tcsh` users may choose to set a `LABELOCITY_ROOT` environment variable and source settings manually so that scripts may be invoked from any directory tree location
 
 Usage of the **Labelocity** toolset is described more fully in the Labelocity User Guide:
 - [Labelocity User Guide](docs/LabelocityUserGuide_v1.0.pdf)
 
 For more information on VICAR Open Source, the progenitor of **Labelocity**, documentation is available by [clicking here](https://github.com/NASA-AMMOS/VICAR#getting-started-and-documentation).
+
+# VICAR Discussion Forums
+
+We've set up online groups to help users collaborate and interact on VICAR-related subjects, where you can find notifications of new releases, view bug reports and participate in general discussions:
+* The [VICAR Open Source Google group](https://groups.google.com/forum/#!forum/vicar-open-source/) can be joined [here](https://groups.google.com/forum/#!forum/vicar-open-source/join).
+* A **#vicar** channel is available in the [OpenPlanetary Slack workspace](http://openplanetary.slack.com/) ([join here](https://www.openplanetary.org/join))
+
+Since **Labelocity** originates with VICAR, these forums are an ideal place to follow up for this application.  
+
+Questions: [vicar_help@jpl.nasa.gov](mailto:vicar_help@jpl.nasa.gov)
 
 # Modifying Labelocity
 One of the prime purposes of Open Source is to solicit contributions from the community, and we welcome such contributions. However, at the current time, this git repo is read-only. At some point in the future, we hope to make this easier, but for now, send any changes to [vicar_help@jpl.nasa.gov](mailto:vicar_help@jpl.nasa.gov) for further discussion. As this software is part of the [VICAR Suite](https://github.com/NASA-AMMOS/VICAR) used in mission surface operations, changes are vetted carefully. Getting more contributions from the community will help make the case for improved governance in the public sphere.
