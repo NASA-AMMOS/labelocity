@@ -40,12 +40,22 @@ setenv V2HTML "${cwdl_full}"
 setenv V2JBIN "${cwdl_full}/bin"
 setenv V2TEMPLATES "${cwdl_full}/templates"
 
-if (! $?CLASSPATH) then
+if (! $?CLASSPATH) then  # unset
     setenv CLASSPATH ${V2HTML}/jars/\*:${V2HTML}/jars
 else
-    if ("${CLASSPATH}" == "") then  # redefine new classpath based on jar retrieval 
+    if ("${CLASSPATH}" == "") then  # empty, redefine new classpath based on jar retrieval 
         setenv CLASSPATH ${V2HTML}/jars/\*:${V2HTML}/jars
     else
         setenv CLASSPATH "${CLASSPATH}":${V2HTML}/jars/\*:${V2HTML}/jars
+    endif
+endif
+
+if (! $?PATH) then  # unset
+    setenv PATH "${V2HTML}":"${V2JBIN}":.
+else
+    if ("${PATH}" == "") then  # empty, redefine new path based labelocity vars 
+        setenv PATH "${V2HTML}":"${V2JBIN}":.
+    else
+        setenv PATH "${PATH}":"${V2HTML}":"${V2JBIN}"
     endif
 endif

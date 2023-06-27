@@ -36,8 +36,18 @@
 # note this script is scoped minimally to promote reuse in many environments
 # its purpose is to move users into the correct shell (tcsh) and set vars
 
+set cwdl=`dirname ${0}`
+set cwdl_full=`cd ${cwdl} && pwd`
+
 # source required environment vars
-source initenv
+if (! $?LABELOCITY_ROOT) then  # unset, assume inside labelocity dir
+    source initenv
+else
+    if ("${LABELOCITY_ROOT}" == "") then  # empty, set this script's dir as root
+        setenv LABELOCITY_ROOT "${cwdl_full}"
+    endif
+    source $LABELOCITY_ROOT/initenv
+endif
 
 # launch tcsh -- yields control to the tcsh terminal until exit
 /usr/bin/env tcsh

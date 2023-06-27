@@ -97,8 +97,9 @@ POSSIBILITY OF SUCH DAMAGE.
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
+                	  <finalName>${project.artifactId}-${semver}${changelist}</finalName>
                     <descriptors>
-                        <descriptor>./labelocity.xml</descriptor>
+                        <descriptor>./package.xml</descriptor>
                     </descriptors>
                 </configuration>
                 <executions>
