@@ -33,20 +33,27 @@
 
 # note minimally scoped source file to promote reuse 
 
-set cwdl=`dirname ${0}`
-set cwdl_full=`cd ${cwdl} && pwd`
+set cwdl=($_)
+if ("$cwdl" != "") then  # sourced
+    set cwdl=$cwdl[2]
+else  # executed 
+   set cwdl=${0}
+endif
+set cwdl=`dirname "${cwdl}"`
+set cwdl_full=`cd "${cwdl}" && pwd`
+echo "INFO: Sourced at '${cwdl_full}'..."
 
 setenv V2HTML "${cwdl_full}"
 setenv V2JBIN "${cwdl_full}/bin"
 setenv V2TEMPLATES "${cwdl_full}/templates"
 
 if (! $?CLASSPATH) then  # unset
-    setenv CLASSPATH ${V2HTML}/jars/\*:${V2HTML}/jars
+    setenv CLASSPATH "${V2HTML}"/jars/\*:"${V2HTML}"/jars
 else
     if ("${CLASSPATH}" == "") then  # empty, redefine new classpath based on jar retrieval 
-        setenv CLASSPATH ${V2HTML}/jars/\*:${V2HTML}/jars
+        setenv CLASSPATH "${V2HTML}"/jars/\*:"${V2HTML}"/jars
     else
-        setenv CLASSPATH "${CLASSPATH}":${V2HTML}/jars/\*:${V2HTML}/jars
+        setenv CLASSPATH "${CLASSPATH}":"${V2HTML}"/jars/\*:"${V2HTML}"/jars
     endif
 endif
 
