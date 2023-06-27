@@ -32,21 +32,36 @@
 ################################################################################
 
 # note minimally scoped source file to promote reuse 
+# TODO: detect if sourced from non-csh shell and fail
 
-set cwdl=($_)
-if ("$cwdl" != "") then  # sourced
-    set cwdl=$cwdl[2]
-else  # executed 
-   set cwdl=${0}
+# detect/set app root dir
+set cwdl=""
+if (! $?LABELOCITY_ROOT) then  # unset
+    set cwdl=($_)
+    if ("$cwdl" != "") then  # sourced
+		    set cwdl=$cwdl[2]
+		endif
+else
+    if ("${LABELOCITY_ROOT}" == "") then  # empty
+        set cwdl=($_)
+				if ("$cwdl" != "") then  # sourced
+				    set cwdl=$cwdl[2]
+				endif
+    else  # assigned
+        set cwdl="${LABELOCITY_ROOT}"
+    endif
+endif
+if ("$cwdl" == "") then  # if still empty then executed w/o LABELOCITY_ROOT
+    set cwdl=${0}
 endif
 set cwdl=`dirname "${cwdl}"`
 set cwdl_full=`cd "${cwdl}" && pwd`
 echo "INFO: Sourced at '${cwdl_full}'..."
 
+# set required vars
 setenv V2HTML "${cwdl_full}"
 setenv V2JBIN "${cwdl_full}/bin"
 setenv V2TEMPLATES "${cwdl_full}/templates"
-
 if (! $?CLASSPATH) then  # unset
     setenv CLASSPATH "${V2HTML}"/jars/\*:"${V2HTML}"/jars
 else
@@ -56,7 +71,6 @@ else
         setenv CLASSPATH "${CLASSPATH}":"${V2HTML}"/jars/\*:"${V2HTML}"/jars
     endif
 endif
-
 if (! $?PATH) then  # unset
     setenv PATH "${V2HTML}":"${V2JBIN}":.
 else
